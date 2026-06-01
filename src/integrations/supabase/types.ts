@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      descricoes_cargo: {
+        Row: {
+          atividades: Json
+          cargo: string
+          conhecimento: Json
+          created_at: string
+          data_revisao: string | null
+          data_versao: string | null
+          departamento: string | null
+          experiencia: Json
+          habilidades_cargo: Json
+          habilidades_culturais: Json
+          id: string
+          indicadores: Json
+          instrucao: Json
+          nivelamento: string | null
+          objetivo: string | null
+          postura: Json
+          status: string
+          superior_imediato: string | null
+          tipo_carreira: string | null
+          unidade_negocio: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atividades?: Json
+          cargo: string
+          conhecimento?: Json
+          created_at?: string
+          data_revisao?: string | null
+          data_versao?: string | null
+          departamento?: string | null
+          experiencia?: Json
+          habilidades_cargo?: Json
+          habilidades_culturais?: Json
+          id?: string
+          indicadores?: Json
+          instrucao?: Json
+          nivelamento?: string | null
+          objetivo?: string | null
+          postura?: Json
+          status?: string
+          superior_imediato?: string | null
+          tipo_carreira?: string | null
+          unidade_negocio?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atividades?: Json
+          cargo?: string
+          conhecimento?: Json
+          created_at?: string
+          data_revisao?: string | null
+          data_versao?: string | null
+          departamento?: string | null
+          experiencia?: Json
+          habilidades_cargo?: Json
+          habilidades_culturais?: Json
+          id?: string
+          indicadores?: Json
+          instrucao?: Json
+          nivelamento?: string | null
+          objetivo?: string | null
+          postura?: Json
+          status?: string
+          superior_imediato?: string | null
+          tipo_carreira?: string | null
+          unidade_negocio?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
