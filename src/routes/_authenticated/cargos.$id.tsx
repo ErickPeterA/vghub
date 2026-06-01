@@ -62,7 +62,7 @@ function EditarCargo() {
       .from("descricoes_cargo")
       .update(payload)
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Alterações salvas");
   };
 

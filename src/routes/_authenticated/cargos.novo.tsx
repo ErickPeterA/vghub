@@ -26,7 +26,7 @@ function NovoCargo() {
       .insert(payload)
       .select("id")
       .single();
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Cargo cadastrado");
     navigate({ to: "/cargos/$id", params: { id: data.id } });
   };
