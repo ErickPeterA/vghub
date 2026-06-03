@@ -12,9 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedCargosNovoRouteImport } from './routes/_authenticated/cargos.novo'
-import { Route as AuthenticatedCargosIdRouteImport } from './routes/_authenticated/cargos.$id'
+import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
+import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
+import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
+import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './routes/_authenticated/projetos.$projectId.index'
+import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
+import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './routes/_authenticated/projetos.$projectId.central'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -30,58 +33,104 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
+  id: '/projetos',
+  path: '/projetos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCargosNovoRoute = AuthenticatedCargosNovoRouteImport.update({
-  id: '/cargos/novo',
-  path: '/cargos/novo',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedCargosIdRoute = AuthenticatedCargosIdRouteImport.update({
-  id: '/cargos/$id',
-  path: '/cargos/$id',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
+const AuthenticatedProjetosNovoRoute =
+  AuthenticatedProjetosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AuthenticatedProjetosRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdRoute =
+  AuthenticatedProjetosProjectIdRouteImport.update({
+    id: '/$projectId',
+    path: '/$projectId',
+    getParentRoute: () => AuthenticatedProjetosRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdIndexRoute =
+  AuthenticatedProjetosProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdDescricaoCargoRoute =
+  AuthenticatedProjetosProjectIdDescricaoCargoRouteImport.update({
+    id: '/descricao-cargo',
+    path: '/descricao-cargo',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdCentralRoute =
+  AuthenticatedProjetosProjectIdCentralRouteImport.update({
+    id: '/central',
+    path: '/central',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/cargos/$id': typeof AuthenticatedCargosIdRoute
-  '/cargos/novo': typeof AuthenticatedCargosNovoRoute
+  '/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
+  '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/cargos/$id': typeof AuthenticatedCargosIdRoute
-  '/cargos/novo': typeof AuthenticatedCargosNovoRoute
+  '/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/cargos/$id': typeof AuthenticatedCargosIdRoute
-  '/_authenticated/cargos/novo': typeof AuthenticatedCargosNovoRoute
+  '/_authenticated/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
+  '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/_authenticated/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/_authenticated/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard' | '/cargos/$id' | '/cargos/novo'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/projetos'
+    | '/projetos/$projectId'
+    | '/projetos/novo'
+    | '/projetos/$projectId/central'
+    | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/cargos/$id' | '/cargos/novo'
+  to:
+    | '/'
+    | '/login'
+    | '/projetos'
+    | '/projetos/novo'
+    | '/projetos/$projectId/central'
+    | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
-    | '/_authenticated/dashboard'
-    | '/_authenticated/cargos/$id'
-    | '/_authenticated/cargos/novo'
+    | '/_authenticated/projetos'
+    | '/_authenticated/projetos/$projectId'
+    | '/_authenticated/projetos/novo'
+    | '/_authenticated/projetos/$projectId/central'
+    | '/_authenticated/projetos/$projectId/descricao-cargo'
+    | '/_authenticated/projetos/$projectId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -113,40 +162,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+    '/_authenticated/projetos': {
+      id: '/_authenticated/projetos'
+      path: '/projetos'
+      fullPath: '/projetos'
+      preLoaderRoute: typeof AuthenticatedProjetosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/cargos/novo': {
-      id: '/_authenticated/cargos/novo'
-      path: '/cargos/novo'
-      fullPath: '/cargos/novo'
-      preLoaderRoute: typeof AuthenticatedCargosNovoRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/_authenticated/projetos/novo': {
+      id: '/_authenticated/projetos/novo'
+      path: '/novo'
+      fullPath: '/projetos/novo'
+      preLoaderRoute: typeof AuthenticatedProjetosNovoRouteImport
+      parentRoute: typeof AuthenticatedProjetosRoute
     }
-    '/_authenticated/cargos/$id': {
-      id: '/_authenticated/cargos/$id'
-      path: '/cargos/$id'
-      fullPath: '/cargos/$id'
-      preLoaderRoute: typeof AuthenticatedCargosIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/_authenticated/projetos/$projectId': {
+      id: '/_authenticated/projetos/$projectId'
+      path: '/$projectId'
+      fullPath: '/projetos/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdRouteImport
+      parentRoute: typeof AuthenticatedProjetosRoute
+    }
+    '/_authenticated/projetos/$projectId/': {
+      id: '/_authenticated/projetos/$projectId/'
+      path: '/'
+      fullPath: '/projetos/$projectId/'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/descricao-cargo': {
+      id: '/_authenticated/projetos/$projectId/descricao-cargo'
+      path: '/descricao-cargo'
+      fullPath: '/projetos/$projectId/descricao-cargo'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/central': {
+      id: '/_authenticated/projetos/$projectId/central'
+      path: '/central'
+      fullPath: '/projetos/$projectId/central'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdCentralRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
   }
 }
 
+interface AuthenticatedProjetosProjectIdRouteChildren {
+  AuthenticatedProjetosProjectIdCentralRoute: typeof AuthenticatedProjetosProjectIdCentralRoute
+  AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
+}
+
+const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectIdRouteChildren =
+  {
+    AuthenticatedProjetosProjectIdCentralRoute:
+      AuthenticatedProjetosProjectIdCentralRoute,
+    AuthenticatedProjetosProjectIdDescricaoCargoRoute:
+      AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+    AuthenticatedProjetosProjectIdIndexRoute:
+      AuthenticatedProjetosProjectIdIndexRoute,
+  }
+
+const AuthenticatedProjetosProjectIdRouteWithChildren =
+  AuthenticatedProjetosProjectIdRoute._addFileChildren(
+    AuthenticatedProjetosProjectIdRouteChildren,
+  )
+
+interface AuthenticatedProjetosRouteChildren {
+  AuthenticatedProjetosProjectIdRoute: typeof AuthenticatedProjetosProjectIdRouteWithChildren
+  AuthenticatedProjetosNovoRoute: typeof AuthenticatedProjetosNovoRoute
+}
+
+const AuthenticatedProjetosRouteChildren: AuthenticatedProjetosRouteChildren = {
+  AuthenticatedProjetosProjectIdRoute:
+    AuthenticatedProjetosProjectIdRouteWithChildren,
+  AuthenticatedProjetosNovoRoute: AuthenticatedProjetosNovoRoute,
+}
+
+const AuthenticatedProjetosRouteWithChildren =
+  AuthenticatedProjetosRoute._addFileChildren(
+    AuthenticatedProjetosRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedCargosIdRoute: typeof AuthenticatedCargosIdRoute
-  AuthenticatedCargosNovoRoute: typeof AuthenticatedCargosNovoRoute
+  AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedCargosIdRoute: AuthenticatedCargosIdRoute,
-  AuthenticatedCargosNovoRoute: AuthenticatedCargosNovoRoute,
+  AuthenticatedProjetosRoute: AuthenticatedProjetosRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -161,3 +264,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
