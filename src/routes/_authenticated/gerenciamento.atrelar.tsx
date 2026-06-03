@@ -51,7 +51,7 @@ function AtrelarUsuarios() {
   const vincular = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await supabase.from("project_members").insert({ project_id: projectId, user_id: userId, role });
+    const { error } = await supabase.from("project_members").insert({ project_id: projectId, user_id: userId, role: role as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" });
     if (error) { toast.error(error.message); setSaving(false); return; }
     await supabase.from("project_history").insert({
       project_id: projectId, user_id: (await supabase.auth.getUser()).data.user?.id, acao: "membro_adicionado", entidade: "member", detalhes: { user_id: userId, role },
@@ -70,7 +70,7 @@ function AtrelarUsuarios() {
   };
 
   const alterarRole = async (id: string, novoRole: string) => {
-    const { error } = await supabase.from("project_members").update({ role: novoRole }).eq("id", id);
+    const { error } = await supabase.from("project_members").update({ role: novoRole as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" }).eq("id", id);
     if (error) return toast.error(error.message);
     load();
   };

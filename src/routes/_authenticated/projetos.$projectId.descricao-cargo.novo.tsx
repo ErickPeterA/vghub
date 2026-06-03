@@ -29,7 +29,7 @@ function NovaDC() {
         data_revisao: payload.data_revisao || null,
       })
       .select("id").single();
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     await logAction({ projectId, acao: "dc_criada", entidade: "descricao_cargo", entidadeId: data.id, detalhes: { cargo: dc.cargo } });
     toast.success("Descrição criada");
     navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });

@@ -19,7 +19,7 @@ function EditDC() {
     supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
       if (error || !data) { toast.error("Não encontrado"); navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } }); return; }
       const base = emptyDC();
-      setInitial({ ...base, ...data, data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
+      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
     });
   }, [dcId, projectId, navigate]);
 
@@ -30,7 +30,7 @@ function EditDC() {
       .from("descricoes_cargo")
       .update({ ...payload, data_versao: payload.data_versao || null, data_revisao: payload.data_revisao || null })
       .eq("id", dcId);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     await logAction({ projectId, acao: "dc_atualizada", entidade: "descricao_cargo", entidadeId: dcId, detalhes: { cargo: dc.cargo } });
     toast.success("Atualizado");
   };
