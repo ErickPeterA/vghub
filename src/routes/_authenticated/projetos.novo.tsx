@@ -1,17 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { logAction } from "@/lib/history";
+import { createProjectAdmin } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/projetos/novo")({
   component: NovoProjeto,
 });
 
 function NovoProjeto() {
-  const { user, isAdmin, loading } = useCurrentUser();
+  const { isAdmin, loading } = useCurrentUser();
   const navigate = useNavigate();
+  const createFn = useServerFn(createProjectAdmin);
   const [nome, setNome] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [responsavelId, setResponsavelId] = useState("");
@@ -28,21 +30,16 @@ function NovoProjeto() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setSaving(true);
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({ nome, empresa: empresa || null, responsavel_id: responsavelId || null, created_by: user.id })
-      .select("id").single();
-    if (error) { toast.error(error.message); setSaving(false); return; }
-    // criar vínculo do criador como admin do projeto se for admin global
-    await supabase.from("project_members").insert({ project_id: data.id, user_id: user.id, role: "admin" });
-    if (responsavelId && responsavelId !== user.id) {
-      await supabase.from("project_members").insert({ project_id: data.id, user_id: responsavelId, role: "lider_estrategico" });
+    try {
+      const data = await createFn({ data: { nome, empresa, responsavelId } });
+      toast.success("Projeto criado");
+      navigate({ to: "/projetos/$projectId/central", params: { projectId: data.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
+    } finally {
+      setSaving(false);
     }
-    await logAction({ projectId: data.id, acao: "projeto_criado", entidade: "project", entidadeId: data.id, detalhes: { nome } });
-    toast.success("Projeto criado");
-    navigate({ to: "/projetos/$projectId/central", params: { projectId: data.id } });
   };
 
   return (

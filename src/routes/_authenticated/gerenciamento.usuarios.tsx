@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Pencil, Trash2, UserPlus, Power } from "lucide-react";
@@ -15,6 +15,7 @@ type Row = { id: string; nome: string; email: string; status: string; isAdmin: b
 function GerenciarUsuarios() {
   const { isAdmin, loading: lu } = useCurrentUser();
   const navigate = useNavigate();
+  const path = useRouterState({ select: (r) => r.location.pathname });
   const listFn = useServerFn(listUsersAdmin);
   const updFn = useServerFn(updateUserAdmin);
   const delFn = useServerFn(deleteUserAdmin);
@@ -34,6 +35,8 @@ function GerenciarUsuarios() {
     } finally { setLoading(false); }
   };
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+
+  if (path !== "/gerenciamento/usuarios") return <Outlet />;
 
   const toggleStatus = async (r: Row) => {
     try {

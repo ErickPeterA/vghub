@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { attachUserToProjectAdmin, removeProjectMemberAdmin, updateProjectMemberRoleAdmin } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/gerenciamento/atrelar")({
   component: AtrelarUsuarios,
@@ -22,6 +24,9 @@ const roleOptions = [
 function AtrelarUsuarios() {
   const { isAdmin, loading: lu } = useCurrentUser();
   const navigate = useNavigate();
+  const attachFn = useServerFn(attachUserToProjectAdmin);
+  const removeFn = useServerFn(removeProjectMemberAdmin);
+  const updateRoleFn = useServerFn(updateProjectMemberRoleAdmin);
   const [projects, setProjects] = useState<Array<{ id: string; nome: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; nome: string; email: string }>>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -51,28 +56,32 @@ function AtrelarUsuarios() {
   const vincular = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await supabase.from("project_members").insert({ project_id: projectId, user_id: userId, role: role as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" });
-    if (error) { toast.error(error.message); setSaving(false); return; }
-    await supabase.from("project_history").insert({
-      project_id: projectId, user_id: (await supabase.auth.getUser()).data.user?.id, acao: "membro_adicionado", entidade: "member", detalhes: { user_id: userId, role },
-    });
-    toast.success("Usuário vinculado");
-    setUserId(""); setSaving(false);
-    load();
+    try {
+      await attachFn({ data: { projectId, userId, role: role as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      toast.success("Usuário vinculado");
+      setUserId("");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao vincular");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remover = async (m: Member) => {
     if (!confirm(`Remover ${m.nome} de ${m.projeto}?`)) return;
-    const { error } = await supabase.from("project_members").delete().eq("id", m.id);
-    if (error) return toast.error(error.message);
-    toast.success("Vínculo removido");
-    load();
+    try {
+      await removeFn({ data: { memberId: m.id } });
+      toast.success("Vínculo removido");
+      load();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao remover"); }
   };
 
   const alterarRole = async (id: string, novoRole: string) => {
-    const { error } = await supabase.from("project_members").update({ role: novoRole as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" }).eq("id", id);
-    if (error) return toast.error(error.message);
-    load();
+    try {
+      await updateRoleFn({ data: { memberId: id, role: novoRole as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      load();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao alterar cargo"); }
   };
 
   return (

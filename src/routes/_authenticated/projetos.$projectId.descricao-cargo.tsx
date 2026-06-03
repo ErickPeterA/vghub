@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ type Row = { id: string; cargo: string; departamento: string | null; nivelamento
 
 function DCList() {
   const { projectId } = Route.useParams();
+  const path = useRouterState({ select: (r) => r.location.pathname });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +27,8 @@ function DCList() {
     setLoading(false);
   };
   useEffect(() => { load(); }, [projectId]);
+
+  if (path !== `/projetos/${projectId}/descricao-cargo`) return <Outlet />;
 
   const remove = async (id: string, cargo: string) => {
     if (!confirm("Excluir descrição?")) return;
