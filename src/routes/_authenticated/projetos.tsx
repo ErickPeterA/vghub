@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Plus, FolderKanban, Archive } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ type Projeto = {
 
 function ProjetosList() {
   const { isAdmin } = useCurrentUser();
+  const path = useRouterState({ select: (r) => r.location.pathname });
   const [rows, setRows] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [responsaveis, setResponsaveis] = useState<Record<string, string>>({});
@@ -45,6 +46,8 @@ function ProjetosList() {
   };
 
   useEffect(() => { load(); }, []);
+
+  if (path !== "/projetos") return <Outlet />;
 
   const arquivar = async (id: string, atual: string) => {
     const novo = atual === "arquivado" ? "ativo" : "arquivado";
