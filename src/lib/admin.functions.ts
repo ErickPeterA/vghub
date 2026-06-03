@@ -64,7 +64,7 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
       const { error } = await admin.auth.admin.updateUserById(data.userId, authUpdate);
       if (error) throw new Error(error.message);
     }
-    const profUpdate: Record<string, unknown> = {};
+    const profUpdate: { nome?: string; email?: string; status?: "ativo" | "inativo" } = {};
     if (data.nome) profUpdate.nome = data.nome;
     if (data.email) profUpdate.email = data.email;
     if (data.status) profUpdate.status = data.status;
