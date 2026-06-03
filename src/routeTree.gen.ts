@@ -15,9 +15,17 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
 import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
+import { Route as AuthenticatedGerenciamentoUsuariosRouteImport } from './routes/_authenticated/gerenciamento.usuarios'
+import { Route as AuthenticatedGerenciamentoAtrelarRouteImport } from './routes/_authenticated/gerenciamento.atrelar'
 import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './routes/_authenticated/projetos.$projectId.index'
+import { Route as AuthenticatedProjetosProjectIdModelosRouteImport } from './routes/_authenticated/projetos.$projectId.modelos'
+import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './routes/_authenticated/projetos.$projectId.central'
+import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
+import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './routes/_authenticated/gerenciamento.usuarios.novo'
+import { Route as AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.novo'
+import { Route as AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.$dcId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -50,10 +58,34 @@ const AuthenticatedProjetosProjectIdRoute =
     path: '/$projectId',
     getParentRoute: () => AuthenticatedProjetosRoute,
   } as any)
+const AuthenticatedGerenciamentoUsuariosRoute =
+  AuthenticatedGerenciamentoUsuariosRouteImport.update({
+    id: '/gerenciamento/usuarios',
+    path: '/gerenciamento/usuarios',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGerenciamentoAtrelarRoute =
+  AuthenticatedGerenciamentoAtrelarRouteImport.update({
+    id: '/gerenciamento/atrelar',
+    path: '/gerenciamento/atrelar',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdIndexRoute =
   AuthenticatedProjetosProjectIdIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdModelosRoute =
+  AuthenticatedProjetosProjectIdModelosRouteImport.update({
+    id: '/modelos',
+    path: '/modelos',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdHistoricoRoute =
+  AuthenticatedProjetosProjectIdHistoricoRouteImport.update({
+    id: '/historico',
+    path: '/historico',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
 const AuthenticatedProjetosProjectIdDescricaoCargoRoute =
@@ -68,25 +100,65 @@ const AuthenticatedProjetosProjectIdCentralRoute =
     path: '/central',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
+const AuthenticatedProjetosProjectIdAndamentoRoute =
+  AuthenticatedProjetosProjectIdAndamentoRouteImport.update({
+    id: '/andamento',
+    path: '/andamento',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedGerenciamentoUsuariosNovoRoute =
+  AuthenticatedGerenciamentoUsuariosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AuthenticatedGerenciamentoUsuariosRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute =
+  AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute =
+  AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport.update({
+    id: '/$dcId',
+    path: '/$dcId',
+    getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
+  '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
-  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
   '/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
+  '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
+  '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
+  '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
-  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdIndexRoute
+  '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
+  '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,11 +166,19 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/_authenticated/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/_authenticated/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/_authenticated/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
+  '/_authenticated/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/_authenticated/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
-  '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/_authenticated/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
   '/_authenticated/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
+  '/_authenticated/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
+  '/_authenticated/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,31 +186,55 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/projetos'
+    | '/gerenciamento/atrelar'
+    | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/novo'
+    | '/gerenciamento/usuarios/novo'
+    | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/central'
     | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId/historico'
+    | '/projetos/$projectId/modelos'
     | '/projetos/$projectId/'
+    | '/projetos/$projectId/descricao-cargo/$dcId'
+    | '/projetos/$projectId/descricao-cargo/novo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/projetos'
+    | '/gerenciamento/atrelar'
+    | '/gerenciamento/usuarios'
     | '/projetos/novo'
+    | '/gerenciamento/usuarios/novo'
+    | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/central'
     | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId/historico'
+    | '/projetos/$projectId/modelos'
     | '/projetos/$projectId'
+    | '/projetos/$projectId/descricao-cargo/$dcId'
+    | '/projetos/$projectId/descricao-cargo/novo'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/projetos'
+    | '/_authenticated/gerenciamento/atrelar'
+    | '/_authenticated/gerenciamento/usuarios'
     | '/_authenticated/projetos/$projectId'
     | '/_authenticated/projetos/novo'
+    | '/_authenticated/gerenciamento/usuarios/novo'
+    | '/_authenticated/projetos/$projectId/andamento'
     | '/_authenticated/projetos/$projectId/central'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
+    | '/_authenticated/projetos/$projectId/historico'
+    | '/_authenticated/projetos/$projectId/modelos'
     | '/_authenticated/projetos/$projectId/'
+    | '/_authenticated/projetos/$projectId/descricao-cargo/$dcId'
+    | '/_authenticated/projetos/$projectId/descricao-cargo/novo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,11 +287,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdRouteImport
       parentRoute: typeof AuthenticatedProjetosRoute
     }
+    '/_authenticated/gerenciamento/usuarios': {
+      id: '/_authenticated/gerenciamento/usuarios'
+      path: '/gerenciamento/usuarios'
+      fullPath: '/gerenciamento/usuarios'
+      preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/gerenciamento/atrelar': {
+      id: '/_authenticated/gerenciamento/atrelar'
+      path: '/gerenciamento/atrelar'
+      fullPath: '/gerenciamento/atrelar'
+      preLoaderRoute: typeof AuthenticatedGerenciamentoAtrelarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/projetos/$projectId/': {
       id: '/_authenticated/projetos/$projectId/'
       path: '/'
       fullPath: '/projetos/$projectId/'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/modelos': {
+      id: '/_authenticated/projetos/$projectId/modelos'
+      path: '/modelos'
+      fullPath: '/projetos/$projectId/modelos'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdModelosRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/historico': {
+      id: '/_authenticated/projetos/$projectId/historico'
+      path: '/historico'
+      fullPath: '/projetos/$projectId/historico'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdHistoricoRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
     '/_authenticated/projetos/$projectId/descricao-cargo': {
@@ -204,21 +336,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdCentralRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
+    '/_authenticated/projetos/$projectId/andamento': {
+      id: '/_authenticated/projetos/$projectId/andamento'
+      path: '/andamento'
+      fullPath: '/projetos/$projectId/andamento'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdAndamentoRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/gerenciamento/usuarios/novo': {
+      id: '/_authenticated/gerenciamento/usuarios/novo'
+      path: '/novo'
+      fullPath: '/gerenciamento/usuarios/novo'
+      preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosNovoRouteImport
+      parentRoute: typeof AuthenticatedGerenciamentoUsuariosRoute
+    }
+    '/_authenticated/projetos/$projectId/descricao-cargo/novo': {
+      id: '/_authenticated/projetos/$projectId/descricao-cargo/novo'
+      path: '/novo'
+      fullPath: '/projetos/$projectId/descricao-cargo/novo'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+    }
+    '/_authenticated/projetos/$projectId/descricao-cargo/$dcId': {
+      id: '/_authenticated/projetos/$projectId/descricao-cargo/$dcId'
+      path: '/$dcId'
+      fullPath: '/projetos/$projectId/descricao-cargo/$dcId'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+    }
   }
 }
 
+interface AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren {
+  AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
+  AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
+}
+
+const AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren: AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren =
+  {
+    AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute:
+      AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute,
+    AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute:
+      AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute,
+  }
+
+const AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren =
+  AuthenticatedProjetosProjectIdDescricaoCargoRoute._addFileChildren(
+    AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren,
+  )
+
 interface AuthenticatedProjetosProjectIdRouteChildren {
+  AuthenticatedProjetosProjectIdAndamentoRoute: typeof AuthenticatedProjetosProjectIdAndamentoRoute
   AuthenticatedProjetosProjectIdCentralRoute: typeof AuthenticatedProjetosProjectIdCentralRoute
-  AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+  AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  AuthenticatedProjetosProjectIdModelosRoute: typeof AuthenticatedProjetosProjectIdModelosRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 
 const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectIdRouteChildren =
   {
+    AuthenticatedProjetosProjectIdAndamentoRoute:
+      AuthenticatedProjetosProjectIdAndamentoRoute,
     AuthenticatedProjetosProjectIdCentralRoute:
       AuthenticatedProjetosProjectIdCentralRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
-      AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+      AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren,
+    AuthenticatedProjetosProjectIdHistoricoRoute:
+      AuthenticatedProjetosProjectIdHistoricoRoute,
+    AuthenticatedProjetosProjectIdModelosRoute:
+      AuthenticatedProjetosProjectIdModelosRoute,
     AuthenticatedProjetosProjectIdIndexRoute:
       AuthenticatedProjetosProjectIdIndexRoute,
   }
@@ -244,12 +431,33 @@ const AuthenticatedProjetosRouteWithChildren =
     AuthenticatedProjetosRouteChildren,
   )
 
+interface AuthenticatedGerenciamentoUsuariosRouteChildren {
+  AuthenticatedGerenciamentoUsuariosNovoRoute: typeof AuthenticatedGerenciamentoUsuariosNovoRoute
+}
+
+const AuthenticatedGerenciamentoUsuariosRouteChildren: AuthenticatedGerenciamentoUsuariosRouteChildren =
+  {
+    AuthenticatedGerenciamentoUsuariosNovoRoute:
+      AuthenticatedGerenciamentoUsuariosNovoRoute,
+  }
+
+const AuthenticatedGerenciamentoUsuariosRouteWithChildren =
+  AuthenticatedGerenciamentoUsuariosRoute._addFileChildren(
+    AuthenticatedGerenciamentoUsuariosRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRouteWithChildren
+  AuthenticatedGerenciamentoAtrelarRoute: typeof AuthenticatedGerenciamentoAtrelarRoute
+  AuthenticatedGerenciamentoUsuariosRoute: typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProjetosRoute: AuthenticatedProjetosRouteWithChildren,
+  AuthenticatedGerenciamentoAtrelarRoute:
+    AuthenticatedGerenciamentoAtrelarRoute,
+  AuthenticatedGerenciamentoUsuariosRoute:
+    AuthenticatedGerenciamentoUsuariosRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
