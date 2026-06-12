@@ -19,7 +19,7 @@ function EditDC() {
     supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
       if (error || !data) { toast.error("Não encontrado"); navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } }); return; }
       const base = emptyDC();
-      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
+      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), dynamic_values: (data.dynamic_values as DescricaoCargo["dynamic_values"]) ?? {}, data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
     });
   }, [dcId, projectId, navigate]);
 
