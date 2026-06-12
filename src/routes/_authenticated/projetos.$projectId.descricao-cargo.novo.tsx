@@ -38,7 +38,7 @@ function NovaDC() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 font-display text-4xl">Nova descrição de cargo</h1>
-      <DCForm initial={emptyDC()} onSubmit={onSubmit} submitLabel="Criar descrição" />
+      <DCForm projectId={projectId} initial={emptyDC()} onSubmit={onSubmit} submitLabel="Criar descrição" />
     </main>
   );
 }

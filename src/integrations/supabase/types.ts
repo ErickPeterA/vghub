@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      base_fields: {
+        Row: {
+          allows_free_text: boolean
+          allows_multiple: boolean
+          created_at: string
+          created_by: string | null
+          display_order: number
+          field_key: string
+          field_type: Database["public"]["Enums"]["dynamic_field_type"]
+          id: string
+          is_active: boolean
+          is_required: boolean
+          label: string
+          project_id: string | null
+          section: string
+          source_field_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          allows_free_text?: boolean
+          allows_multiple?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          field_key: string
+          field_type?: Database["public"]["Enums"]["dynamic_field_type"]
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label: string
+          project_id?: string | null
+          section?: string
+          source_field_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allows_free_text?: boolean
+          allows_multiple?: boolean
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          field_key?: string
+          field_type?: Database["public"]["Enums"]["dynamic_field_type"]
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label?: string
+          project_id?: string | null
+          section?: string
+          source_field_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "base_fields_source_field_id_fkey"
+            columns: ["source_field_id"]
+            isOneToOne: false
+            referencedRelation: "base_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_options: {
+        Row: {
+          created_at: string
+          display_order: number
+          field_id: string
+          id: string
+          is_active: boolean
+          label: string
+          source_option_id: string | null
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          field_id: string
+          id?: string
+          is_active?: boolean
+          label: string
+          source_option_id?: string | null
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          field_id?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          source_option_id?: string | null
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_options_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "base_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "base_options_source_option_id_fkey"
+            columns: ["source_option_id"]
+            isOneToOne: false
+            referencedRelation: "base_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       descricoes_cargo: {
         Row: {
           atividades: Json
@@ -24,6 +144,7 @@ export type Database = {
           data_revisao: string | null
           data_versao: string | null
           departamento: string | null
+          dynamic_values: Json
           experiencia: Json
           habilidades_cargo: Json
           habilidades_culturais: Json
@@ -49,6 +170,7 @@ export type Database = {
           data_revisao?: string | null
           data_versao?: string | null
           departamento?: string | null
+          dynamic_values?: Json
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -74,6 +196,7 @@ export type Database = {
           data_revisao?: string | null
           data_versao?: string | null
           departamento?: string | null
+          dynamic_values?: Json
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -388,6 +511,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_project_base: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      clone_general_base_to_project: {
+        Args: { _created_by?: string; _project_id: string }
+        Returns: undefined
+      }
       get_project_role: {
         Args: { _project_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["project_role"]
@@ -407,6 +538,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      dynamic_field_type:
+        | "text"
+        | "textarea"
+        | "number"
+        | "date"
+        | "checkbox"
+        | "single_select"
+        | "multi_select"
       project_role:
         | "admin"
         | "lider_estrategico"
@@ -543,6 +682,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      dynamic_field_type: [
+        "text",
+        "textarea",
+        "number",
+        "date",
+        "checkbox",
+        "single_select",
+        "multi_select",
+      ],
       project_role: [
         "admin",
         "lider_estrategico",

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FileText, Library, LayoutDashboard, History, BarChart3, ArrowLeft } from "lucide-react";
+import { Database, FileText, Library, LayoutDashboard, History, BarChart3, ArrowLeft } from "lucide-react";
 
 export function ProjectSidebar({ projectId, projectName }: { projectId: string; projectName: string }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -7,6 +7,7 @@ export function ProjectSidebar({ projectId, projectName }: { projectId: string; 
   const items = [
     { to: `${base}/central`, icon: LayoutDashboard, label: "Página Central" },
     { to: `${base}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
+    { to: `${base}/base`, icon: Database, label: "Base do Projeto" },
     { to: `${base}/modelos`, icon: Library, label: "Modelos" },
     { to: `${base}/andamento`, icon: BarChart3, label: "Andamento" },
     { to: `${base}/historico`, icon: History, label: "Histórico" },

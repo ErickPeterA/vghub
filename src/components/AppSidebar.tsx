@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { FolderKanban, Settings, Users, UserPlus, LinkIcon, LogOut, ChevronDown } from "lucide-react";
+import { Database, FolderKanban, Users, UserPlus, LinkIcon, LogOut, ChevronDown } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
@@ -60,6 +60,11 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={path === "/gerenciamento/atrelar"}>
                         <Link to="/gerenciamento/atrelar"><LinkIcon /> <span>Atrelar Usuários</span></Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={path === "/gerenciamento/bases"}>
+                        <Link to="/gerenciamento/bases"><Database /> <span>Configuração das Bases</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>

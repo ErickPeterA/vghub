@@ -16,12 +16,14 @@ import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
 import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
 import { Route as AuthenticatedGerenciamentoUsuariosRouteImport } from './routes/_authenticated/gerenciamento.usuarios'
+import { Route as AuthenticatedGerenciamentoBasesRouteImport } from './routes/_authenticated/gerenciamento.bases'
 import { Route as AuthenticatedGerenciamentoAtrelarRouteImport } from './routes/_authenticated/gerenciamento.atrelar'
 import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './routes/_authenticated/projetos.$projectId.index'
 import { Route as AuthenticatedProjetosProjectIdModelosRouteImport } from './routes/_authenticated/projetos.$projectId.modelos'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './routes/_authenticated/projetos.$projectId.central'
+import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
 import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
 import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './routes/_authenticated/gerenciamento.usuarios.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.novo'
@@ -64,6 +66,12 @@ const AuthenticatedGerenciamentoUsuariosRoute =
     path: '/gerenciamento/usuarios',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedGerenciamentoBasesRoute =
+  AuthenticatedGerenciamentoBasesRouteImport.update({
+    id: '/gerenciamento/bases',
+    path: '/gerenciamento/bases',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedGerenciamentoAtrelarRoute =
   AuthenticatedGerenciamentoAtrelarRouteImport.update({
     id: '/gerenciamento/atrelar',
@@ -100,6 +108,12 @@ const AuthenticatedProjetosProjectIdCentralRoute =
     path: '/central',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
+const AuthenticatedProjetosProjectIdBaseRoute =
+  AuthenticatedProjetosProjectIdBaseRouteImport.update({
+    id: '/base',
+    path: '/base',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdAndamentoRoute =
   AuthenticatedProjetosProjectIdAndamentoRouteImport.update({
     id: '/andamento',
@@ -130,11 +144,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -148,10 +164,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -167,11 +185,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/_authenticated/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
+  '/_authenticated/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/_authenticated/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/_authenticated/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/_authenticated/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/_authenticated/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -187,11 +207,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/projetos'
     | '/gerenciamento/atrelar'
+    | '/gerenciamento/bases'
     | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/novo'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
+    | '/projetos/$projectId/base'
     | '/projetos/$projectId/central'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
@@ -205,10 +227,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/projetos'
     | '/gerenciamento/atrelar'
+    | '/gerenciamento/bases'
     | '/gerenciamento/usuarios'
     | '/projetos/novo'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
+    | '/projetos/$projectId/base'
     | '/projetos/$projectId/central'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
@@ -223,11 +247,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/projetos'
     | '/_authenticated/gerenciamento/atrelar'
+    | '/_authenticated/gerenciamento/bases'
     | '/_authenticated/gerenciamento/usuarios'
     | '/_authenticated/projetos/$projectId'
     | '/_authenticated/projetos/novo'
     | '/_authenticated/gerenciamento/usuarios/novo'
     | '/_authenticated/projetos/$projectId/andamento'
+    | '/_authenticated/projetos/$projectId/base'
     | '/_authenticated/projetos/$projectId/central'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
@@ -294,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/gerenciamento/bases': {
+      id: '/_authenticated/gerenciamento/bases'
+      path: '/gerenciamento/bases'
+      fullPath: '/gerenciamento/bases'
+      preLoaderRoute: typeof AuthenticatedGerenciamentoBasesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/gerenciamento/atrelar': {
       id: '/_authenticated/gerenciamento/atrelar'
       path: '/gerenciamento/atrelar'
@@ -334,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/central'
       fullPath: '/projetos/$projectId/central'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdCentralRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/base': {
+      id: '/_authenticated/projetos/$projectId/base'
+      path: '/base'
+      fullPath: '/projetos/$projectId/base'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdBaseRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
     '/_authenticated/projetos/$projectId/andamento': {
@@ -387,6 +427,7 @@ const AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren =
 
 interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdAndamentoRoute: typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
   AuthenticatedProjetosProjectIdCentralRoute: typeof AuthenticatedProjetosProjectIdCentralRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -398,6 +439,8 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
   {
     AuthenticatedProjetosProjectIdAndamentoRoute:
       AuthenticatedProjetosProjectIdAndamentoRoute,
+    AuthenticatedProjetosProjectIdBaseRoute:
+      AuthenticatedProjetosProjectIdBaseRoute,
     AuthenticatedProjetosProjectIdCentralRoute:
       AuthenticatedProjetosProjectIdCentralRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
@@ -449,6 +492,7 @@ const AuthenticatedGerenciamentoUsuariosRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRouteWithChildren
   AuthenticatedGerenciamentoAtrelarRoute: typeof AuthenticatedGerenciamentoAtrelarRoute
+  AuthenticatedGerenciamentoBasesRoute: typeof AuthenticatedGerenciamentoBasesRoute
   AuthenticatedGerenciamentoUsuariosRoute: typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
 }
 
@@ -456,6 +500,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProjetosRoute: AuthenticatedProjetosRouteWithChildren,
   AuthenticatedGerenciamentoAtrelarRoute:
     AuthenticatedGerenciamentoAtrelarRoute,
+  AuthenticatedGerenciamentoBasesRoute: AuthenticatedGerenciamentoBasesRoute,
   AuthenticatedGerenciamentoUsuariosRoute:
     AuthenticatedGerenciamentoUsuariosRouteWithChildren,
 }

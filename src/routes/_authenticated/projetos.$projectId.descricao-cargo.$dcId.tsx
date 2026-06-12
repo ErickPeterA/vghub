@@ -19,7 +19,7 @@ function EditDC() {
     supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
       if (error || !data) { toast.error("Não encontrado"); navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } }); return; }
       const base = emptyDC();
-      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
+      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), dynamic_values: (data.dynamic_values as DescricaoCargo["dynamic_values"]) ?? {}, data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
     });
   }, [dcId, projectId, navigate]);
 
@@ -40,7 +40,7 @@ function EditDC() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 font-display text-4xl">Editar descrição</h1>
-      <DCForm initial={initial} onSubmit={onSubmit} submitLabel="Salvar alterações" />
+      <DCForm projectId={projectId} initial={initial} onSubmit={onSubmit} submitLabel="Salvar alterações" />
     </main>
   );
 }

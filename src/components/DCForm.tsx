@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, empty } from "@/lib/dc-types";
+import { DynamicFieldControl, useProjectFields } from "@/components/DynamicFields";
 
 const inp =
   "w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
@@ -71,14 +72,16 @@ function Repeater<T>({
 }
 
 export function DCForm({
-  initial, onSubmit, submitLabel = "Salvar",
+  projectId, initial, onSubmit, submitLabel = "Salvar",
 }: {
+  projectId: string;
   initial: DescricaoCargo;
   onSubmit: (dc: DescricaoCargo) => Promise<void>;
   submitLabel?: string;
 }) {
   const [dc, setDc] = useState<DescricaoCargo>(initial);
   const [saving, setSaving] = useState(false);
+  const { fields, loading: loadingFields } = useProjectFields(projectId);
 
   const set = <K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
     setDc((p) => ({ ...p, [k]: v }));
@@ -103,46 +106,28 @@ export function DCForm({
 
   return (
     <form onSubmit={handle} className="space-y-6">
-      <Section num="01" title="Cabeçalho" desc="Identificação básica do cargo.">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Cargo *">
-            <input required value={dc.cargo} onChange={(e) => set("cargo", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Unidade de negócio">
-            <input value={dc.unidade_negocio} onChange={(e) => set("unidade_negocio", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Departamento">
-            <input value={dc.departamento} onChange={(e) => set("departamento", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Nivelamento">
-            <input value={dc.nivelamento} onChange={(e) => set("nivelamento", e.target.value)} className={inp} placeholder="Júnior, Pleno, Sênior..." />
-          </Field>
-          <Field label="Superior imediato">
-            <input value={dc.superior_imediato} onChange={(e) => set("superior_imediato", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Tipo de carreira">
-            <input value={dc.tipo_carreira} onChange={(e) => set("tipo_carreira", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Data da versão">
-            <input type="date" value={dc.data_versao} onChange={(e) => set("data_versao", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Última revisão">
-            <input type="date" value={dc.data_revisao} onChange={(e) => set("data_revisao", e.target.value)} className={inp} />
-          </Field>
-          <Field label="Status">
-            <select value={dc.status} onChange={(e) => set("status", e.target.value)} className={inp}>
-              <option value="rascunho">Rascunho</option>
-              <option value="em_revisao">Em revisão</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="arquivado">Arquivado</option>
-            </select>
-          </Field>
-        </div>
-        <div className="mt-4">
-          <Field label="Objetivo do cargo">
-            <textarea rows={4} value={dc.objetivo} onChange={(e) => set("objetivo", e.target.value)} className={inp} />
-          </Field>
-        </div>
+      <Section num="01" title="Campos configuráveis" desc="Estrutura definida na Base do Projeto.">
+        {loadingFields ? <p className="text-sm text-muted-foreground">Carregando campos...</p> : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {fields.map((field) => {
+              const scalarKeys = ["cargo", "unidade_negocio", "departamento", "nivelamento", "superior_imediato", "tipo_carreira", "data_versao", "data_revisao", "status", "objetivo"] as const;
+              const scalarKey = scalarKeys.find((key) => key === field.field_key);
+              const value = scalarKey ? dc[scalarKey] : dc.dynamic_values[field.field_key];
+              return (
+                <Field key={field.id} label={`${field.label}${field.is_required ? " *" : ""}`}>
+                  <DynamicFieldControl
+                    field={field}
+                    value={value}
+                    onChange={(nextValue) => {
+                      if (scalarKey) set(scalarKey, String(nextValue));
+                      else set("dynamic_values", { ...dc.dynamic_values, [field.field_key]: nextValue });
+                    }}
+                  />
+                </Field>
+              );
+            })}
+          </div>
+        )}
       </Section>
 
       <Section num="02" title="Instrução" desc="Formação acadêmica exigida.">

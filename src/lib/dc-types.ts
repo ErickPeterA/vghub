@@ -36,6 +36,7 @@ export type DescricaoCargo = {
   habilidades_cargo: HabilidadeItem[];
   habilidades_culturais: HabilidadeItem[];
   postura: PosturaItem[];
+  dynamic_values: Record<string, string | number | boolean | string[]>;
 };
 
 export const emptyDC = (): DescricaoCargo => ({
@@ -57,4 +58,5 @@ export const emptyDC = (): DescricaoCargo => ({
   habilidades_cargo: [],
   habilidades_culturais: [],
   postura: [],
+  dynamic_values: {},
 });
