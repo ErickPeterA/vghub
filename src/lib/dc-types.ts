@@ -1,23 +1,15 @@
-export type InstrucaoItem = { requisito: string; nivel: string; area: string };
-export type ExperienciaItem = { requisito: string; tempo: string; tipo: string; area: string };
-export type ConhecimentoItem = { requisito: string; tecnico: string; descricao: string; nivel: string };
-export type AtividadeItem = { macroprocesso: string; sn: string; atividade: string; periodicidade: string };
-export type IndicadorItem = { nome: string; meta: string };
-export type HabilidadeItem = { nome: string; descricao: string };
-export type PosturaItem = { nome: string };
+// Itens dos blocos repetidores são dinâmicos: cada chave corresponde a um
+// field_key configurado em base_fields para aquela seção.
+export type DynamicItem = Record<string, string | number | boolean | string[]>;
 
 export const empty = {
-  instrucao: (): InstrucaoItem => ({ requisito: "", nivel: "", area: "" }),
-  experiencia: (): ExperienciaItem => ({ requisito: "", tempo: "", tipo: "", area: "" }),
-  conhecimento: (): ConhecimentoItem => ({ requisito: "", tecnico: "", descricao: "", nivel: "" }),
-  atividade: (): AtividadeItem => ({ macroprocesso: "", sn: "", atividade: "", periodicidade: "" }),
-  indicador: (): IndicadorItem => ({ nome: "", meta: "" }),
-  habilidade: (): HabilidadeItem => ({ nome: "", descricao: "" }),
-  postura: (): PosturaItem => ({ nome: "" }),
+  item: (): DynamicItem => ({}),
 };
 
 export type DescricaoCargo = {
   id?: string;
+  // Cabeçalho — colunas fixas (mantidas por compatibilidade). Demais campos
+  // do cabeçalho criados via base ficam em dynamic_values.
   cargo: string;
   unidade_negocio: string;
   departamento: string;
@@ -28,14 +20,16 @@ export type DescricaoCargo = {
   data_revisao: string;
   status: string;
   objetivo: string;
-  instrucao: InstrucaoItem[];
-  experiencia: ExperienciaItem[];
-  conhecimento: ConhecimentoItem[];
-  atividades: AtividadeItem[];
-  indicadores: IndicadorItem[];
-  habilidades_cargo: HabilidadeItem[];
-  habilidades_culturais: HabilidadeItem[];
-  postura: PosturaItem[];
+  // Blocos repetidores — agora armazenam itens dinâmicos
+  instrucao: DynamicItem[];
+  experiencia: DynamicItem[];
+  conhecimento: DynamicItem[];
+  atividades: DynamicItem[];
+  indicadores: DynamicItem[];
+  habilidades_cargo: DynamicItem[];
+  habilidades_culturais: DynamicItem[];
+  postura: DynamicItem[];
+  // Campos extras do cabeçalho configurados via base
   dynamic_values: Record<string, string | number | boolean | string[]>;
 };
 
