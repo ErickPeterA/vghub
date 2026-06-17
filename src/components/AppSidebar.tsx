@@ -15,21 +15,45 @@ export function AppSidebar() {
   const isActive = (p: string) => path === p || path.startsWith(p + "/");
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-2 w-2 rounded-full bg-accent" />
-          <span className="font-display text-lg">Estrutura DC</span>
+    <Sidebar 
+      collapsible="icon" 
+      className="border-r border-[#042558]/10 bg-gradient-to-b from-[#042558] to-[#0a3a7a] text-white"
+    >
+      <SidebarHeader className="border-b border-white/10 p-0">
+        <div className="flex items-center justify-center px-2 py-3">
+          {/* Logo quadrada - aparece quando recolhido */}
+          <img 
+            src="/logobranca.png" 
+            alt="Logo" 
+            className=" h-[1rem] w-auto object-cover group-data-[collapsible=icon]:block hidden" 
+          />
+          
+          {/* Logo completa - aparece quando expandido */}
+          <img 
+            src="/logobranca.png" 
+            alt="VG Hub" 
+            className="w-30 object-contain group-data-[collapsible=icon]:hidden block" 
+          />
         </div>
       </SidebarHeader>
-      <SidebarContent>
+
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/40 text-xs font-medium uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+            Principal
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/projetos")}>
-                  <Link to="/projetos"><FolderKanban /> <span>Projetos</span></Link>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={isActive("/projetos")}
+                  className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                >
+                  <Link to="/projetos">
+                    <FolderKanban className="h-4 w-4" strokeWidth={1.5} /> 
+                    <span className=" group-data-[collapsible=icon]:hidden">Projetos</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -37,34 +61,66 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {isAdmin && (
-          <Collapsible defaultOpen={isActive("/gerenciamento")} className="group/coll">
+          <Collapsible 
+            defaultOpen={isActive("/gerenciamento")} 
+            className="group/coll"
+          >
             <SidebarGroup>
               <CollapsibleTrigger asChild>
-                <SidebarGroupLabel className="cursor-pointer">
-                  Gerenciamento <ChevronDown className="ml-auto h-3 w-3 transition group-data-[state=open]/coll:rotate-180" />
+                <SidebarGroupLabel className="cursor-pointer text-white/40 text-xs font-medium uppercase tracking-wider hover:text-white/60 transition-colors group-data-[collapsible=icon]:hidden">
+                  Gerenciamento 
+                  <ChevronDown className="ml-auto h-3 w-3 transition-transform duration-200 group-data-[state=open]/coll:rotate-180 text-white/40" />
                 </SidebarGroupLabel>
               </CollapsibleTrigger>
-              <CollapsibleContent>
+              <CollapsibleContent className="group-data-[collapsible=icon]:hidden">
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={path === "/gerenciamento/usuarios"}>
-                        <Link to="/gerenciamento/usuarios"><Users /> <span>Gerenciar Usuários</span></Link>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={path === "/gerenciamento/usuarios"}
+                        className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                      >
+                        <Link to="/gerenciamento/usuarios">
+                          <Users className="h-4 w-4" strokeWidth={1.5} /> 
+                          <span>Gerenciar Usuários</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={path === "/gerenciamento/usuarios/novo"}>
-                        <Link to="/gerenciamento/usuarios/novo"><UserPlus /> <span>Criar Login</span></Link>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={path === "/gerenciamento/usuarios/novo"}
+                        className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                      >
+                        <Link to="/gerenciamento/usuarios/novo">
+                          <UserPlus className="h-4 w-4" strokeWidth={1.5} /> 
+                          <span>Criar Login</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={path === "/gerenciamento/atrelar"}>
-                        <Link to="/gerenciamento/atrelar"><LinkIcon /> <span>Atrelar Usuários</span></Link>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={path === "/gerenciamento/atrelar"}
+                        className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                      >
+                        <Link to="/gerenciamento/atrelar">
+                          <LinkIcon className="h-4 w-4" strokeWidth={1.5} /> 
+                          <span>Atrelar Usuários</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={path === "/gerenciamento/bases"}>
-                        <Link to="/gerenciamento/bases"><Database /> <span>Configuração das Bases</span></Link>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={path === "/gerenciamento/bases"}
+                        className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                      >
+                        <Link to="/gerenciamento/bases">
+                          <Database className="h-4 w-4" strokeWidth={1.5} /> 
+                          <span>Configuração das Bases</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
@@ -74,18 +130,33 @@ export function AppSidebar() {
           </Collapsible>
         )}
       </SidebarContent>
-      <SidebarFooter>
-        <div className="flex items-center justify-between gap-2 px-2 py-2 text-xs">
-          <div className="min-w-0 flex-1 truncate">
-            <div className="truncate font-medium">{profile?.nome ?? "—"}</div>
-            <div className="truncate text-muted-foreground">{profile?.email}</div>
+
+      <SidebarFooter className="border-t border-white/10">
+        <div className="flex items-center justify-between gap-2 px-2 py-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
+              <span className="text-xs font-medium text-white">
+                {profile?.nome ? profile.nome.charAt(0).toUpperCase() : "U"}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden">
+              <div className="truncate text-sm font-medium text-white">
+                {profile?.nome ?? "—"}
+              </div>
+              <div className="truncate text-xs text-white/40">
+                {profile?.email}
+              </div>
+            </div>
           </div>
           <button
-            onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); }}
-            className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary"
+            onClick={async () => { 
+              await supabase.auth.signOut(); 
+              navigate({ to: "/login" }); 
+            }}
+            className="rounded-lg bg-white/5 p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white/80"
             title="Sair"
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className="h-4 w-4" strokeWidth={1.5} />
           </button>
         </div>
       </SidebarFooter>
