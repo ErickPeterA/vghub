@@ -68,8 +68,10 @@ export function DynamicFieldControl({ field, value, onChange }: {
   if (field.field_type === "single_select") {
     return (
       <div className="space-y-2">
-        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
-          <option value="">— Selecione —</option>
+        <select  {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
+          <option value="">
+            — Selecione —
+          </option>
           {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
         </select>
         {field.allows_free_text && <input className={controlClass} placeholder="Ou digite um valor" value={field.options.some((option) => option.value === value) ? "" : String(value ?? "")} onChange={(e) => onChange(e.target.value)} />}

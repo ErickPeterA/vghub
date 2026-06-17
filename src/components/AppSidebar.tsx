@@ -25,7 +25,7 @@ export function AppSidebar() {
           <img 
             src="/logobranca.png" 
             alt="Logo" 
-            className=" h-[1rem] w-auto object-cover group-data-[collapsible=icon]:block hidden" 
+            className="h-[1rem] w-auto object-cover group-data-[collapsible=icon]:block hidden" 
           />
           
           {/* Logo completa - aparece quando expandido */}
@@ -48,11 +48,11 @@ export function AppSidebar() {
                 <SidebarMenuButton 
                   asChild 
                   isActive={isActive("/projetos")}
-                  className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10"
+                  className="text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white data-[active=true]:shadow-lg data-[active=true]:shadow-black/10 group-data-[collapsible=icon]:justify-center"
                 >
                   <Link to="/projetos">
                     <FolderKanban className="h-4 w-4" strokeWidth={1.5} /> 
-                    <span className=" group-data-[collapsible=icon]:hidden">Projetos</span>
+                    <span className="group-data-[collapsible=icon]:hidden">Projetos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -133,13 +133,14 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-white/10">
         <div className="flex items-center justify-between gap-2 px-2 py-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Avatar - aparece apenas quando expandido */}
+          <div className="flex items-center gap-2 min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
               <span className="text-xs font-medium text-white">
                 {profile?.nome ? profile.nome.charAt(0).toUpperCase() : "U"}
               </span>
             </div>
-            <div className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 flex-1 truncate">
               <div className="truncate text-sm font-medium text-white">
                 {profile?.nome ?? "—"}
               </div>
@@ -148,12 +149,14 @@ export function AppSidebar() {
               </div>
             </div>
           </div>
+
+          {/* Botão de sair - aparece sempre */}
           <button
             onClick={async () => { 
               await supabase.auth.signOut(); 
               navigate({ to: "/login" }); 
             }}
-            className="rounded-lg bg-white/5 p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white/80"
+            className="rounded-lg bg-white/5 p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white/80 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center"
             title="Sair"
           >
             <LogOut className="h-4 w-4" strokeWidth={1.5} />
