@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +17,7 @@ export function useCurrentUser(): CurrentUser {
   const [profile, setProfile] = useState<CurrentUser["profile"]>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async (s: Session | null) => {
+  const load = useCallback(async (s: Session | null) => {
     if (!s?.user) {
       setIsAdmin(false);
       setProfile(null);
@@ -29,26 +29,34 @@ export function useCurrentUser(): CurrentUser {
     ]);
     setIsAdmin(!!roleRow);
     setProfile(prof as CurrentUser["profile"]);
-  };
+  }, []);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     await load(data.session);
-  };
+  }, [load]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
-      setSession(s);
-      await load(s);
-      setLoading(false);
-    });
+    let active = true;
+    // Get initial session first
     supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
       setSession(data.session);
       await load(data.session);
       setLoading(false);
     });
-    return () => subscription.unsubscribe();
-  }, []);
+    // Then listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
+      if (!active) return;
+      setSession(s);
+      await load(s);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [load]);
 
   return { session, user: session?.user ?? null, isAdmin, profile, loading, refresh };
 }

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useAuth } from "@/hooks/use-auth";
 import { Lock, Mail, LogIn, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -15,7 +15,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { session } = useCurrentUser();
+  const { session } = useAuth();
 
   useEffect(() => {
     if (session) navigate({ to: "/projetos", replace: true });

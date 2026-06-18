@@ -84,10 +84,20 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      router.invalidate();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Only invalidate on meaningful auth events, not on every token refresh
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          router.invalidate();
+        }, 100);
+      }
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
   }, [router]);
   return (
     <QueryClientProvider client={queryClient}>
