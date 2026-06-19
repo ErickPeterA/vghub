@@ -80,25 +80,12 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+// RootComponent limpo — sem router.invalidate() no onAuthStateChange.
+// A proteção de rotas é feita pelo beforeLoad em _authenticated.tsx,
+// que já chama supabase.auth.getUser() a cada navegação.
+// O router.invalidate() aqui causava tela branca ao navegar após o login.
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const router = useRouter();
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Only invalidate on meaningful auth events, not on every token refresh
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(() => {
-          router.invalidate();
-        }, 100);
-      }
-    });
-    return () => {
-      subscription.unsubscribe();
-      if (timer) clearTimeout(timer);
-    };
-  }, [router]);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />

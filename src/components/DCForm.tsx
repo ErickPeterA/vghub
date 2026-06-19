@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
@@ -6,7 +6,6 @@ import { DynamicFieldControl, useProjectFields, type DynamicField } from "@/comp
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
 
-// Campos escalares já existentes no cabeçalho (colunas dedicadas)
 const HEADER_SCALAR_KEYS = [
   "cargo", "unidade_negocio", "departamento", "nivelamento", "superior_imediato",
   "tipo_carreira", "data_versao", "data_revisao", "status", "objetivo",
@@ -15,7 +14,8 @@ type HeaderScalarKey = (typeof HEADER_SCALAR_KEYS)[number];
 const isHeaderScalar = (key: string): key is HeaderScalarKey =>
   (HEADER_SCALAR_KEYS as readonly string[]).includes(key);
 
-function SectionShell({
+// Componentes auxiliares com memo para evitar re-renders desnecessários
+const SectionShell = memo(function SectionShell({
   num, title, desc, children,
 }: { num: string; title: string; desc?: string; children: React.ReactNode }) {
   return (
@@ -30,16 +30,16 @@ function SectionShell({
       {children}
     </section>
   );
-}
+});
 
-function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+const FieldWrap = memo(function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className={lbl}>{label}</span>
       <div className="mt-1.5">{children}</div>
     </label>
   );
-}
+});
 
 function EmptyConfig({ message }: { message: string }) {
   return (
@@ -48,6 +48,71 @@ function EmptyConfig({ message }: { message: string }) {
     </p>
   );
 }
+
+// Campo isolado com memo — só re-renderiza quando seu próprio valor muda
+const SingleField = memo(function SingleField({
+  field,
+  value,
+  onChange,
+}: {
+  field: DynamicField;
+  value: DynamicItem[string] | undefined;
+  onChange: (key: string, val: DynamicItem[string]) => void;
+}) {
+  const handleChange = useCallback(
+    (next: string | number | boolean | string[]) => onChange(field.field_key, next),
+    [field.field_key, onChange]
+  );
+  return (
+    <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`}>
+      <DynamicFieldControl field={field} value={value} onChange={handleChange} />
+    </FieldWrap>
+  );
+});
+
+// Item de repeater isolado com memo
+const RepeaterItem = memo(function RepeaterItem({
+  index,
+  item,
+  fields,
+  onUpdate,
+  onDelete,
+}: {
+  index: number;
+  item: DynamicItem;
+  fields: DynamicField[];
+  onUpdate: (index: number, key: string, val: DynamicItem[string]) => void;
+  onDelete: (index: number) => void;
+}) {
+  const handleDelete = useCallback(() => onDelete(index), [index, onDelete]);
+  return (
+    <div className="relative rounded-lg border border-border bg-background/60 p-4">
+      <button
+        type="button"
+        onClick={handleDelete}
+        className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        aria-label="Remover"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+      <p className="mb-3 text-xs text-muted-foreground">#{index + 1}</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        {fields.map((field) => {
+          const handleFieldChange = (key: string, val: DynamicItem[string]) =>
+            onUpdate(index, key, val);
+          return (
+            <SingleField
+              key={field.id}
+              field={field}
+              value={item[field.field_key]}
+              onChange={handleFieldChange}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+});
 
 export function DCForm({
   projectId, initial, onSubmit, submitLabel = "Salvar",
@@ -61,23 +126,31 @@ export function DCForm({
   const [saving, setSaving] = useState(false);
   const { fields, loading: loadingFields } = useProjectFields(projectId);
 
-  const setScalar = <K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
-    setDc((p) => ({ ...p, [k]: v }));
+  // useCallback em todos os handlers para estabilizar referências
+  const setScalar = useCallback(<K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
+    setDc((p) => ({ ...p, [k]: v })), []);
 
-  const setDynamicHeader = (key: string, value: DynamicItem[string]) =>
-    setDc((p) => ({ ...p, dynamic_values: { ...p.dynamic_values, [key]: value } }));
+  const setDynamicHeader = useCallback((key: string, value: DynamicItem[string]) =>
+    setDc((p) => ({ ...p, dynamic_values: { ...p.dynamic_values, [key]: value } })), []);
 
-  const updItem = (arrayKey: keyof DescricaoCargo, i: number, patch: DynamicItem) => {
+  const handleHeaderChange = useCallback((key: string, val: DynamicItem[string]) => {
+    if (isHeaderScalar(key)) setScalar(key, String(val ?? ""));
+    else setDynamicHeader(key, val);
+  }, [setScalar, setDynamicHeader]);
+
+  const updItem = useCallback((arrayKey: keyof DescricaoCargo, i: number, fieldKey: string, val: DynamicItem[string]) => {
     setDc((p) => {
       const arr = [...(p[arrayKey] as DynamicItem[])];
-      arr[i] = { ...arr[i], ...patch };
+      arr[i] = { ...arr[i], [fieldKey]: val };
       return { ...p, [arrayKey]: arr } as DescricaoCargo;
     });
-  };
-  const addItem = (arrayKey: keyof DescricaoCargo) =>
-    setDc((p) => ({ ...p, [arrayKey]: [...(p[arrayKey] as DynamicItem[]), {}] }) as DescricaoCargo);
-  const delItem = (arrayKey: keyof DescricaoCargo, i: number) =>
-    setDc((p) => ({ ...p, [arrayKey]: (p[arrayKey] as DynamicItem[]).filter((_, j) => j !== i) }) as DescricaoCargo);
+  }, []);
+
+  const addItem = useCallback((arrayKey: keyof DescricaoCargo) =>
+    setDc((p) => ({ ...p, [arrayKey]: [...(p[arrayKey] as DynamicItem[]), {}] }) as DescricaoCargo), []);
+
+  const delItem = useCallback((arrayKey: keyof DescricaoCargo, i: number) =>
+    setDc((p) => ({ ...p, [arrayKey]: (p[arrayKey] as DynamicItem[]).filter((_, j) => j !== i) }) as DescricaoCargo), []);
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,16 +169,12 @@ export function DCForm({
             ? dc[field.field_key]
             : dc.dynamic_values[field.field_key];
           return (
-            <FieldWrap key={field.id} label={`${field.label}${field.is_required ? " *" : ""}`}>
-              <DynamicFieldControl
-                field={field}
-                value={value as DynamicItem[string] | undefined}
-                onChange={(next) => {
-                  if (isHeaderScalar(field.field_key)) setScalar(field.field_key, String(next ?? ""));
-                  else setDynamicHeader(field.field_key, next);
-                }}
-              />
-            </FieldWrap>
+            <SingleField
+              key={field.id}
+              field={field}
+              value={value as DynamicItem[string] | undefined}
+              onChange={handleHeaderChange}
+            />
           );
         })}
       </div>
@@ -121,6 +190,12 @@ export function DCForm({
     if (sectionFields.length === 0) {
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
     }
+
+    const handleUpdate = (i: number, key: string, val: DynamicItem[string]) =>
+      updItem(arrayKey, i, key, val);
+    const handleDelete = (i: number) => delItem(arrayKey, i);
+    const handleAdd = () => addItem(arrayKey);
+
     return (
       <div className="space-y-4">
         {items.length === 0 && (
@@ -129,32 +204,18 @@ export function DCForm({
           </p>
         )}
         {items.map((item, i) => (
-          <div key={i} className="relative rounded-lg border border-border bg-background/60 p-4">
-            <button
-              type="button"
-              onClick={() => delItem(arrayKey, i)}
-              className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              aria-label="Remover"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-            <p className="mb-3 text-xs text-muted-foreground">#{i + 1}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              {sectionFields.map((field) => (
-                <FieldWrap key={field.id} label={`${field.label}${field.is_required ? " *" : ""}`}>
-                  <DynamicFieldControl
-                    field={field}
-                    value={item[field.field_key]}
-                    onChange={(next) => updItem(arrayKey, i, { [field.field_key]: next })}
-                  />
-                </FieldWrap>
-              ))}
-            </div>
-          </div>
+          <RepeaterItem
+            key={i}
+            index={i}
+            item={item}
+            fields={sectionFields}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+          />
         ))}
         <button
           type="button"
-          onClick={() => addItem(arrayKey)}
+          onClick={handleAdd}
           className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <Plus className="h-4 w-4" /> Adicionar {itemSingular}

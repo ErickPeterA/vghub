@@ -1,18 +1,16 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
-  component: IndexRedirect,
+  // Redireciona instantaneamente no servidor/antes de renderizar
+  // sem flash de tela branca
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      throw redirect({ to: "/projetos" });
+    } else {
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: () => null,
 });
-
-function IndexRedirect() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    navigate({ to: "/login", replace: true });
-  }, [navigate]);
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-sm text-muted-foreground">Carregando...</div>
-    </div>
-  );
-}

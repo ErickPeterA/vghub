@@ -1,5 +1,5 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
 
@@ -11,17 +11,47 @@ function ProjectLayout() {
   const { projectId } = Route.useParams();
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [notFound, setNotFound] = useState(false);
+  // useRef para evitar que navigate mude a referência e cause loop no useEffect
+  const projectIdRef = useRef(projectId);
+  projectIdRef.current = projectId;
 
   useEffect(() => {
-    supabase.from("projects").select("nome").eq("id", projectId).maybeSingle().then(({ data }) => {
-      if (!data) navigate({ to: "/projetos" });
-      else setName(data.nome);
-      setLoading(false);
-    });
-  }, [projectId, navigate]);
+    let cancelled = false;
+    setLoading(true);
+    setNotFound(false);
+    supabase
+      .from("projects")
+      .select("nome")
+      .eq("id", projectIdRef.current)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (!data) {
+          setNotFound(true);
+        } else {
+          setName(data.nome);
+        }
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [projectId]);
 
-  if (loading) return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Carregando projeto...</div>;
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        Carregando projeto...
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        Projeto não encontrado.
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">

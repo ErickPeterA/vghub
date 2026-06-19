@@ -1,12 +1,16 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { Lock, Mail, LogIn, Building2 } from "lucide-react";
+import { Lock, Mail, LogIn } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — Estrutura DC" }] }),
+  // Se já estiver logado, redireciona direto sem nem renderizar a página
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) throw redirect({ to: "/projetos" });
+  },
   component: LoginPage,
 });
 
@@ -15,11 +19,6 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { session } = useAuth();
-
-  useEffect(() => {
-    if (session) navigate({ to: "/projetos", replace: true });
-  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,10 +26,10 @@ function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: "/projetos" });
+      // replace: true garante que o botão "voltar" não leva de volta ao login
+      await navigate({ to: "/projetos", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao autenticar");
-    } finally {
       setLoading(false);
     }
   };
@@ -38,11 +37,9 @@ function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#042558] via-[#0a3a7a] to-[#1a5a9a] px-4">
       <div className="w-full max-w-md">
-        {/* Card centralizado */}
         <div className="rounded-xl bg-white/95 backdrop-blur-sm p-8 shadow-2xl shadow-black/20">
-          {/* Header */}
           <div className="mb-4 text-center">
-            <img src="/logobg.png" alt="Logo" className="mx-auto  w-40 " />
+            <img src="/logobg.png" alt="Logo" className="mx-auto w-40" />
             <h1 className="text-3xl font-bold text-[#042558] tracking-tight pt-4 pb-3">
               Entrar
             </h1>
@@ -51,7 +48,6 @@ function LoginPage() {
             </p>
           </div>
 
-          {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -99,9 +95,7 @@ function LoginPage() {
             </button>
           </form>
 
-          {/* Rodapé */}
-          <div className="mt-6 border-t border-gray-100 pt-4 text-center">
-          </div>
+          <div className="mt-6 border-t border-gray-100 pt-4 text-center" />
         </div>
       </div>
     </div>
