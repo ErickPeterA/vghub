@@ -234,6 +234,11 @@ export function BaseManager({
   // Referência para manter projectId estável no load
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
+  // Refs para leitura síncrona dentro de callbacks sem criar dependências
+  const fieldsRef = useRef<Field[]>([]);
+  const newLabelRef = useRef<Record<string, string>>({});
+  fieldsRef.current = fields;
+  newLabelRef.current = newLabel;
 
   const load = useCallback(async () => {
     // Sem setLoading(true) aqui para não re-montar tudo após criação de campo
@@ -263,9 +268,9 @@ export function BaseManager({
   }, []);
 
   const addField = useCallback(async (sectionKey: string) => {
-    const label = (newLabel[sectionKey] ?? "").trim();
+    const label = (newLabelRef.current[sectionKey] ?? "").trim();
     if (!label) return;
-    const sectionFields = fields.filter((f) => f.section === sectionKey);
+    const sectionFields = fieldsRef.current.filter((f) => f.section === sectionKey);
     const fieldKey = `${slugify(label)}_${Date.now()}`;
     const { data, error } = await supabase
       .from("base_fields")
@@ -284,7 +289,7 @@ export function BaseManager({
     setFields((cur) => [...cur, data as Field]);
     setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
     toast.success("Campo criado");
-  }, [fields, newLabel]);
+  }, []);
 
   const removeField = useCallback(async (id: string) => {
     if (!confirm("Excluir este campo e todas as opções?")) return;
@@ -296,7 +301,7 @@ export function BaseManager({
   }, []);
 
   const addOption = useCallback(async (fieldId: string, label: string) => {
-    const field = fields.find((f) => f.id === fieldId);
+    const field = fieldsRef.current.find((f) => f.id === fieldId);
     if (!field) return;
     const value = `${slugify(label)}_${Date.now()}`;
     const { data, error } = await supabase
@@ -316,7 +321,7 @@ export function BaseManager({
         f.id === fieldId ? { ...f, base_options: [...f.base_options, data as Option] } : f
       )
     );
-  }, [fields]);
+  }, []);
 
   const toggleOption = useCallback(async (fieldId: string, optionId: string, active: boolean) => {
     const { error } = await supabase
