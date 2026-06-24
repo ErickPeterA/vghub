@@ -1,11 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/")({
-  component: () => {
-    const { projectId } = Route.useParams();
-    const navigate = useNavigate();
-    useEffect(() => { navigate({ to: "/projetos/$projectId/central", params: { projectId }, replace: true }); }, [projectId, navigate]);
-    return null;
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/projetos/$projectId/central", params, replace: true });
   },
+  component: () => null,
 });

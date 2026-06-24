@@ -3,13 +3,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Lock, Mail, LogIn } from "lucide-react";
+import { getCurrentUserSafely } from "@/lib/auth-safe";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — Estrutura DC" }] }),
   // Se já estiver logado, redireciona direto sem nem renderizar a página
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/projetos" });
+    const user = await getCurrentUserSafely();
+    if (user) throw redirect({ to: "/projetos" });
   },
   component: LoginPage,
 });

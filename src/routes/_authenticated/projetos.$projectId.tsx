@@ -1,7 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
+import { withTimeout } from "@/lib/auth-safe";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
   component: ProjectLayout,
@@ -20,18 +22,29 @@ function ProjectLayout() {
     let cancelled = false;
     setLoading(true);
     setNotFound(false);
-    supabase
-      .from("projects")
-      .select("nome")
-      .eq("id", projectIdRef.current)
-      .maybeSingle()
-      .then(({ data }) => {
+    withTimeout(
+      supabase
+        .from("projects")
+        .select("nome")
+        .eq("id", projectIdRef.current)
+        .maybeSingle(),
+      10_000,
+      "Não foi possível carregar o projeto.",
+    )
+      .then(({ data, error }) => {
         if (cancelled) return;
+        if (error) throw error;
         if (!data) {
           setNotFound(true);
         } else {
           setName(data.nome);
         }
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar projeto");
+        setNotFound(true);
         setLoading(false);
       });
     return () => { cancelled = true; };
