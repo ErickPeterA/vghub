@@ -1,18 +1,23 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { BaseManager } from "@/components/BaseManager";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUserSafely, withTimeout } from "@/lib/auth-safe";
 
 export const Route = createFileRoute("/_authenticated/gerenciamento/bases")({
   // Proteção feita no beforeLoad — sem useEffect/navigate que causam loop
   beforeLoad: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUserSafely();
     if (!user) throw redirect({ to: "/login" });
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+    const { data } = await withTimeout(
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle(),
+      8_000,
+      "Não foi possível validar permissões.",
+    );
     if (!data) throw redirect({ to: "/projetos" });
   },
   component: GeneralBasePage,

@@ -13,12 +13,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
+import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
 import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
 import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
 import { Route as AuthenticatedGerenciamentoUsuariosRouteImport } from './routes/_authenticated/gerenciamento.usuarios'
 import { Route as AuthenticatedGerenciamentoBasesRouteImport } from './routes/_authenticated/gerenciamento.bases'
 import { Route as AuthenticatedGerenciamentoAtrelarRouteImport } from './routes/_authenticated/gerenciamento.atrelar'
 import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './routes/_authenticated/projetos.$projectId.index'
+import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './routes/_authenticated/gerenciamento.usuarios.index'
 import { Route as AuthenticatedProjetosProjectIdModelosRouteImport } from './routes/_authenticated/projetos.$projectId.modelos'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
@@ -26,6 +28,7 @@ import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './rou
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
 import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
 import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './routes/_authenticated/gerenciamento.usuarios.novo'
+import { Route as AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.index'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.$dcId'
 
@@ -48,6 +51,12 @@ const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
   path: '/projetos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedProjetosIndexRoute =
+  AuthenticatedProjetosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjetosRoute,
+  } as any)
 const AuthenticatedProjetosNovoRoute =
   AuthenticatedProjetosNovoRouteImport.update({
     id: '/novo',
@@ -83,6 +92,12 @@ const AuthenticatedProjetosProjectIdIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedGerenciamentoUsuariosIndexRoute =
+  AuthenticatedGerenciamentoUsuariosIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedGerenciamentoUsuariosRoute,
   } as any)
 const AuthenticatedProjetosProjectIdModelosRoute =
   AuthenticatedProjetosProjectIdModelosRouteImport.update({
@@ -126,6 +141,12 @@ const AuthenticatedGerenciamentoUsuariosNovoRoute =
     path: '/novo',
     getParentRoute: () => AuthenticatedGerenciamentoUsuariosRoute,
   } as any)
+const AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute =
+  AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute =
   AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport.update({
     id: '/novo',
@@ -148,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
@@ -155,28 +177,30 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
+  '/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
+  '/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
   '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
-  '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/projetos': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
-  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
+  '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
+  '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -189,6 +213,7 @@ export interface FileRoutesById {
   '/_authenticated/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/_authenticated/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/_authenticated/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
@@ -196,9 +221,11 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/_authenticated/projetos/$projectId/modelos': typeof AuthenticatedProjetosProjectIdModelosRoute
+  '/_authenticated/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/_authenticated/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
+  '/_authenticated/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +238,7 @@ export interface FileRouteTypes {
     | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/novo'
+    | '/projetos/'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/base'
@@ -218,28 +246,30 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/modelos'
+    | '/gerenciamento/usuarios/'
     | '/projetos/$projectId/'
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
+    | '/projetos/$projectId/descricao-cargo/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/projetos'
     | '/gerenciamento/atrelar'
     | '/gerenciamento/bases'
-    | '/gerenciamento/usuarios'
     | '/projetos/novo'
+    | '/projetos'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/central'
-    | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/modelos'
+    | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
+    | '/projetos/$projectId/descricao-cargo'
   id:
     | '__root__'
     | '/'
@@ -251,6 +281,7 @@ export interface FileRouteTypes {
     | '/_authenticated/gerenciamento/usuarios'
     | '/_authenticated/projetos/$projectId'
     | '/_authenticated/projetos/novo'
+    | '/_authenticated/projetos/'
     | '/_authenticated/gerenciamento/usuarios/novo'
     | '/_authenticated/projetos/$projectId/andamento'
     | '/_authenticated/projetos/$projectId/base'
@@ -258,9 +289,11 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
     | '/_authenticated/projetos/$projectId/modelos'
+    | '/_authenticated/gerenciamento/usuarios/'
     | '/_authenticated/projetos/$projectId/'
     | '/_authenticated/projetos/$projectId/descricao-cargo/$dcId'
     | '/_authenticated/projetos/$projectId/descricao-cargo/novo'
+    | '/_authenticated/projetos/$projectId/descricao-cargo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,6 +331,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projetos'
       preLoaderRoute: typeof AuthenticatedProjetosRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/projetos/': {
+      id: '/_authenticated/projetos/'
+      path: '/'
+      fullPath: '/projetos/'
+      preLoaderRoute: typeof AuthenticatedProjetosIndexRouteImport
+      parentRoute: typeof AuthenticatedProjetosRoute
     }
     '/_authenticated/projetos/novo': {
       id: '/_authenticated/projetos/novo'
@@ -340,6 +380,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projetos/$projectId/'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdIndexRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/gerenciamento/usuarios/': {
+      id: '/_authenticated/gerenciamento/usuarios/'
+      path: '/'
+      fullPath: '/gerenciamento/usuarios/'
+      preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosIndexRouteImport
+      parentRoute: typeof AuthenticatedGerenciamentoUsuariosRoute
     }
     '/_authenticated/projetos/$projectId/modelos': {
       id: '/_authenticated/projetos/$projectId/modelos'
@@ -390,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosNovoRouteImport
       parentRoute: typeof AuthenticatedGerenciamentoUsuariosRoute
     }
+    '/_authenticated/projetos/$projectId/descricao-cargo/': {
+      id: '/_authenticated/projetos/$projectId/descricao-cargo/'
+      path: '/'
+      fullPath: '/projetos/$projectId/descricao-cargo/'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+    }
     '/_authenticated/projetos/$projectId/descricao-cargo/novo': {
       id: '/_authenticated/projetos/$projectId/descricao-cargo/novo'
       path: '/novo'
@@ -410,6 +464,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren {
   AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
+  AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
 }
 
 const AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren: AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren =
@@ -418,6 +473,8 @@ const AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren: AuthenticatedPr
       AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute:
       AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute,
+    AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute:
+      AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute,
   }
 
 const AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren =
@@ -461,12 +518,14 @@ const AuthenticatedProjetosProjectIdRouteWithChildren =
 interface AuthenticatedProjetosRouteChildren {
   AuthenticatedProjetosProjectIdRoute: typeof AuthenticatedProjetosProjectIdRouteWithChildren
   AuthenticatedProjetosNovoRoute: typeof AuthenticatedProjetosNovoRoute
+  AuthenticatedProjetosIndexRoute: typeof AuthenticatedProjetosIndexRoute
 }
 
 const AuthenticatedProjetosRouteChildren: AuthenticatedProjetosRouteChildren = {
   AuthenticatedProjetosProjectIdRoute:
     AuthenticatedProjetosProjectIdRouteWithChildren,
   AuthenticatedProjetosNovoRoute: AuthenticatedProjetosNovoRoute,
+  AuthenticatedProjetosIndexRoute: AuthenticatedProjetosIndexRoute,
 }
 
 const AuthenticatedProjetosRouteWithChildren =
@@ -476,12 +535,15 @@ const AuthenticatedProjetosRouteWithChildren =
 
 interface AuthenticatedGerenciamentoUsuariosRouteChildren {
   AuthenticatedGerenciamentoUsuariosNovoRoute: typeof AuthenticatedGerenciamentoUsuariosNovoRoute
+  AuthenticatedGerenciamentoUsuariosIndexRoute: typeof AuthenticatedGerenciamentoUsuariosIndexRoute
 }
 
 const AuthenticatedGerenciamentoUsuariosRouteChildren: AuthenticatedGerenciamentoUsuariosRouteChildren =
   {
     AuthenticatedGerenciamentoUsuariosNovoRoute:
       AuthenticatedGerenciamentoUsuariosNovoRoute,
+    AuthenticatedGerenciamentoUsuariosIndexRoute:
+      AuthenticatedGerenciamentoUsuariosIndexRoute,
   }
 
 const AuthenticatedGerenciamentoUsuariosRouteWithChildren =
@@ -517,13 +579,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

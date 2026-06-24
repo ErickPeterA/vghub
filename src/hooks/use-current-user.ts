@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionSafely, withTimeout } from "@/lib/auth-safe";
 
 export type CurrentUser = {
   session: Session | null;
@@ -19,38 +20,56 @@ export function useCurrentUser(): CurrentUser {
 
   const load = useCallback(async (s: Session | null) => {
     if (!s?.user) {
-      setIsAdmin(false);
-      setProfile(null);
-      return;
+      return { isAdmin: false, profile: null as CurrentUser["profile"] };
     }
-    const [{ data: roleRow }, { data: prof }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle(),
-      supabase.from("profiles").select("id,nome,email,status").eq("id", s.user.id).maybeSingle(),
-    ]);
-    setIsAdmin(!!roleRow);
-    setProfile(prof as CurrentUser["profile"]);
+    try {
+      const [{ data: roleRow }, { data: prof }] = await Promise.all([
+        withTimeout(
+          supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle(),
+          8_000,
+          "Não foi possível carregar permissões.",
+        ),
+        withTimeout(
+          supabase.from("profiles").select("id,nome,email,status").eq("id", s.user.id).maybeSingle(),
+          8_000,
+          "Não foi possível carregar perfil.",
+        ),
+      ]);
+      return { isAdmin: !!roleRow, profile: prof as CurrentUser["profile"] };
+    } catch {
+      return { isAdmin: false, profile: null as CurrentUser["profile"] };
+    }
   }, []);
 
   const refresh = useCallback(async () => {
-    const { data } = await supabase.auth.getSession();
-    await load(data.session);
+    setLoading(true);
+    const nextSession = await getSessionSafely();
+    const nextUser = await load(nextSession);
+    setSession(nextSession);
+    setIsAdmin(nextUser.isAdmin);
+    setProfile(nextUser.profile);
+    setLoading(false);
   }, [load]);
 
   useEffect(() => {
     let active = true;
-    // Get initial session first
-    supabase.auth.getSession().then(async ({ data }) => {
+    const applySession = async (nextSession: Session | null) => {
       if (!active) return;
-      setSession(data.session);
-      await load(data.session);
+      setSession(nextSession);
+      const nextUser = await load(nextSession);
+      if (!active) return;
+      setIsAdmin(nextUser.isAdmin);
+      setProfile(nextUser.profile);
       setLoading(false);
-    });
-    // Then listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
+    };
+
+    getSessionSafely().then(applySession);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       if (!active) return;
       setSession(s);
-      await load(s);
-      setLoading(false);
+      setLoading(true);
+      void applySession(s);
     });
     return () => {
       active = false;
