@@ -86,6 +86,7 @@ export type Database = {
       base_options: {
         Row: {
           created_at: string
+          description: string | null
           display_order: number
           field_id: string
           id: string
@@ -97,6 +98,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           display_order?: number
           field_id: string
           id?: string
@@ -108,6 +110,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           display_order?: number
           field_id?: string
           id?: string
@@ -546,6 +549,7 @@ export type Database = {
         | "checkbox"
         | "single_select"
         | "multi_select"
+        | "competency_description"
       project_role:
         | "admin"
         | "lider_estrategico"
@@ -690,6 +694,7 @@ export const Constants = {
         "checkbox",
         "single_select",
         "multi_select",
+        "competency_description",
       ],
       project_role: [
         "admin",
