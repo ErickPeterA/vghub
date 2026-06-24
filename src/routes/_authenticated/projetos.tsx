@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated/projetos")({
 
 function ProjetosLayout() {
   const isIndex = useRouterState({
-    select: (state) => state.matches[state.matches.length - 1]?.routeId === "/_authenticated/projetos",
+    select: (state) => state.location.pathname === "/projetos" || state.location.pathname === "/projetos/",
   });
   return isIndex ? <ProjectListPage /> : <Outlet />;
 }

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated/gerenciamento/usuarios")({
 
 function UsuariosLayout() {
   const isIndex = useRouterState({
-    select: (state) => state.matches[state.matches.length - 1]?.routeId === "/_authenticated/gerenciamento/usuarios",
+    select: (state) => state.location.pathname === "/gerenciamento/usuarios" || state.location.pathname === "/gerenciamento/usuarios/",
   });
   return isIndex ? <UsersManagementPage /> : <Outlet />;
 }
