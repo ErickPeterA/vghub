@@ -6,10 +6,10 @@ export type DynamicField = {
   field_key: string;
   label: string;
   section: string;
-  field_type: "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select";
+  field_type: "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select" | "competency_description";
   is_required: boolean;
   allows_free_text: boolean;
-  options: Array<{ id: string; label: string; value: string }>;
+  options: Array<{ id: string; label: string; value: string; description: string | null }>;
 };
 
 const controlClass = "w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
@@ -22,7 +22,7 @@ export function useProjectFields(projectId: string) {
     setLoading(true);
     supabase
       .from("base_fields")
-      .select("id,field_key,label,section,field_type,is_required,allows_free_text,base_options(id,label,value,is_active,display_order)")
+      .select("id,field_key,label,section,field_type,is_required,allows_free_text,display_order,base_options(id,label,value,description,is_active,display_order)")
       .eq("project_id", projectId)
       .eq("is_active", true)
       .order("display_order")
@@ -32,7 +32,7 @@ export function useProjectFields(projectId: string) {
           options: (field.base_options ?? [])
             .filter((option) => option.is_active)
             .sort((a, b) => a.display_order - b.display_order)
-            .map(({ id, label, value }) => ({ id, label, value })),
+            .map(({ id, label, value, description }) => ({ id, label, value, description: description ?? null })),
         })) as DynamicField[]);
         setLoading(false);
       });
@@ -65,13 +65,25 @@ export function DynamicFieldControl({ field, value, onChange }: {
       </div>
     );
   }
+  if (field.field_type === "competency_description") {
+    const selected = field.options.find((o) => o.value === value);
+    return (
+      <div className="grid gap-2 md:grid-cols-[1fr_1.4fr]">
+        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
+          <option value="">— Selecione —</option>
+          {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
+        </select>
+        <div className={`${controlClass} min-h-[2.5rem] bg-muted/30 text-muted-foreground`}>
+          {selected?.description || <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>}
+        </div>
+      </div>
+    );
+  }
   if (field.field_type === "single_select") {
     return (
       <div className="space-y-2">
-        <select  {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
-          <option value="">
-            — Selecione —
-          </option>
+        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
+          <option value="">— Selecione —</option>
           {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
         </select>
         {field.allows_free_text && <input className={controlClass} placeholder="Ou digite um valor" value={field.options.some((option) => option.value === value) ? "" : String(value ?? "")} onChange={(e) => onChange(e.target.value)} />}
