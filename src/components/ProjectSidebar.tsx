@@ -7,7 +7,6 @@ export function ProjectSidebar({ projectId, projectName }: { projectId: string; 
     { to: "/projetos/$projectId/central", href: `/projetos/${projectId}/central`, icon: LayoutDashboard, label: "Página Central" },
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
     { to: "/projetos/$projectId/base", href: `/projetos/${projectId}/base`, icon: Database, label: "Base do Projeto" },
-    { to: "/projetos/$projectId/modelos", href: `/projetos/${projectId}/modelos`, icon: Library, label: "Modelos" },
     { to: "/projetos/$projectId/andamento", href: `/projetos/${projectId}/andamento`, icon: BarChart3, label: "Andamento" },
     { to: "/projetos/$projectId/historico", href: `/projetos/${projectId}/historico`, icon: History, label: "Histórico" },
   ] as const;

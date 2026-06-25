@@ -31,7 +31,7 @@ type Field = {
 
 const inputClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 const types: Array<{ value: FieldType; label: string }> = [
-  { value: "text", label: "Texto livre" },
+  { value: "text", label: "Texto" },
   { value: "textarea", label: "Texto longo" },
   { value: "number", label: "Número" },
   { value: "date", label: "Data" },
@@ -136,9 +136,6 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
         </label>
         <label className="flex cursor-pointer items-center gap-1.5">
           <input type="checkbox" checked={field.is_active} onChange={(e) => onPatch(field.id, { is_active: e.target.checked })} /> Ativo
-        </label>
-        <label className="flex cursor-pointer items-center gap-1.5">
-          <input type="checkbox" checked={field.allows_free_text} onChange={(e) => onPatch(field.id, { allows_free_text: e.target.checked })} /> Permitir digitação livre
         </label>
       </div>
 

@@ -20,7 +20,7 @@ const SectionShell = memo(function SectionShell({
 }: { num: string; title: string; desc?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
-      <header className="mb-6 flex items-start justify-between gap-4 border-b border-border pb-4">
+      <header className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-widest text-accent">{num}</p>
           <h2 className="mt-1 font-display text-3xl">{title}</h2>
@@ -96,17 +96,19 @@ const RepeaterItem = memo(function RepeaterItem({
         <Trash2 className="h-4 w-4" />
       </button>
       <p className="mb-3 text-xs text-muted-foreground">#{index + 1}</p>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2 auto-rows-min">
         {fields.map((field) => {
           const handleFieldChange = (key: string, val: DynamicItem[string]) =>
             onUpdate(index, key, val);
+          const wideField = field.field_type === "textarea" || field.field_type === "competency_description";
           return (
-            <SingleField
-              key={field.id}
-              field={field}
-              value={item[field.field_key]}
-              onChange={handleFieldChange}
-            />
+            <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
+              <SingleField
+                field={field}
+                value={item[field.field_key]}
+                onChange={handleFieldChange}
+              />
+            </div>
           );
         })}
       </div>
@@ -163,18 +165,20 @@ export function DCForm({
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
     }
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 auto-rows-min">
         {sectionFields.map((field) => {
           const value = isHeaderScalar(field.field_key)
             ? dc[field.field_key]
             : dc.dynamic_values[field.field_key];
+          const wideField = field.field_type === "textarea" || field.field_type === "competency_description";
           return (
-            <SingleField
-              key={field.id}
-              field={field}
-              value={value as DynamicItem[string] | undefined}
-              onChange={handleHeaderChange}
-            />
+            <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
+              <SingleField
+                field={field}
+                value={value as DynamicItem[string] | undefined}
+                onChange={handleHeaderChange}
+              />
+            </div>
           );
         })}
       </div>
@@ -241,7 +245,7 @@ export function DCForm({
         })
       )}
 
-      <div className="sticky bottom-4 z-10 flex justify-end gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur">
+      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
         <button
           type="submit"
           disabled={saving}

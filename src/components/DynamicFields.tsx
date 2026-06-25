@@ -12,7 +12,7 @@ export type DynamicField = {
   options: Array<{ id: string; label: string; value: string; description: string | null }>;
 };
 
-const controlClass = "w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+const controlClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-ring";
 
 export function useProjectFields(projectId: string) {
   const [fields, setFields] = useState<DynamicField[]>([]);
@@ -54,27 +54,28 @@ export function DynamicFieldControl({ field, value, onChange }: {
   if (field.field_type === "multi_select") {
     const selected = Array.isArray(value) ? value : [];
     return (
-      <div className="space-y-2 rounded-md border border-border p-3">
+      <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
         {field.options.map((option) => (
           <label key={option.id} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} />
+            <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} className="h-4 w-4 rounded" />
             {option.label}
           </label>
         ))}
-        {field.allows_free_text && <input className={controlClass} placeholder="Outro valor" onBlur={(e) => e.target.value && onChange([...selected, e.target.value])} />}
       </div>
     );
   }
   if (field.field_type === "competency_description") {
     const selected = field.options.find((o) => o.value === value);
     return (
-      <div className="grid gap-2 md:grid-cols-[1fr_1.4fr]">
+      <div className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_2.5fr]">
         <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
           <option value="">— Selecione —</option>
           {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
         </select>
-        <div className={`${controlClass} min-h-[2.5rem] bg-muted/30 text-muted-foreground`}>
-          {selected?.description || <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>}
+        <div className={`${controlClass} min-h-[4rem] rounded-lg bg-muted/20 text-muted-foreground`}>
+          <div className="flex h-full items-center p-3 text-sm leading-6">
+            {selected?.description || <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>}
+          </div>
         </div>
       </div>
     );
@@ -86,7 +87,6 @@ export function DynamicFieldControl({ field, value, onChange }: {
           <option value="">— Selecione —</option>
           {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
         </select>
-        {field.allows_free_text && <input className={controlClass} placeholder="Ou digite um valor" value={field.options.some((option) => option.value === value) ? "" : String(value ?? "")} onChange={(e) => onChange(e.target.value)} />}
       </div>
     );
   }
