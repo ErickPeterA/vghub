@@ -58,7 +58,7 @@ function AtrelarUsuarios() {
     e.preventDefault();
     setSaving(true);
     try {
-      await attachFn({ data: { projectId, userId, role: role as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      await attachFn({ data: { projectId, userId, role } });
       toast.success("Usuário vinculado");
       setUserId("");
       load();
