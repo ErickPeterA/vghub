@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
 
 function ProjectLayout() {
   const { projectId } = Route.useParams();
+  const { isAdmin } = useCurrentUser();
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
