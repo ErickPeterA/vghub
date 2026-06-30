@@ -2,7 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const projectRoleSchema = z.enum(["admin", "lider_estrategico", "lider_tatico", "lider_operacional", "gp"]);
+const projectRoleSchema = z.enum([
+  "admin",
+  "lider_estrategico",
+  "lider_tatico",
+  "lider_operacional",
+  "gp",
+  "lider_superior",
+  "lider_setor",
+  "usuario_comum",
+]);
+export type ProjectRoleValue = z.infer<typeof projectRoleSchema>;
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
