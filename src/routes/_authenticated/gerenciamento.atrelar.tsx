@@ -98,7 +98,7 @@ function AtrelarUsuarios() {
           <option value="">— Usuário —</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.nome} ({u.email})</option>)}
         </select>
-        <select value={role} onChange={(e) => setRole(e.target.value)} className={inp}>
+        <select value={role} onChange={(e) => setRole(e.target.value as RoleValue)} className={inp}>
           {roleOptions.map((r) => <option key={r.v} value={r.v}>{r.l}</option>)}
         </select>
         <button disabled={saving} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"><Plus className="h-4 w-4" /> Vincular</button>
