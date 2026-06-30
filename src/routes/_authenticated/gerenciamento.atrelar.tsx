@@ -33,7 +33,7 @@ function AtrelarUsuarios() {
   const [members, setMembers] = useState<Member[]>([]);
   const [projectId, setProjectId] = useState("");
   const [userId, setUserId] = useState("");
-  const [role, setRole] = useState("lider_operacional");
+  const [role, setRole] = useState<RoleValue>("usuario_comum");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (!lu && !isAdmin) navigate({ to: "/projetos" }); }, [isAdmin, lu, navigate]);
