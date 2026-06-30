@@ -15,11 +15,12 @@ type Member = { id: string; project_id: string; user_id: string; role: string; n
 
 const roleOptions = [
   { v: "admin", l: "Admin" },
-  { v: "lider_estrategico", l: "Líder Estratégico" },
-  { v: "lider_tatico", l: "Líder Tático" },
-  { v: "lider_operacional", l: "Líder Operacional" },
   { v: "gp", l: "GP (Gerente de Pessoas)" },
+  { v: "lider_superior", l: "Líder Superior" },
+  { v: "lider_setor", l: "Líder de Setor" },
+  { v: "usuario_comum", l: "Usuário Comum" },
 ];
+type RoleValue = "admin" | "gp" | "lider_superior" | "lider_setor" | "usuario_comum" | "lider_estrategico" | "lider_tatico" | "lider_operacional";
 
 function AtrelarUsuarios() {
   const { isAdmin, loading: lu } = useCurrentUser();
@@ -32,7 +33,7 @@ function AtrelarUsuarios() {
   const [members, setMembers] = useState<Member[]>([]);
   const [projectId, setProjectId] = useState("");
   const [userId, setUserId] = useState("");
-  const [role, setRole] = useState("lider_operacional");
+  const [role, setRole] = useState<RoleValue>("usuario_comum");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (!lu && !isAdmin) navigate({ to: "/projetos" }); }, [isAdmin, lu, navigate]);
@@ -57,7 +58,7 @@ function AtrelarUsuarios() {
     e.preventDefault();
     setSaving(true);
     try {
-      await attachFn({ data: { projectId, userId, role: role as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      await attachFn({ data: { projectId, userId, role } });
       toast.success("Usuário vinculado");
       setUserId("");
       load();
@@ -79,7 +80,7 @@ function AtrelarUsuarios() {
 
   const alterarRole = async (id: string, novoRole: string) => {
     try {
-      await updateRoleFn({ data: { memberId: id, role: novoRole as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      await updateRoleFn({ data: { memberId: id, role: novoRole as RoleValue } });
       load();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao alterar cargo"); }
   };
@@ -97,7 +98,7 @@ function AtrelarUsuarios() {
           <option value="">— Usuário —</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.nome} ({u.email})</option>)}
         </select>
-        <select value={role} onChange={(e) => setRole(e.target.value)} className={inp}>
+        <select value={role} onChange={(e) => setRole(e.target.value as RoleValue)} className={inp}>
           {roleOptions.map((r) => <option key={r.v} value={r.v}>{r.l}</option>)}
         </select>
         <button disabled={saving} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"><Plus className="h-4 w-4" /> Vincular</button>

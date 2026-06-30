@@ -20,6 +20,7 @@ export type Database = {
           allows_multiple: boolean
           created_at: string
           created_by: string | null
+          data_source: string
           display_order: number
           field_key: string
           field_type: Database["public"]["Enums"]["dynamic_field_type"]
@@ -37,6 +38,7 @@ export type Database = {
           allows_multiple?: boolean
           created_at?: string
           created_by?: string | null
+          data_source?: string
           display_order?: number
           field_key: string
           field_type?: Database["public"]["Enums"]["dynamic_field_type"]
@@ -54,6 +56,7 @@ export type Database = {
           allows_multiple?: boolean
           created_at?: string
           created_by?: string | null
+          data_source?: string
           display_order?: number
           field_key?: string
           field_type?: Database["public"]["Enums"]["dynamic_field_type"]
@@ -148,6 +151,7 @@ export type Database = {
           data_versao: string | null
           departamento: string | null
           dynamic_values: Json
+          etapa: Database["public"]["Enums"]["dc_stage"]
           experiencia: Json
           habilidades_cargo: Json
           habilidades_culturais: Json
@@ -174,6 +178,7 @@ export type Database = {
           data_versao?: string | null
           departamento?: string | null
           dynamic_values?: Json
+          etapa?: Database["public"]["Enums"]["dc_stage"]
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -200,6 +205,7 @@ export type Database = {
           data_versao?: string | null
           departamento?: string | null
           dynamic_values?: Json
+          etapa?: Database["public"]["Enums"]["dc_stage"]
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -252,6 +258,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_areas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          nome: string
+          parent_id: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          nome: string
+          parent_id?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          nome?: string
+          parent_id?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_areas_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "project_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_areas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_history: {
         Row: {
@@ -334,6 +391,42 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_member_scopes: {
+        Row: {
+          area_id: string | null
+          created_at: string
+          id: string
+          member_id: string
+        }
+        Insert: {
+          area_id?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+        }
+        Update: {
+          area_id?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_member_scopes_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "project_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_member_scopes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "project_members"
             referencedColumns: ["id"]
           },
         ]
@@ -514,8 +607,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      area_ancestors: { Args: { _area_id: string }; Returns: string[] }
       can_manage_project_base: {
         Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_dc: {
+        Args: { _dc_id: string; _user_id: string }
         Returns: boolean
       }
       clone_general_base_to_project: {
@@ -541,6 +639,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      dc_stage: "em_criacao" | "em_aprovacao" | "concluido"
       dynamic_field_type:
         | "text"
         | "textarea"
@@ -556,6 +655,9 @@ export type Database = {
         | "lider_tatico"
         | "lider_operacional"
         | "gp"
+        | "lider_superior"
+        | "lider_setor"
+        | "usuario_comum"
       project_status: "ativo" | "arquivado"
       user_status: "ativo" | "inativo"
     }
@@ -686,6 +788,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      dc_stage: ["em_criacao", "em_aprovacao", "concluido"],
       dynamic_field_type: [
         "text",
         "textarea",
@@ -702,6 +805,9 @@ export const Constants = {
         "lider_tatico",
         "lider_operacional",
         "gp",
+        "lider_superior",
+        "lider_setor",
+        "usuario_comum",
       ],
       project_status: ["ativo", "arquivado"],
       user_status: ["ativo", "inativo"],

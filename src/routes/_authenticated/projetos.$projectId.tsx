@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
 import { withTimeout } from "@/lib/auth-safe";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
   component: ProjectLayout,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
 
 function ProjectLayout() {
   const { projectId } = Route.useParams();
+  const { isAdmin } = useCurrentUser();
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -68,7 +70,7 @@ function ProjectLayout() {
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
-      <ProjectSidebar projectId={projectId} projectName={name} />
+      <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} />
       <div className="flex-1 overflow-x-auto">
         <Outlet />
       </div>

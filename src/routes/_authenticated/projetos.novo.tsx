@@ -34,7 +34,7 @@ function NovoProjeto() {
     try {
       const data = await createFn({ data: { nome, empresa, responsavelId } });
       toast.success("Projeto criado");
-      navigate({ to: "/projetos/$projectId/central", params: { projectId: data.id } });
+      navigate({ to: "/projetos/$projectId/areas", params: { projectId: data.id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
     } finally {

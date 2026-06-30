@@ -23,8 +23,10 @@ import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './route
 import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './routes/_authenticated/gerenciamento.usuarios.index'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
+import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
 import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './routes/_authenticated/projetos.$projectId.central'
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
+import { Route as AuthenticatedProjetosProjectIdAreasRouteImport } from './routes/_authenticated/projetos.$projectId.areas'
 import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
 import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './routes/_authenticated/gerenciamento.usuarios.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.index'
@@ -110,6 +112,12 @@ const AuthenticatedProjetosProjectIdDescricaoCargoRoute =
     path: '/descricao-cargo',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
+const AuthenticatedProjetosProjectIdConfiguracoesRoute =
+  AuthenticatedProjetosProjectIdConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdCentralRoute =
   AuthenticatedProjetosProjectIdCentralRouteImport.update({
     id: '/central',
@@ -120,6 +128,12 @@ const AuthenticatedProjetosProjectIdBaseRoute =
   AuthenticatedProjetosProjectIdBaseRouteImport.update({
     id: '/base',
     path: '/base',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdAreasRoute =
+  AuthenticatedProjetosProjectIdAreasRouteImport.update({
+    id: '/areas',
+    path: '/areas',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
 const AuthenticatedProjetosProjectIdAndamentoRoute =
@@ -165,8 +179,10 @@ export interface FileRoutesByFullPath {
   '/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
@@ -184,8 +200,10 @@ export interface FileRoutesByTo {
   '/projetos': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdIndexRoute
@@ -207,8 +225,10 @@ export interface FileRoutesById {
   '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/_authenticated/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/_authenticated/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  '/_authenticated/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/_authenticated/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
+  '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/_authenticated/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
@@ -231,8 +251,10 @@ export interface FileRouteTypes {
     | '/projetos/'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
+    | '/projetos/$projectId/areas'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/central'
+    | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
     | '/gerenciamento/usuarios/'
@@ -250,8 +272,10 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
+    | '/projetos/$projectId/areas'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/central'
+    | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
     | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
@@ -272,8 +296,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/'
     | '/_authenticated/gerenciamento/usuarios/novo'
     | '/_authenticated/projetos/$projectId/andamento'
+    | '/_authenticated/projetos/$projectId/areas'
     | '/_authenticated/projetos/$projectId/base'
     | '/_authenticated/projetos/$projectId/central'
+    | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
     | '/_authenticated/gerenciamento/usuarios/'
@@ -389,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
+    '/_authenticated/projetos/$projectId/configuracoes': {
+      id: '/_authenticated/projetos/$projectId/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/projetos/$projectId/configuracoes'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
     '/_authenticated/projetos/$projectId/central': {
       id: '/_authenticated/projetos/$projectId/central'
       path: '/central'
@@ -401,6 +434,13 @@ declare module '@tanstack/react-router' {
       path: '/base'
       fullPath: '/projetos/$projectId/base'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdBaseRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/areas': {
+      id: '/_authenticated/projetos/$projectId/areas'
+      path: '/areas'
+      fullPath: '/projetos/$projectId/areas'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdAreasRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
     '/_authenticated/projetos/$projectId/andamento': {
@@ -464,8 +504,10 @@ const AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren =
 
 interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdAndamentoRoute: typeof AuthenticatedProjetosProjectIdAndamentoRoute
+  AuthenticatedProjetosProjectIdAreasRoute: typeof AuthenticatedProjetosProjectIdAreasRoute
   AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
   AuthenticatedProjetosProjectIdCentralRoute: typeof AuthenticatedProjetosProjectIdCentralRoute
+  AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
@@ -475,10 +517,14 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
   {
     AuthenticatedProjetosProjectIdAndamentoRoute:
       AuthenticatedProjetosProjectIdAndamentoRoute,
+    AuthenticatedProjetosProjectIdAreasRoute:
+      AuthenticatedProjetosProjectIdAreasRoute,
     AuthenticatedProjetosProjectIdBaseRoute:
       AuthenticatedProjetosProjectIdBaseRoute,
     AuthenticatedProjetosProjectIdCentralRoute:
       AuthenticatedProjetosProjectIdCentralRoute,
+    AuthenticatedProjetosProjectIdConfiguracoesRoute:
+      AuthenticatedProjetosProjectIdConfiguracoesRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
       AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren,
     AuthenticatedProjetosProjectIdHistoricoRoute:
@@ -556,13 +602,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
