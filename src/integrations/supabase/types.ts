@@ -20,6 +20,7 @@ export type Database = {
           allows_multiple: boolean
           created_at: string
           created_by: string | null
+          data_source: string
           display_order: number
           field_key: string
           field_type: Database["public"]["Enums"]["dynamic_field_type"]
@@ -37,6 +38,7 @@ export type Database = {
           allows_multiple?: boolean
           created_at?: string
           created_by?: string | null
+          data_source?: string
           display_order?: number
           field_key: string
           field_type?: Database["public"]["Enums"]["dynamic_field_type"]
@@ -54,6 +56,7 @@ export type Database = {
           allows_multiple?: boolean
           created_at?: string
           created_by?: string | null
+          data_source?: string
           display_order?: number
           field_key?: string
           field_type?: Database["public"]["Enums"]["dynamic_field_type"]
@@ -252,6 +255,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_areas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          nome: string
+          parent_id: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          nome: string
+          parent_id?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          nome?: string
+          parent_id?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_areas_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "project_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_areas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_history: {
         Row: {
