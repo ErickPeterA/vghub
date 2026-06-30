@@ -614,6 +614,9 @@ export type Database = {
         | "lider_tatico"
         | "lider_operacional"
         | "gp"
+        | "lider_superior"
+        | "lider_setor"
+        | "usuario_comum"
       project_status: "ativo" | "arquivado"
       user_status: "ativo" | "inativo"
     }
@@ -761,6 +764,9 @@ export const Constants = {
         "lider_tatico",
         "lider_operacional",
         "gp",
+        "lider_superior",
+        "lider_setor",
+        "usuario_comum",
       ],
       project_status: ["ativo", "arquivado"],
       user_status: ["ativo", "inativo"],
