@@ -70,7 +70,7 @@ function ProjectLayout() {
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
-      <ProjectSidebar projectId={projectId} projectName={name} />
+      <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} />
       <div className="flex-1 overflow-x-auto">
         <Outlet />
       </div>
