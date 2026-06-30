@@ -151,6 +151,7 @@ export type Database = {
           data_versao: string | null
           departamento: string | null
           dynamic_values: Json
+          etapa: Database["public"]["Enums"]["dc_stage"]
           experiencia: Json
           habilidades_cargo: Json
           habilidades_culturais: Json
@@ -177,6 +178,7 @@ export type Database = {
           data_versao?: string | null
           departamento?: string | null
           dynamic_values?: Json
+          etapa?: Database["public"]["Enums"]["dc_stage"]
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -203,6 +205,7 @@ export type Database = {
           data_versao?: string | null
           departamento?: string | null
           dynamic_values?: Json
+          etapa?: Database["public"]["Enums"]["dc_stage"]
           experiencia?: Json
           habilidades_cargo?: Json
           habilidades_culturais?: Json
@@ -595,6 +598,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      dc_stage: "em_criacao" | "em_aprovacao" | "concluido"
       dynamic_field_type:
         | "text"
         | "textarea"
@@ -740,6 +744,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      dc_stage: ["em_criacao", "em_aprovacao", "concluido"],
       dynamic_field_type: [
         "text",
         "textarea",
