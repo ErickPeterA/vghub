@@ -80,7 +80,7 @@ function AtrelarUsuarios() {
 
   const alterarRole = async (id: string, novoRole: string) => {
     try {
-      await updateRoleFn({ data: { memberId: id, role: novoRole as "admin" | "lider_estrategico" | "lider_tatico" | "lider_operacional" | "gp" } });
+      await updateRoleFn({ data: { memberId: id, role: novoRole as RoleValue } });
       load();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao alterar cargo"); }
   };
