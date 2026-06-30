@@ -15,11 +15,12 @@ type Member = { id: string; project_id: string; user_id: string; role: string; n
 
 const roleOptions = [
   { v: "admin", l: "Admin" },
-  { v: "lider_estrategico", l: "Líder Estratégico" },
-  { v: "lider_tatico", l: "Líder Tático" },
-  { v: "lider_operacional", l: "Líder Operacional" },
   { v: "gp", l: "GP (Gerente de Pessoas)" },
+  { v: "lider_superior", l: "Líder Superior" },
+  { v: "lider_setor", l: "Líder de Setor" },
+  { v: "usuario_comum", l: "Usuário Comum" },
 ];
+type RoleValue = "admin" | "gp" | "lider_superior" | "lider_setor" | "usuario_comum" | "lider_estrategico" | "lider_tatico" | "lider_operacional";
 
 function AtrelarUsuarios() {
   const { isAdmin, loading: lu } = useCurrentUser();
