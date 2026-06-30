@@ -395,6 +395,42 @@ export type Database = {
           },
         ]
       }
+      project_member_scopes: {
+        Row: {
+          area_id: string | null
+          created_at: string
+          id: string
+          member_id: string
+        }
+        Insert: {
+          area_id?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+        }
+        Update: {
+          area_id?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_member_scopes_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "project_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_member_scopes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "project_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           created_at: string
@@ -571,8 +607,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      area_ancestors: { Args: { _area_id: string }; Returns: string[] }
       can_manage_project_base: {
         Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_dc: {
+        Args: { _dc_id: string; _user_id: string }
         Returns: boolean
       }
       clone_general_base_to_project: {
