@@ -622,6 +622,10 @@ export type Database = {
     }
     Functions: {
       area_ancestors: { Args: { _area_id: string }; Returns: string[] }
+      can_create_dc: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_manage_project_base: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
