@@ -46,11 +46,13 @@ function AtrelarUsuarios() {
     ]);
     setProjects(ps ?? []);
     setUsers(us ?? []);
-    setMembers((ms ?? []).map((m) => ({
-      id: m.id, project_id: m.project_id, user_id: m.user_id, role: m.role,
-      // @ts-expect-error nested
-      nome: m.profiles?.nome ?? "—", email: m.profiles?.email ?? "", projeto: m.projects?.nome ?? "—",
-    })));
+    setMembers((ms ?? []).map((m) => {
+      const row = m as unknown as { id: string; project_id: string; user_id: string; role: string; profiles: { nome?: string; email?: string } | null; projects: { nome?: string } | null };
+      return {
+        id: row.id, project_id: row.project_id, user_id: row.user_id, role: row.role,
+        nome: row.profiles?.nome ?? "—", email: row.profiles?.email ?? "", projeto: row.projects?.nome ?? "—",
+      };
+    }));
   };
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
 
