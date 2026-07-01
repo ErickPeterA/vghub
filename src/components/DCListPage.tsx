@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, FileText, ArrowRight, ArrowLeft, Check, Trash2 } from "lucide-react";
+import { Plus, FileText, ArrowRight, ArrowLeft, Check, Trash2, Layers, Users, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -20,10 +20,10 @@ type Row = {
 type Area = { id: string; nome: string; cor: string | null; parent_id: string | null };
 type Profile = { id: string; nome: string };
 
-const STAGES: { key: Stage; label: string }[] = [
-  { key: "em_criacao", label: "Em Criação" },
-  { key: "em_aprovacao", label: "Em Aprovação" },
-  { key: "concluido", label: "Concluídos" },
+const STAGES: { key: Stage; label: string; icon: React.ReactNode }[] = [
+  { key: "em_criacao", label: "Em Criação", icon: <Clock className="h-4 w-4 text-blue-500" /> },
+  { key: "em_aprovacao", label: "Em Aprovação", icon: <Users className="h-4 w-4 text-yellow-500" /> },
+  { key: "concluido", label: "Concluídos", icon: <Check className="h-4 w-4 text-green-500" /> },
 ];
 
 const stageOrder = (s: Stage): number => STAGES.findIndex((x) => x.key === s);
@@ -92,102 +92,175 @@ export function DCListPage({ projectId }: { projectId: string }) {
     void load();
   };
 
-  const renderSetorBadge = (row: Row) => {
+  const getSetorInfo = (row: Row) => {
     const setor = row.departamento ? areaById.get(row.departamento) : null;
     if (!setor) return null;
     const parent = setor.parent_id ? areaById.get(setor.parent_id) : null;
-    const color = setor.cor ?? parent?.cor ?? "#6366F1";
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: `${color}22`, color }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-        {setor.nome}
-      </span>
-    );
+    return {
+      nome: setor.nome,
+      cor: setor.cor ?? parent?.cor ?? "#042558"
+    };
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Cargos do projeto</p>
-          <h1 className="mt-2 font-display text-4xl">Descrição de Cargo</h1>
+    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="">
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-[#042558]">Descrições de Cargo</h1>
+                <p className="text-sm text-[#042558]/60">Gerencie as descrições de cargos do projeto</p>
+              </div>
+            </div>
+          </div>
+          <Link 
+            to="/projetos/$projectId/descricao-cargo/novo" 
+            params={{ projectId }} 
+            className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
+          >
+            <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
+            Nova Descrição
+          </Link>
         </div>
-        <Link to="/projetos/$projectId/descricao-cargo/novo" params={{ projectId }} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
-          <Plus className="h-4 w-4" /> Criar Descrição
-        </Link>
-      </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-3">
-          {STAGES.map((stage) => {
-            const items = rows.filter((r) => r.etapa === stage.key);
-            return (
-              <section key={stage.key} className="rounded-xl border border-border bg-card/40 p-3">
-                <header className="mb-3 flex items-center justify-between border-b border-border pb-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider">{stage.label}</h2>
-                  <span className="text-xs text-muted-foreground">{items.length}</span>
-                </header>
-                {items.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-                    <FileText className="mx-auto mb-1 h-5 w-5 opacity-60" />
-                    Nenhum item
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {items.map((row) => {
-                      const responsavel = profileById.get(row.created_by);
-                      const stageIdx = stageOrder(row.etapa);
-                      const isOwner = user?.id === row.created_by;
-                      const canApprove =
-                        row.etapa === "em_aprovacao" &&
-                        (isAdmin || isResponsavel || isLider || (isUsuarioComum && isOwner));
-                      return (
-                        <article key={row.id} className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                          <Link to="/projetos/$projectId/descricao-cargo/$dcId" params={{ projectId, dcId: row.id }} className="block">
-                            <h3 className="font-medium leading-tight hover:underline">{row.cargo || "(sem cargo)"}</h3>
-                          </Link>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                            {renderSetorBadge(row)}
-                            <span>{new Date(row.created_at).toLocaleDateString("pt-BR")}</span>
-                          </div>
-                          {responsavel && <p className="mt-1 text-xs text-muted-foreground">por <span className="text-foreground">{responsavel.nome}</span></p>}
+        {/* Content */}
+        {loading ? (
+          <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
+              <p className="text-sm text-[#042558]/60">Carregando descrições...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+            {STAGES.map((stage) => {
+              const items = rows.filter((r) => r.etapa === stage.key);
+              return (
+                <section key={stage.key} className="flex flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-lg">
+                  <header className="mb-4 flex items-center justify-between border-b border-[#042558]/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-md bg-[#042558]/10 p-1.5 text-[#042558]">
+                        {stage.icon}
+                      </div>
+                      <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+                        {stage.label}
+                      </h2>
+                    </div>
+                    <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#042558]/10 px-2 text-xs font-medium text-[#042558]">
+                      {items.length}
+                    </span>
+                  </header>
+                  
+                  {items.length === 0 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
+                      <FileText className="mb-2 h-8 w-8 text-[#042558]/30" />
+                      <p className="text-xs text-[#042558]/40">Nenhuma descrição</p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 space-y-3">
+                      {items.map((row) => {
+                        const responsavel = profileById.get(row.created_by);
+                        const stageIdx = stageOrder(row.etapa);
+                        const isOwner = user?.id === row.created_by;
+                        const canApprove =
+                          row.etapa === "em_aprovacao" &&
+                          (isAdmin || isResponsavel || isLider || (isUsuarioComum && isOwner));
+                        const setorInfo = getSetorInfo(row);
+                        
+                        return (
+                          <article key={row.id} className="group rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md">
+                            <Link 
+                              to="/projetos/$projectId/descricao-cargo/$dcId" 
+                              params={{ projectId, dcId: row.id }} 
+                              className="block"
+                            >
+                              <h3 className="text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80">
+                                {row.cargo || "(sem cargo)"}
+                              </h3>
+                            </Link>
+                            
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium text-[#042558]/60 uppercase">
+                                {row.cargo?.toUpperCase() || "SEM CARGO"}, 
+                              </span>
+                              <span className="text-xs text-[#042558]/40">
+                                {new Date(row.created_at).toLocaleDateString("pt-BR")}
+                              </span>
+                            </div>
+                            
+                            {responsavel && (
+                              <p className="mt-1 text-xs text-[#042558]/40">
+                                por <span className="font-medium text-[#042558]/70">{responsavel.nome}</span>
+                              </p>
+                            )}
 
-                          <div className="mt-3 flex items-center justify-end gap-1.5">
-                            {hasFullControl && (
-                              <>
-                                {stageIdx > 0 && (
-                                  <button onClick={() => moveStage(row, STAGES[stageIdx - 1].key)} className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary" title="Etapa anterior">
+                            <div className="mt-3 flex items-center justify-between border-t border-[#042558]/10 pt-3">
+                              <div className="flex items-center gap-2">
+                                {setorInfo && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span 
+                                      className="h-2.5 w-2.5 rounded-full" 
+                                      style={{ background: setorInfo.cor }}
+                                    />
+                                    <span className="text-[10px] font-medium text-[#042558]/60">
+                                      {setorInfo.nome}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                {hasFullControl && stageIdx > 0 && (
+                                  <button 
+                                    onClick={() => moveStage(row, STAGES[stageIdx - 1].key)} 
+                                    className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
+                                    title="Etapa anterior"
+                                  >
                                     <ArrowLeft className="h-3.5 w-3.5" />
                                   </button>
                                 )}
-                                {stageIdx < STAGES.length - 1 && (
-                                  <button onClick={() => moveStage(row, STAGES[stageIdx + 1].key)} className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-secondary" title="Próxima etapa">
+                                {hasFullControl && stageIdx < STAGES.length - 1 && (
+                                  <button 
+                                    onClick={() => moveStage(row, STAGES[stageIdx + 1].key)} 
+                                    className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
+                                    title="Próxima etapa"
+                                  >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </button>
                                 )}
-                                <button onClick={() => remove(row)} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Excluir">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            )}
-                            {!hasFullControl && canApprove && (
-                              <button onClick={() => moveStage(row, "concluido")} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:opacity-90">
-                                <Check className="h-3.5 w-3.5" /> Aprovar
-                              </button>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      )}
+                                {hasFullControl && (
+                                  <button 
+                                    onClick={() => remove(row)} 
+                                    className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-red-50 hover:text-red-600"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                {!hasFullControl && canApprove && (
+                                  <button 
+                                    onClick={() => moveStage(row, "concluido")} 
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl"
+                                  >
+                                    <Check className="h-3.5 w-3.5" /> Aprovar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

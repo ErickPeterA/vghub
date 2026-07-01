@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2, Pencil, Check, X, Layers, Building2, FolderTree } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,13 +13,13 @@ type Area = {
 };
 
 const DEFAULT_COLORS = [
-  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
-  "#EC4899", "#06B6D4", "#F97316", "#84CC16", "#6366F1",
+  "#042558", "#1a5a8a", "#2d7ab5", "#4a9ad9", "#6bb5e8",
+  "#8ccaf0", "#aedbf5", "#cfe8fa", "#e5f2fc", "#f0f8ff",
 ];
 
 const pickColor = (i: number) => DEFAULT_COLORS[i % DEFAULT_COLORS.length];
 
-const inp = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+const inp = "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
 
 export function AreasManager({ projectId }: { projectId: string }) {
   const [areas, setAreas] = useState<Area[]>([]);
@@ -104,108 +104,209 @@ export function AreasManager({ projectId }: { projectId: string }) {
   const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <p className="text-xs uppercase tracking-widest text-muted-foreground">Estrutura organizacional</p>
-      <h1 className="mt-2 font-display text-4xl">Áreas</h1>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Cadastre as Áreas e, dentro de cada uma, os Setores. Esses valores alimentam automaticamente
-        os campos "Área" e "Setor" das descrições de cargo. Apenas o admin ou o responsável pelo projeto pode editar.
-      </p>
+    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
+      <div className="mx-auto max-w-5xl">
+        {/* Header */}
+        <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-[#042558]">Áreas e Setores</h1>
+                </div>
+              </div>
+              <p className="mt-3 max-w-2xl text-sm text-[#042558]/50">
+                Cadastre as Áreas e, dentro de cada uma, os Setores. Esses valores alimentam automaticamente
+                os campos "Área" e "Setor" das descrições de cargo.
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <div className="mt-8 flex gap-2">
-        <input
-          value={newAreaName}
-          onChange={(e) => setNewAreaName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addArea())}
-          placeholder="Nova área..."
-          className={inp}
-        />
-        <button onClick={addArea} className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
-          <Plus className="h-4 w-4" /> Nova Área
-        </button>
-      </div>
+        {/* Add Area */}
+        <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm">
+          <div className="flex gap-3">
+            <input
+              value={newAreaName}
+              onChange={(e) => setNewAreaName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addArea())}
+              placeholder="Nova área..."
+              className={inp}
+            />
+            <button 
+              onClick={addArea} 
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30"
+            >
+              <Plus className="h-4 w-4" /> Nova Área
+            </button>
+          </div>
+        </div>
 
-      {loading ? (
-        <p className="mt-6 text-sm text-muted-foreground">Carregando...</p>
-      ) : topLevel.length === 0 ? (
-        <p className="mt-6 rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhuma área cadastrada ainda.
-        </p>
-      ) : (
-        <div className="mt-6 space-y-3">
-          {topLevel.map((area) => {
-            const setores = childrenOf(area.id);
-            const isOpen = expanded[area.id] ?? true;
-            return (
-              <div key={area.id} className="rounded-xl border border-border bg-card">
-                <div className="flex items-center gap-2 p-4">
-                  <button onClick={() => toggle(area.id)} className="text-muted-foreground hover:text-foreground">
-                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: area.cor ?? "#888" }} />
-                  {editing === area.id ? (
-                    <>
-                      <input value={editValue} onChange={(e) => setEditValue(e.target.value)} className={inp} autoFocus
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(area); } if (e.key === "Escape") setEditing(null); }}
-                      />
-                      <button onClick={() => saveEdit(area)} className="rounded-md p-2 hover:bg-secondary"><Check className="h-4 w-4" /></button>
-                      <button onClick={() => setEditing(null)} className="rounded-md p-2 hover:bg-secondary"><X className="h-4 w-4" /></button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 font-medium">{area.nome}</span>
-                      <span className="text-xs text-muted-foreground">{setores.length} setor(es)</span>
-                      <button onClick={() => startEdit(area)} className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => remove(area)} className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                    </>
+        {/* Content */}
+        {loading ? (
+          <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
+              <p className="text-sm text-[#042558]/60">Carregando áreas...</p>
+            </div>
+          </div>
+        ) : topLevel.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-12">
+            <Building2 className="mb-4 h-12 w-12 text-[#042558]/20" />
+            <p className="text-sm font-medium text-[#042558]/60">Nenhuma área cadastrada</p>
+            <p className="text-xs text-[#042558]/40">Comece criando sua primeira área acima</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {topLevel.map((area) => {
+              const setores = childrenOf(area.id);
+              const isOpen = expanded[area.id] ?? true;
+              return (
+                <div key={area.id} className="overflow-hidden rounded-2xl border border-[#042558]/10 bg-white/60 shadow-sm transition-all hover:shadow-md">
+                  {/* Area Header */}
+                  <div className="flex items-center gap-3 bg-[#042558]/5 p-4 transition-colors hover:bg-[#042558]/10">
+                    <button 
+                      onClick={() => toggle(area.id)} 
+                      className="rounded-md p-1 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
+                    >
+                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
+                    <div 
+                      className="h-4 w-4 shrink-0 rounded-full shadow-sm" 
+                      style={{ background: area.cor ?? "#042558" }}
+                    />
+                    {editing === area.id ? (
+                      <div className="flex flex-1 items-center gap-2">
+                        <input 
+                          value={editValue} 
+                          onChange={(e) => setEditValue(e.target.value)} 
+                          className={`${inp} flex-1`} 
+                          autoFocus
+                          onKeyDown={(e) => { 
+                            if (e.key === "Enter") { e.preventDefault(); saveEdit(area); } 
+                            if (e.key === "Escape") setEditing(null); 
+                          }}
+                        />
+                        <button 
+                          onClick={() => saveEdit(area)} 
+                          className="rounded-lg bg-[#042558] p-2 text-white transition-colors hover:bg-[#042558]/90"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => setEditing(null)} 
+                          className="rounded-lg border border-[#042558]/20 p-2 text-[#042558]/60 transition-colors hover:bg-[#042558]/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="flex-1 font-semibold text-[#042558]">{area.nome}</span>
+                        <span className="rounded-full bg-[#042558]/10 px-2.5 py-0.5 text-xs font-medium text-[#042558]">
+                          {setores.length} setor{setores.length !== 1 ? 'es' : ''}
+                        </span>
+                        <button 
+                          onClick={() => startEdit(area)} 
+                          className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => remove(area)} 
+                          className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Setores */}
+                  {isOpen && (
+                    <div className="border-t border-[#042558]/10 bg-white/30 p-4">
+                      {setores.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                          {setores.map((s) => (
+                            <div 
+                              key={s.id} 
+                              className="flex items-center gap-3 rounded-xl border border-[#042558]/10 bg-white/60 p-3 transition-all hover:border-[#042558]/30 hover:shadow-sm"
+                            >
+                              <div 
+                                className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" 
+                                style={{ background: s.cor ?? area.cor ?? "#042558" }}
+                              />
+                              {editing === s.id ? (
+                                <div className="flex flex-1 items-center gap-2">
+                                  <input 
+                                    value={editValue} 
+                                    onChange={(e) => setEditValue(e.target.value)} 
+                                    className={`${inp} flex-1`} 
+                                    autoFocus
+                                    onKeyDown={(e) => { 
+                                      if (e.key === "Enter") { e.preventDefault(); saveEdit(s); } 
+                                      if (e.key === "Escape") setEditing(null); 
+                                    }}
+                                  />
+                                  <button 
+                                    onClick={() => saveEdit(s)} 
+                                    className="rounded-lg bg-[#042558] p-1.5 text-white transition-colors hover:bg-[#042558]/90"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button 
+                                    onClick={() => setEditing(null)} 
+                                    className="rounded-lg border border-[#042558]/20 p-1.5 text-[#042558]/60 transition-colors hover:bg-[#042558]/10"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="flex-1 text-sm font-medium text-[#042558]">{s.nome}</span>
+                                  <button 
+                                    onClick={() => startEdit(s)} 
+                                    className="rounded-md p-1 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button 
+                                    onClick={() => remove(s)} 
+                                    className="rounded-md p-1 text-[#042558]/40 transition-colors hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Add Setor */}
+                      <div className="flex gap-2">
+                        <input
+                          value={newSetorName[area.id] ?? ""}
+                          onChange={(e) => setNewSetorName((p) => ({ ...p, [area.id]: e.target.value }))}
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSetor(area.id))}
+                          placeholder="Novo setor..."
+                          className={`${inp} flex-1`}
+                        />
+                        <button 
+                          onClick={() => addSetor(area.id)} 
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Adicionar
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {isOpen && (
-                  <div className="border-t border-border bg-background/30 p-4">
-                    {setores.length > 0 && (
-                      <div className="mb-3 space-y-2">
-                        {setores.map((s) => (
-                          <div key={s.id} className="flex items-center gap-2 rounded-md border border-border bg-card p-2 pl-3">
-                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.cor ?? area.cor ?? "#888" }} />
-                            {editing === s.id ? (
-                              <>
-                                <input value={editValue} onChange={(e) => setEditValue(e.target.value)} className={inp} autoFocus
-                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveEdit(s); } if (e.key === "Escape") setEditing(null); }}
-                                />
-                                <button onClick={() => saveEdit(s)} className="rounded-md p-1.5 hover:bg-secondary"><Check className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => setEditing(null)} className="rounded-md p-1.5 hover:bg-secondary"><X className="h-3.5 w-3.5" /></button>
-                              </>
-                            ) : (
-                              <>
-                                <span className="flex-1 text-sm">{s.nome}</span>
-                                <button onClick={() => startEdit(s)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => remove(s)} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        value={newSetorName[area.id] ?? ""}
-                        onChange={(e) => setNewSetorName((p) => ({ ...p, [area.id]: e.target.value }))}
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSetor(area.id))}
-                        placeholder="Novo setor..."
-                        className={inp}
-                      />
-                      <button onClick={() => addSetor(area.id)} className="inline-flex shrink-0 items-center gap-1 rounded-md bg-secondary px-3 py-2 text-sm hover:bg-secondary/80">
-                        <Plus className="h-3.5 w-3.5" /> Adicionar setor
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

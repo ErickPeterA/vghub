@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, memo } from "react";
-import { Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import { Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical, Database, Layers } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -29,7 +29,8 @@ type Field = {
   allows_free_text: boolean; is_active: boolean; base_options: Option[];
 };
 
-const inputClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+const inputClass = "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
+
 const types: Array<{ value: FieldType; label: string }> = [
   { value: "text", label: "Texto" },
   { value: "textarea", label: "Texto longo" },
@@ -62,8 +63,8 @@ const OptionRow = memo(function OptionRow({
 
   if (showDescription) {
     return (
-      <div className={`flex items-start gap-2 rounded-md border p-2 ${option.is_active ? "border-border" : "border-dashed opacity-60"}`}>
-        <button type="button" onClick={() => onToggle(option.id, !option.is_active)} className="min-w-[140px] truncate text-left text-sm font-medium hover:underline">
+      <div className={`flex items-start gap-2 rounded-lg border p-3 ${option.is_active ? "border-[#042558]/20 bg-white/60" : "border-dashed border-[#042558]/10 bg-white/30 opacity-60"}`}>
+        <button type="button" onClick={() => onToggle(option.id, !option.is_active)} className="min-w-[140px] truncate text-left text-sm font-medium text-[#042558] hover:text-[#042558]/80 hover:underline">
           {option.label}
         </button>
         <input
@@ -73,14 +74,14 @@ const OptionRow = memo(function OptionRow({
           placeholder="Descrição da competência"
           className={inputClass}
         />
-        <button type="button" onClick={() => onRemove(option.id)} aria-label="Excluir" className="shrink-0 rounded-md p-2 text-muted-foreground hover:text-destructive">×</button>
+        <button type="button" onClick={() => onRemove(option.id)} aria-label="Excluir" className="shrink-0 rounded-md p-2 text-[#042558]/40 transition-colors hover:bg-red-50 hover:text-red-600">×</button>
       </div>
     );
   }
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${option.is_active ? "border-border" : "border-dashed opacity-50"}`}>
-      <button type="button" onClick={() => onToggle(option.id, !option.is_active)}>{option.label}</button>
-      <button type="button" onClick={() => onRemove(option.id)} aria-label="Excluir opção" className="text-muted-foreground hover:text-destructive">×</button>
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${option.is_active ? "border-[#042558]/20 bg-white/60 text-[#042558]" : "border-dashed border-[#042558]/10 bg-white/30 text-[#042558]/40"}`}>
+      <button type="button" onClick={() => onToggle(option.id, !option.is_active)} className="hover:text-[#042558]">{option.label}</button>
+      <button type="button" onClick={() => onRemove(option.id)} aria-label="Excluir opção" className="text-[#042558]/40 transition-colors hover:text-red-600">×</button>
     </span>
   );
 });
@@ -112,10 +113,10 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style} className="rounded-xl border border-border bg-background/50 p-4">
+    <div ref={setNodeRef} style={style} className="rounded-xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md">
       <div className="grid gap-3 md:grid-cols-[auto_1.4fr_1fr_1fr_auto]">
-        <button type="button" {...attributes} {...listeners} className="flex cursor-grab items-center justify-center rounded-md border border-border px-2 hover:bg-secondary active:cursor-grabbing" title="Arrastar para reordenar">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <button type="button" {...attributes} {...listeners} className="flex cursor-grab items-center justify-center rounded-lg border border-[#042558]/20 bg-white/50 px-2 transition-colors hover:bg-[#042558]/10 active:cursor-grabbing" title="Arrastar para reordenar">
+          <GripVertical className="h-4 w-4 text-[#042558]/40" />
         </button>
         <input value={field.label} onChange={(e) => onPatch(field.id, { label: e.target.value })} className={inputClass} aria-label="Nome do campo" />
         <select value={field.section} onChange={(e) => onPatch(field.id, { section: e.target.value })} className={inputClass} aria-label="Bloco">
@@ -124,24 +125,28 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
         <select value={field.field_type} onChange={(e) => onPatch(field.id, { field_type: e.target.value as FieldType, allows_multiple: e.target.value === "multi_select" })} className={inputClass} aria-label="Tipo do campo">
           {types.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
         </select>
-        <div className="flex gap-1">
-          <button type="button" onClick={() => onSave(field)} className="rounded-md border border-border p-2 hover:bg-secondary" title="Salvar"><Save className="h-4 w-4" /></button>
-          <button type="button" onClick={() => onRemove(field.id)} className="rounded-md border border-border p-2 text-destructive hover:bg-destructive/10" title="Excluir"><Trash2 className="h-4 w-4" /></button>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => onSave(field)} className="rounded-lg border border-[#042558]/20 bg-white/50 p-2 text-[#042558] transition-colors hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20" title="Salvar">
+            <Save className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => onRemove(field.id)} className="rounded-lg border border-[#042558]/20 bg-white/50 p-2 text-[#042558]/40 transition-colors hover:border-red-500 hover:bg-red-50 hover:text-red-600" title="Excluir">
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-5 text-sm">
-        <label className="flex cursor-pointer items-center gap-1.5">
-          <input type="checkbox" checked={field.is_required} onChange={(e) => onPatch(field.id, { is_required: e.target.checked })} /> Obrigatório
+        <label className="flex cursor-pointer items-center gap-1.5 text-[#042558]/60 transition-colors hover:text-[#042558]">
+          <input type="checkbox" checked={field.is_required} onChange={(e) => onPatch(field.id, { is_required: e.target.checked })} className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20" /> Obrigatório
         </label>
-        <label className="flex cursor-pointer items-center gap-1.5">
-          <input type="checkbox" checked={field.is_active} onChange={(e) => onPatch(field.id, { is_active: e.target.checked })} /> Ativo
+        <label className="flex cursor-pointer items-center gap-1.5 text-[#042558]/60 transition-colors hover:text-[#042558]">
+          <input type="checkbox" checked={field.is_active} onChange={(e) => onPatch(field.id, { is_active: e.target.checked })} className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20" /> Ativo
         </label>
       </div>
 
       {showOptions && (
-        <div className="mt-4 border-t border-border pt-4">
-          <button type="button" onClick={() => setOptionsOpen((v) => !v)} className="mb-2 flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground">
+        <div className="mt-4 border-t border-[#042558]/10 pt-4">
+          <button type="button" onClick={() => setOptionsOpen((v) => !v)} className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#042558]/50 transition-colors hover:text-[#042558]">
             Opções ({field.base_options.length})
             {optionsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
@@ -150,7 +155,7 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
             <>
               <div className="mb-3 flex gap-2">
                 <input value={newOptionLabel} onChange={(e) => setNewOptionLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddOption())} placeholder={showDescription ? "Nova competência..." : "Nova opção..."} className={inputClass} />
-                <button type="button" onClick={handleAddOption} className="inline-flex shrink-0 items-center gap-1 rounded-md bg-secondary px-3 py-2 text-sm hover:bg-secondary/80">
+                <button type="button" onClick={handleAddOption} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20">
                   <Plus className="h-3.5 w-3.5" /> Adicionar
                 </button>
               </div>
@@ -306,73 +311,101 @@ export function BaseManager({
   }, []);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <p className="text-xs uppercase tracking-widest text-muted-foreground">Bases dinâmicas</p>
-      <h1 className="mt-2 font-display text-4xl">{title}</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{description}</p>
-
-      {loading ? (
-        <p className="mt-8 text-sm text-muted-foreground">Carregando base...</p>
-      ) : (
-        <div className="mt-8 space-y-10">
-          {DC_SECTIONS.map((section) => {
-            const sectionFields = fields
-              .filter((f) => f.section === section.key)
-              .sort((a, b) => a.display_order - b.display_order);
-            return (
-              <section key={section.key} className="rounded-2xl border border-border bg-card p-6">
-                <header className="mb-5 flex items-baseline justify-between gap-4 border-b border-border pb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-accent">{section.num}</p>
-                    <h2 className="mt-1 font-display text-2xl">{section.label}</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar.</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{sectionFields.length} campo(s)</span>
-                </header>
-
-                <div className="mb-5 flex gap-2">
-                  <input
-                    value={newLabel[section.key] ?? ""}
-                    onChange={(e) => setNewLabel((prev) => ({ ...prev, [section.key]: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addField(section.key))}
-                    className={inputClass}
-                    placeholder={`Novo campo em ${section.label}`}
-                  />
-                  <button type="button" onClick={() => addField(section.key)} className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
-                    <Plus className="h-4 w-4" /> Criar campo
-                  </button>
-                </div>
-
-                {sectionFields.length === 0 ? (
-                  <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                    Nenhum campo neste bloco.
-                  </p>
-                ) : (
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(section.key, e)}>
-                    <SortableContext items={sectionFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-3">
-                        {sectionFields.map((field) => (
-                          <SortableFieldRow
-                            key={field.id}
-                            field={field}
-                            onPatch={patchLocal}
-                            onSave={save}
-                            onRemove={removeField}
-                            onAddOption={addOption}
-                            onToggleOption={toggleOption}
-                            onRemoveOption={removeOption}
-                            onUpdateOptionDescription={updateOptionDescription}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                )}
-              </section>
-            );
-          })}
+    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
+      <div className="mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-lg bg-[#042558]/10 p-2.5">
+              <Database className="h-5 w-5 text-[#042558]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-[#042558]">{title}</h1>
+              <p className="mt-1 text-sm text-[#042558]/60">{description}</p>
+            </div>
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
+              <p className="text-sm text-[#042558]/60">Carregando base...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {DC_SECTIONS.map((section) => {
+              const sectionFields = fields
+                .filter((f) => f.section === section.key)
+                .sort((a, b) => a.display_order - b.display_order);
+              return (
+                <section key={section.key} className="overflow-hidden rounded-2xl border border-[#042558]/10 bg-white/60 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
+                  <div className="border-b border-[#042558]/10 bg-[#042558]/5 p-5">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+                          Bloco {section.num}
+                        </p>
+                        <h2 className="text-xl font-bold text-[#042558]">{section.label}</h2>
+                        <p className="mt-0.5 text-xs text-[#042558]/40">
+                          Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
+                        {sectionFields.length} campo{sectionFields.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="mb-4 flex gap-2">
+                      <input
+                        value={newLabel[section.key] ?? ""}
+                        onChange={(e) => setNewLabel((prev) => ({ ...prev, [section.key]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addField(section.key))}
+                        className={inputClass}
+                        placeholder={`Novo campo em ${section.label}`}
+                      />
+                      <button type="button" onClick={() => addField(section.key)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30">
+                        <Plus className="h-4 w-4" /> Criar campo
+                      </button>
+                    </div>
+
+                    {sectionFields.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
+                        <Layers className="mb-2 h-8 w-8 text-[#042558]/20" />
+                        <p className="text-sm font-medium text-[#042558]/40">Nenhum campo neste bloco</p>
+                        <p className="text-xs text-[#042558]/30">Crie seu primeiro campo acima</p>
+                      </div>
+                    ) : (
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(section.key, e)}>
+                        <SortableContext items={sectionFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-3">
+                            {sectionFields.map((field) => (
+                              <SortableFieldRow
+                                key={field.id}
+                                field={field}
+                                onPatch={patchLocal}
+                                onSave={save}
+                                onRemove={removeField}
+                                onAddOption={addOption}
+                                onToggleOption={toggleOption}
+                                onRemoveOption={removeOption}
+                                onUpdateOptionDescription={updateOptionDescription}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
