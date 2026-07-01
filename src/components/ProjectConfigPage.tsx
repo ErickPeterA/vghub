@@ -156,36 +156,34 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
                   </button>
                 </div>
 
-                {m.role === "lider_setor" && (
-                  <div className="mt-3 rounded-md border border-border bg-background/40 p-3">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Setores gerenciados</p>
-                    {memberScopes.length === 0 && (
-                      <p className="mb-2 text-xs text-muted-foreground">Nenhum setor vinculado ainda.</p>
+                {(m.role === "lider_setor" || m.role === "lider_superior") && (
+                  <div className="mt-3 space-y-3 rounded-md border border-border bg-background/40 p-3">
+                    <ScopePicker
+                      title="Áreas"
+                      subtitle={m.role === "lider_superior" ? "Obrigatório: escolha ao menos uma área que este líder gerencia." : "Obrigatório: áreas gerenciadas por este líder."}
+                      options={allAreas.filter((a) => a.parent_id === null)}
+                      memberScopes={memberScopes}
+                      onAdd={(id) => addScope(m, id)}
+                      onRemove={removeScope}
+                    />
+                    <ScopePicker
+                      title="Setores"
+                      subtitle="Opcional: setores específicos (pode escolher mais de um)."
+                      options={allAreas.filter((a) => a.parent_id !== null)}
+                      memberScopes={memberScopes}
+                      onAdd={(id) => addScope(m, id)}
+                      onRemove={removeScope}
+                      renderLabel={(a) => {
+                        const parent = a.parent_id ? allAreas.find((x) => x.id === a.parent_id) : null;
+                        return parent ? `${parent.nome} → ${a.nome}` : a.nome;
+                      }}
+                    />
+                    {memberScopes.filter((s) => {
+                      const a = allAreas.find((x) => x.id === s.area_id);
+                      return a && a.parent_id === null;
+                    }).length === 0 && (
+                      <p className="text-xs text-amber-500">⚠ Este líder ainda não tem nenhuma área vinculada.</p>
                     )}
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      {memberScopes.map((s) => {
-                        const a = allAreas.find((x) => x.id === s.area_id);
-                        return (
-                          <span key={s.id} className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs">
-                            {a?.nome ?? "—"}
-                            <button onClick={() => removeScope(s)} className="text-muted-foreground hover:text-destructive">×</button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <select
-                      defaultValue=""
-                      onChange={(e) => { addScope(m, e.target.value); e.currentTarget.value = ""; }}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-                    >
-                      <option value="">+ Vincular setor...</option>
-                      {allAreas
-                        .filter((a) => !memberScopes.some((s) => s.area_id === a.id))
-                        .map((a) => {
-                          const parent = a.parent_id ? allAreas.find((x) => x.id === a.parent_id) : null;
-                          return <option key={a.id} value={a.id}>{parent ? `${parent.nome} → ${a.nome}` : a.nome}</option>;
-                        })}
-                    </select>
                   </div>
                 )}
               </div>
@@ -194,5 +192,50 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
         </div>
       )}
     </main>
+  );
+}
+
+function ScopePicker({
+  title, subtitle, options, memberScopes, onAdd, onRemove, renderLabel,
+}: {
+  title: string;
+  subtitle: string;
+  options: Area[];
+  memberScopes: Scope[];
+  onAdd: (areaId: string) => void;
+  onRemove: (scope: Scope) => void;
+  renderLabel?: (a: Area) => string;
+}) {
+  const optionIds = new Set(options.map((o) => o.id));
+  const selected = memberScopes.filter((s) => optionIds.has(s.area_id));
+  const label = (a: Area) => (renderLabel ? renderLabel(a) : a.nome);
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+      <p className="mb-2 text-[11px] text-muted-foreground">{subtitle}</p>
+      {selected.length === 0 && <p className="mb-2 text-xs text-muted-foreground">Nenhum item vinculado.</p>}
+      <div className="mb-2 flex flex-wrap gap-2">
+        {selected.map((s) => {
+          const a = options.find((x) => x.id === s.area_id);
+          if (!a) return null;
+          return (
+            <span key={s.id} className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs">
+              {label(a)}
+              <button onClick={() => onRemove(s)} className="text-muted-foreground hover:text-destructive">×</button>
+            </span>
+          );
+        })}
+      </div>
+      <select
+        defaultValue=""
+        onChange={(e) => { onAdd(e.target.value); e.currentTarget.value = ""; }}
+        className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+      >
+        <option value="">+ Vincular {title.toLowerCase()}...</option>
+        {options
+          .filter((a) => !memberScopes.some((s) => s.area_id === a.id))
+          .map((a) => <option key={a.id} value={a.id}>{label(a)}</option>)}
+      </select>
+    </div>
   );
 }
