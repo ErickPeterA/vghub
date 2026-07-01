@@ -634,6 +634,16 @@ export type Database = {
         Args: { _dc_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_dc_row: {
+        Args: {
+          _created_by: string
+          _departamento: string
+          _etapa: Database["public"]["Enums"]["dc_stage"]
+          _project_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       clone_general_base_to_project: {
         Args: { _created_by?: string; _project_id: string }
         Returns: undefined
