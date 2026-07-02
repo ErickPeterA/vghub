@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_configs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          header_schema: Json
+          id: string
+          is_active: boolean
+          project_id: string
+          questions_schema: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          header_schema?: Json
+          id?: string
+          is_active?: boolean
+          project_id: string
+          questions_schema?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          header_schema?: Json
+          id?: string
+          is_active?: boolean
+          project_id?: string
+          questions_schema?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_links: {
+        Row: {
+          answered_at: string | null
+          config_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          label: string | null
+          project_id: string
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["activity_link_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          answered_at?: string | null
+          config_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          label?: string | null
+          project_id: string
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["activity_link_status"]
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          answered_at?: string | null
+          config_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          label?: string | null
+          project_id?: string
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["activity_link_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_links_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "activity_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_responses: {
+        Row: {
+          created_at: string
+          header_answers: Json
+          id: string
+          link_id: string
+          project_id: string
+          question_answers: Json
+          submitted_at: string
+          submitted_ip: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          header_answers?: Json
+          id?: string
+          link_id: string
+          project_id: string
+          question_answers?: Json
+          submitted_at?: string
+          submitted_ip?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          header_answers?: Json
+          id?: string
+          link_id?: string
+          project_id?: string
+          question_answers?: Json
+          submitted_at?: string
+          submitted_ip?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_responses_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "activity_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_responses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       base_fields: {
         Row: {
           allows_free_text: boolean
@@ -666,6 +818,7 @@ export type Database = {
       }
     }
     Enums: {
+      activity_link_status: "pending" | "answered" | "expired" | "cancelled"
       app_role: "admin" | "user"
       dc_stage: "em_criacao" | "em_aprovacao" | "concluido"
       dynamic_field_type:
@@ -815,6 +968,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_link_status: ["pending", "answered", "expired", "cancelled"],
       app_role: ["admin", "user"],
       dc_stage: ["em_criacao", "em_aprovacao", "concluido"],
       dynamic_field_type: [
