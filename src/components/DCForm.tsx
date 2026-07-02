@@ -252,34 +252,44 @@ export function DCForm({
           >
             <Plus className="h-4 w-4" /> Adicionar {itemSingular}
           </button>
-        )}
+      </div>
+    );
+  };
 
   return (
     <form onSubmit={handle} className="space-y-6">
-      {loadingFields ? (
-        <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>
-      ) : (
-        DC_SECTIONS.map((section) => {
-          const sectionFields = fields.filter((field) => field.section === section.key);
-          return (
-            <SectionShell key={section.key} num={section.num} title={section.label}>
-              {section.repeater
-                ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields)
-                : renderHeader(sectionFields)}
-            </SectionShell>
-          );
-        })
-      )}
+      <fieldset disabled={readOnly} className="space-y-6 border-0 p-0 disabled:opacity-100">
+        {headerExtra}
+        {loadingFields ? (
+          <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>
+        ) : (
+          DC_SECTIONS.map((section) => {
+            const sectionFields = fields.filter((field) => field.section === section.key);
+            return (
+              <SectionShell key={section.key} num={section.num} title={section.label}>
+                {section.repeater
+                  ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields)
+                  : renderHeader(sectionFields)}
+              </SectionShell>
+            );
+          })
+        )}
+      </fieldset>
 
-      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-primary px-6 py-2.5 text-sm text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? "Salvando..." : submitLabel}
-        </button>
-      </div>
+      {(!readOnly || footerExtra) && (
+        <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
+          {footerExtra}
+          {!readOnly && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-full bg-primary px-6 py-2.5 text-sm text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? "Salvando..." : submitLabel}
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }
