@@ -2,10 +2,16 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Database, FileText, History, BarChart3, ArrowLeft, Network, Settings, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
+
+const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional"]);
 
 export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId: string; projectName: string; isAdmin?: boolean }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const { user } = useCurrentUser();
   const [unreviewed, setUnreviewed] = useState(0);
+  const [projectRole, setProjectRole] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -21,7 +27,21 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
     const iv = setInterval(load, 30000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [projectId]);
-  const items = [
+
+  useEffect(() => {
+    if (!user) return;
+    void supabase
+      .from("project_members")
+      .select("role")
+      .eq("project_id", projectId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setProjectRole(data?.role ?? null));
+  }, [projectId, user?.id]);
+
+  const isLider = !isAdmin && projectRole !== null && LIDER_ROLES.has(projectRole);
+
+  const allItems = [
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
@@ -30,6 +50,11 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
     { to: "/projetos/$projectId/historico", href: `/projetos/${projectId}/historico`, icon: History, label: "Histórico" },
     ...(isAdmin ? [{ to: "/projetos/$projectId/configuracoes", href: `/projetos/${projectId}/configuracoes`, icon: Settings, label: "Permissões" }] : []),
   ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
+
+  const items = isLider
+    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Andamento")
+    : allItems;
+
   return (
     <aside className="w-64 shrink-0 border-r border-border bg-card/30">
       <div className="border-b border-border p-4">
