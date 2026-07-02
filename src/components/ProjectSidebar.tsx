@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Database, FileText, LayoutDashboard, History, BarChart3, ArrowLeft, Network, Settings, ClipboardList } from "lucide-react";
+import { Database, FileText, History, BarChart3, ArrowLeft, Network, Settings, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,14 +22,13 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
     return () => { cancelled = true; clearInterval(iv); };
   }, [projectId]);
   const items = [
-    { to: "/projetos/$projectId/central", href: `/projetos/${projectId}/central`, icon: LayoutDashboard, label: "Página Central" },
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
     { to: "/projetos/$projectId/base", href: `/projetos/${projectId}/base`, icon: Database, label: "Base do Projeto" },
     { to: "/projetos/$projectId/andamento", href: `/projetos/${projectId}/andamento`, icon: BarChart3, label: "Andamento" },
     { to: "/projetos/$projectId/historico", href: `/projetos/${projectId}/historico`, icon: History, label: "Histórico" },
-    ...(isAdmin ? [{ to: "/projetos/$projectId/configuracoes", href: `/projetos/${projectId}/configuracoes`, icon: Settings, label: "Configurações" }] : []),
+    ...(isAdmin ? [{ to: "/projetos/$projectId/configuracoes", href: `/projetos/${projectId}/configuracoes`, icon: Settings, label: "Permissões" }] : []),
   ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
   return (
     <aside className="w-64 shrink-0 border-r border-border bg-card/30">

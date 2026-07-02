@@ -27,7 +27,6 @@ import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/pub
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
-import { Route as AuthenticatedProjetosProjectIdCentralRouteImport } from './routes/_authenticated/projetos.$projectId.central'
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
 import { Route as AuthenticatedProjetosProjectIdAtividadesRouteImport } from './routes/_authenticated/projetos.$projectId.atividades'
 import { Route as AuthenticatedProjetosProjectIdAreasRouteImport } from './routes/_authenticated/projetos.$projectId.areas'
@@ -140,12 +139,6 @@ const AuthenticatedProjetosProjectIdConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
-const AuthenticatedProjetosProjectIdCentralRoute =
-  AuthenticatedProjetosProjectIdCentralRouteImport.update({
-    id: '/central',
-    path: '/central',
-    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
-  } as any)
 const AuthenticatedProjetosProjectIdBaseRoute =
   AuthenticatedProjetosProjectIdBaseRouteImport.update({
     id: '/base',
@@ -211,7 +204,6 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
-  '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -236,7 +228,6 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
-  '/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
@@ -265,7 +256,6 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/_authenticated/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
-  '/_authenticated/projetos/$projectId/central': typeof AuthenticatedProjetosProjectIdCentralRoute
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -295,7 +285,6 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/areas'
     | '/projetos/$projectId/atividades'
     | '/projetos/$projectId/base'
-    | '/projetos/$projectId/central'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
@@ -320,7 +309,6 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/areas'
     | '/projetos/$projectId/atividades'
     | '/projetos/$projectId/base'
-    | '/projetos/$projectId/central'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
     | '/api/public/activity-form/$token'
@@ -348,7 +336,6 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/areas'
     | '/_authenticated/projetos/$projectId/atividades'
     | '/_authenticated/projetos/$projectId/base'
-    | '/_authenticated/projetos/$projectId/central'
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
@@ -498,13 +485,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
-    '/_authenticated/projetos/$projectId/central': {
-      id: '/_authenticated/projetos/$projectId/central'
-      path: '/central'
-      fullPath: '/projetos/$projectId/central'
-      preLoaderRoute: typeof AuthenticatedProjetosProjectIdCentralRouteImport
-      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
-    }
     '/_authenticated/projetos/$projectId/base': {
       id: '/_authenticated/projetos/$projectId/base'
       path: '/base'
@@ -590,7 +570,6 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdAreasRoute: typeof AuthenticatedProjetosProjectIdAreasRoute
   AuthenticatedProjetosProjectIdAtividadesRoute: typeof AuthenticatedProjetosProjectIdAtividadesRoute
   AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
-  AuthenticatedProjetosProjectIdCentralRoute: typeof AuthenticatedProjetosProjectIdCentralRoute
   AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -607,8 +586,6 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdAtividadesRoute,
     AuthenticatedProjetosProjectIdBaseRoute:
       AuthenticatedProjetosProjectIdBaseRoute,
-    AuthenticatedProjetosProjectIdCentralRoute:
-      AuthenticatedProjetosProjectIdCentralRoute,
     AuthenticatedProjetosProjectIdConfiguracoesRoute:
       AuthenticatedProjetosProjectIdConfiguracoesRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
@@ -691,3 +668,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

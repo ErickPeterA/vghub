@@ -96,7 +96,7 @@ export function ProjectListPage() {
           {rows.map((p) => (
             <div key={p.id} className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-2">
-                <Link to="/projetos/$projectId/central" params={{ projectId: p.id }} className="flex-1">
+                <Link to="/projetos/$projectId/descricao-cargo" params={{ projectId: p.id }} className="flex-1">
                   <h3 className="font-display text-xl leading-tight hover:text-accent">{p.nome}</h3>
                   {p.empresa && <p className="mt-1 text-sm text-muted-foreground">{p.empresa}</p>}
                 </Link>
@@ -110,7 +110,7 @@ export function ProjectListPage() {
               </div>
               {isAdmin && (
                 <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                  <button onClick={() => navigate({ to: "/projetos/$projectId/central", params: { projectId: p.id } })} className="flex-1 rounded-md bg-[#173c78] px-3 py-1.5 text-xs text-white hover:bg-[#042558] cursor-pointer">Abrir</button>
+                  <button onClick={() => navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId: p.id } })} className="flex-1 rounded-md bg-[#173c78] px-3 py-1.5 text-xs text-white hover:bg-[#042558] cursor-pointer">Abrir</button>
                   <button onClick={() => arquivar(p.id, p.status)} className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
                     <Archive className="h-3 w-3" />
                   </button>
