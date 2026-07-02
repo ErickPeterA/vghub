@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
 import { DynamicFieldControl, useProjectFields, useProjectAreas, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
+import { FieldCommentButton } from "@/components/FieldCommentButton";
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
 
