@@ -1,17 +1,36 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Database, FileText, Library, LayoutDashboard, History, BarChart3, ArrowLeft, Network, Settings } from "lucide-react";
+import { Database, FileText, LayoutDashboard, History, BarChart3, ArrowLeft, Network, Settings, ClipboardList } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId: string; projectName: string; isAdmin?: boolean }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const [unreviewed, setUnreviewed] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { count } = await supabase
+        .from("activity_links")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "answered")
+        .is("reviewed_at", null);
+      if (!cancelled) setUnreviewed(count ?? 0);
+    };
+    void load();
+    const iv = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [projectId]);
   const items = [
     { to: "/projetos/$projectId/central", href: `/projetos/${projectId}/central`, icon: LayoutDashboard, label: "Página Central" },
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
+    { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
     { to: "/projetos/$projectId/base", href: `/projetos/${projectId}/base`, icon: Database, label: "Base do Projeto" },
     { to: "/projetos/$projectId/andamento", href: `/projetos/${projectId}/andamento`, icon: BarChart3, label: "Andamento" },
     { to: "/projetos/$projectId/historico", href: `/projetos/${projectId}/historico`, icon: History, label: "Histórico" },
     ...(isAdmin ? [{ to: "/projetos/$projectId/configuracoes", href: `/projetos/${projectId}/configuracoes`, icon: Settings, label: "Configurações" }] : []),
-  ] as const;
+  ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
   return (
     <aside className="w-64 shrink-0 border-r border-border bg-card/30">
       <div className="border-b border-border p-4">
