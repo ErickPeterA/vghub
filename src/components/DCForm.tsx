@@ -244,16 +244,15 @@ export function DCForm({
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={() => addItem(arrayKey)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" /> Adicionar {itemSingular}
-        </button>
-      </div>
-    );
-  };
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => addItem(arrayKey)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" /> Adicionar {itemSingular}
+          </button>
+        )}
 
   return (
     <form onSubmit={handle} className="space-y-6">
