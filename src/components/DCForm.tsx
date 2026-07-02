@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
 import { DynamicFieldControl, useProjectFields, useProjectAreas, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
+import { FieldCommentButton } from "@/components/FieldCommentButton";
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
 
@@ -31,12 +32,15 @@ const SectionShell = memo(function SectionShell({
   );
 });
 
-const FieldWrap = memo(function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+const FieldWrap = memo(function FieldWrap({ label, action, children }: { label: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className={lbl}>{label}</span>
+    <div className="block">
+      <div className="flex items-center justify-between gap-2">
+        <span className={lbl}>{label}</span>
+        {action}
+      </div>
       <div className="mt-1.5">{children}</div>
-    </label>
+    </div>
   );
 });
 
@@ -54,19 +58,21 @@ const SingleField = memo(function SingleField({
   onChange,
   areas,
   parentAreaId,
+  action,
 }: {
   field: DynamicField;
   value: DynamicItem[string] | undefined;
   onChange: (key: string, val: DynamicItem[string]) => void;
   areas: ProjectArea[];
   parentAreaId?: string | null;
+  action?: React.ReactNode;
 }) {
   const handleChange = useCallback(
     (next: string | number | boolean | string[]) => onChange(field.field_key, next),
     [field.field_key, onChange]
   );
   return (
-    <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`}>
+    <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`} action={action}>
       <DynamicFieldControl field={field} value={value} onChange={handleChange} areas={areas} parentAreaId={parentAreaId} />
     </FieldWrap>
   );
@@ -82,11 +88,16 @@ function findAreaValue(fields: DynamicField[], getter: (key: string) => DynamicI
 
 export function DCForm({
   projectId, initial, onSubmit, submitLabel = "Salvar",
+  readOnly = false, commentTarget, headerExtra, footerExtra,
 }: {
   projectId: string;
   initial: DescricaoCargo;
   onSubmit: (dc: DescricaoCargo) => Promise<void>;
   submitLabel?: string;
+  readOnly?: boolean;
+  commentTarget?: { dcId: string; versionId: string | null; canAddComment: boolean };
+  headerExtra?: React.ReactNode;
+  footerExtra?: React.ReactNode;
 }) {
   const [dc, setDc] = useState<DescricaoCargo>(initial);
   const [saving, setSaving] = useState(false);
@@ -145,6 +156,18 @@ export function DCForm({
     return dc.dynamic_values[key];
   }, [dc]);
 
+  const renderCommentButton = (fieldKey: string) => {
+    if (!commentTarget) return null;
+    return (
+      <FieldCommentButton
+        dcId={commentTarget.dcId}
+        fieldKey={fieldKey}
+        versionId={commentTarget.versionId}
+        canAdd={commentTarget.canAddComment}
+      />
+    );
+  };
+
   const renderHeader = (sectionFields: DynamicField[]) => {
     if (sectionFields.length === 0) {
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
@@ -163,6 +186,7 @@ export function DCForm({
                 onChange={handleHeaderChange}
                 areas={areas}
                 parentAreaId={field.data_source === "setores" ? parentAreaId : undefined}
+                action={renderCommentButton(field.field_key)}
               />
             </div>
           );
@@ -211,6 +235,7 @@ export function DCForm({
                         onChange={(k, v) => updItem(arrayKey, i, k, v)}
                         areas={areas}
                         parentAreaId={field.data_source === "setores" ? itemParentArea : undefined}
+                        action={renderCommentButton(`${String(arrayKey)}[${i}].${field.field_key}`)}
                       />
                     </div>
                   );
@@ -219,43 +244,53 @@ export function DCForm({
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={() => addItem(arrayKey)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" /> Adicionar {itemSingular}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => addItem(arrayKey)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" /> Adicionar {itemSingular}
+          </button>
+        )}
       </div>
     );
   };
 
   return (
     <form onSubmit={handle} className="space-y-6">
-      {loadingFields ? (
-        <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>
-      ) : (
-        DC_SECTIONS.map((section) => {
-          const sectionFields = fields.filter((field) => field.section === section.key);
-          return (
-            <SectionShell key={section.key} num={section.num} title={section.label}>
-              {section.repeater
-                ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields)
-                : renderHeader(sectionFields)}
-            </SectionShell>
-          );
-        })
-      )}
+      <fieldset disabled={readOnly} className="space-y-6 border-0 p-0 disabled:opacity-100">
+        {headerExtra}
+        {loadingFields ? (
+          <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>
+        ) : (
+          DC_SECTIONS.map((section) => {
+            const sectionFields = fields.filter((field) => field.section === section.key);
+            return (
+              <SectionShell key={section.key} num={section.num} title={section.label}>
+                {section.repeater
+                  ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields)
+                  : renderHeader(sectionFields)}
+              </SectionShell>
+            );
+          })
+        )}
+      </fieldset>
 
-      <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-primary px-6 py-2.5 text-sm text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? "Salvando..." : submitLabel}
-        </button>
-      </div>
+      {(!readOnly || footerExtra) && (
+        <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:justify-end">
+          {footerExtra}
+          {!readOnly && (
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-full bg-primary px-6 py-2.5 text-sm text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? "Salvando..." : submitLabel}
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }

@@ -74,8 +74,10 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
   const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
-  const isLider = projectRole === "lider_superior" || projectRole === "lider_setor";
+  const isLider = projectRole === "lider_estrategico" || projectRole === "lider_tatico" || projectRole === "lider_operacional" || projectRole === "lider_superior" || projectRole === "lider_setor";
   const isUsuarioComum = projectRole === "usuario_comum";
+  const isOnlyLider = isLider && !hasFullControl;
+  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_aprovacao") : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
     const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", row.id);
@@ -117,14 +119,16 @@ export function DCListPage({ projectId }: { projectId: string }) {
               </div>
             </div>
           </div>
-          <Link 
-            to="/projetos/$projectId/descricao-cargo/novo" 
-            params={{ projectId }} 
-            className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
-          >
-            <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
-            Nova Descrição
-          </Link>
+          {!isOnlyLider && (
+            <Link 
+              to="/projetos/$projectId/descricao-cargo/novo" 
+              params={{ projectId }} 
+              className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
+            >
+              <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
+              Nova Descrição
+            </Link>
+          )}
         </div>
 
         {/* Content */}
@@ -136,8 +140,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {STAGES.map((stage) => {
+          <div className={`grid gap-6 ${visibleStages.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
+            {visibleStages.map((stage) => {
               const items = rows.filter((r) => r.etapa === stage.key);
               return (
                 <section key={stage.key} className="flex flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-lg">

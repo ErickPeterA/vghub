@@ -384,6 +384,86 @@ export type Database = {
           },
         ]
       }
+      field_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          field_key: string
+          id: string
+          job_description_id: string
+          version_id: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          field_key: string
+          id?: string
+          job_description_id: string
+          version_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          field_key?: string
+          id?: string
+          job_description_id?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_comments_job_description_id_fkey"
+            columns: ["job_description_id"]
+            isOneToOne: false
+            referencedRelation: "descricoes_cargo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_comments_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "job_description_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_description_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          job_description_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_description_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_description_id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_description_versions_job_description_id_fkey"
+            columns: ["job_description_id"]
+            isOneToOne: false
+            referencedRelation: "descricoes_cargo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -799,6 +879,10 @@ export type Database = {
       clone_general_base_to_project: {
         Args: { _created_by?: string; _project_id: string }
         Returns: undefined
+      }
+      create_dc_version_snapshot: {
+        Args: { _created_by: string; _dc_id: string }
+        Returns: string
       }
       get_project_role: {
         Args: { _project_id: string; _user_id: string }
