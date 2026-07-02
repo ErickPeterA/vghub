@@ -74,8 +74,10 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
   const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
-  const isLider = projectRole === "lider_superior" || projectRole === "lider_setor";
+  const isLider = projectRole === "lider_estrategico" || projectRole === "lider_tatico" || projectRole === "lider_operacional" || projectRole === "lider_superior" || projectRole === "lider_setor";
   const isUsuarioComum = projectRole === "usuario_comum";
+  const isOnlyLider = isLider && !hasFullControl;
+  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_aprovacao") : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
     const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", row.id);
