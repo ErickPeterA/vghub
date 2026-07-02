@@ -58,19 +58,21 @@ const SingleField = memo(function SingleField({
   onChange,
   areas,
   parentAreaId,
+  action,
 }: {
   field: DynamicField;
   value: DynamicItem[string] | undefined;
   onChange: (key: string, val: DynamicItem[string]) => void;
   areas: ProjectArea[];
   parentAreaId?: string | null;
+  action?: React.ReactNode;
 }) {
   const handleChange = useCallback(
     (next: string | number | boolean | string[]) => onChange(field.field_key, next),
     [field.field_key, onChange]
   );
   return (
-    <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`}>
+    <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`} action={action}>
       <DynamicFieldControl field={field} value={value} onChange={handleChange} areas={areas} parentAreaId={parentAreaId} />
     </FieldWrap>
   );
