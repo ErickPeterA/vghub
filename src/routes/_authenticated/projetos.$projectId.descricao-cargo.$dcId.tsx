@@ -1,29 +1,88 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { History as HistoryIcon, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DCForm } from "@/components/DCForm";
 import { emptyDC, type DescricaoCargo } from "@/lib/dc-types";
 import { logAction } from "@/lib/history";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/descricao-cargo/$dcId")({
   component: EditDC,
 });
 
+type DCRow = DescricaoCargo & { etapa?: "em_criacao" | "em_aprovacao" | "concluido" };
+type VersionRow = { id: string; version_number: number; created_at: string; snapshot: unknown };
+
+const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
+
+function fromSnapshot(snapshot: unknown): DescricaoCargo {
+  const base = emptyDC();
+  const data = (snapshot ?? {}) as Partial<DescricaoCargo>;
+  return {
+    ...base,
+    ...data,
+    dynamic_values: (data.dynamic_values as DescricaoCargo["dynamic_values"]) ?? {},
+    data_versao: data.data_versao ?? "",
+    data_revisao: data.data_revisao ?? "",
+  } as DescricaoCargo;
+}
+
 function EditDC() {
   const { projectId, dcId } = Route.useParams();
   const navigate = useNavigate();
-  const [initial, setInitial] = useState<DescricaoCargo | null>(null);
+  const { user, isAdmin } = useCurrentUser();
+  const [current, setCurrent] = useState<DCRow | null>(null);
+  const [projectRole, setProjectRole] = useState<string | null>(null);
+  const [isResponsavel, setIsResponsavel] = useState(false);
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [viewingVersionId, setViewingVersionId] = useState<string | null>(null);
+  const [openVersions, setOpenVersions] = useState(false);
+  const [finalizando, setFinalizando] = useState(false);
+
+  const loadVersions = async () => {
+    const { data } = await supabase
+      .from("job_description_versions")
+      .select("id,version_number,created_at,snapshot")
+      .eq("job_description_id", dcId)
+      .order("version_number", { ascending: true });
+    setVersions((data ?? []) as VersionRow[]);
+  };
 
   useEffect(() => {
-    supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
+    void supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
       if (error || !data) { toast.error("Não encontrado"); navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } }); return; }
-      const base = emptyDC();
-      setInitial({ ...base, ...(data as unknown as Partial<DescricaoCargo>), dynamic_values: (data.dynamic_values as DescricaoCargo["dynamic_values"]) ?? {}, data_versao: data.data_versao ?? "", data_revisao: data.data_revisao ?? "" } as DescricaoCargo);
+      setCurrent({ ...(fromSnapshot(data) as DCRow), etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
     });
-  }, [dcId, projectId, navigate]);
+    void loadVersions();
+    void supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle().then(({ data }) => {
+      if (user) setIsResponsavel(data?.responsavel_id === user.id);
+    });
+    if (user) {
+      void supabase.from("project_members").select("role").eq("project_id", projectId).eq("user_id", user.id).maybeSingle().then(({ data }) => {
+        setProjectRole(data?.role ?? null);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dcId, projectId, user?.id]);
+
+  const isLider = projectRole !== null && LIDER_ROLES.has(projectRole);
+  const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
+  const readOnly = (isLider && !hasFullControl) || viewingVersionId !== null;
+
+  const currentVersion = versions.length > 0 ? versions[versions.length - 1] : null;
+  const viewingVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
+  const displayedInitial = useMemo<DescricaoCargo | null>(() => {
+    if (viewingVersion) return fromSnapshot(viewingVersion.snapshot);
+    return current;
+  }, [viewingVersion, current]);
+
+  const versionIdForComments = viewingVersion?.id ?? currentVersion?.id ?? null;
 
   const onSubmit = async (dc: DescricaoCargo) => {
+    if (readOnly) return;
     const { id: _omit, ...payload } = dc;
     void _omit;
     const { error } = await supabase
@@ -35,12 +94,107 @@ function EditDC() {
     toast.success("Atualizado");
   };
 
-  if (!initial) return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Carregando...</div>;
+  const finalizarRevisao = async () => {
+    if (!currentVersion) return;
+    setFinalizando(true);
+    try {
+      const { count } = await supabase
+        .from("field_comments")
+        .select("id", { count: "exact", head: true })
+        .eq("job_description_id", dcId)
+        .eq("version_id", currentVersion.id);
+      const hasComments = (count ?? 0) > 0;
+      const target = hasComments ? "em_criacao" : "concluido";
+      const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", dcId);
+      if (error) throw error;
+      await logAction({ projectId, acao: "dc_revisao_finalizada", entidade: "descricao_cargo", entidadeId: dcId, detalhes: { comentarios: count ?? 0, para: target } });
+      toast.success(hasComments ? "Item retornou para Em Criação" : "Revisão concluída");
+      navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao finalizar");
+    } finally {
+      setFinalizando(false);
+    }
+  };
+
+  if (!displayedInitial) return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Carregando...</div>;
+
+  const showLiderActions = isLider && !hasFullControl && current?.etapa === "em_aprovacao" && !viewingVersionId;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="mb-6 font-display text-4xl">Editar descrição</h1>
-      <DCForm projectId={projectId} initial={initial} onSubmit={onSubmit} submitLabel="Salvar alterações" />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-4xl">
+          {readOnly ? "Descrição (leitura)" : "Editar descrição"}
+        </h1>
+        <button
+          type="button"
+          onClick={() => { void loadVersions(); setOpenVersions(true); }}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <HistoryIcon className="h-4 w-4" /> Versões ({versions.length})
+        </button>
+      </div>
+
+      {viewingVersion && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <span>Visualizando versão {viewingVersion.version_number} de {versions.length}</span>
+          <button
+            type="button"
+            onClick={() => setViewingVersionId(null)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-3 py-1 text-xs font-medium hover:bg-amber-200"
+          >
+            <ArrowLeft className="h-3 w-3" /> Voltar à versão atual
+          </button>
+        </div>
+      )}
+
+      <DCForm
+        projectId={projectId}
+        initial={displayedInitial}
+        onSubmit={onSubmit}
+        submitLabel="Salvar alterações"
+        readOnly={readOnly}
+        commentTarget={{ dcId, versionId: versionIdForComments, canAddComment: isLider && !viewingVersionId }}
+        footerExtra={showLiderActions ? (
+          <button
+            type="button"
+            onClick={finalizarRevisao}
+            disabled={finalizando}
+            className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {finalizando ? "Finalizando..." : "Finalizar revisão"}
+          </button>
+        ) : null}
+      />
+
+      <Dialog open={openVersions} onOpenChange={setOpenVersions}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Versões</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {versions.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma versão registrada.</p>}
+            {versions.slice().reverse().map((v) => {
+              const isCurrent = v.id === currentVersion?.id;
+              const isViewing = v.id === viewingVersionId;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => { setViewingVersionId(isCurrent ? null : v.id); setOpenVersions(false); }}
+                  className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${isViewing ? "border-amber-400 bg-amber-50" : "border-border hover:bg-secondary"}`}
+                >
+                  <span className="font-medium">
+                    Versão {v.version_number}{isCurrent ? " (atual)" : ""}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString("pt-BR")}</span>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
