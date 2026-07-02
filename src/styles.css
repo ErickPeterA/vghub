@@ -23,7 +23,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
-  --font-display: "Instrument Serif", serif;
+  --font-display: "Inter", sans-serif;
   --font-sans: "Inter", sans-serif;
 }
 
@@ -47,6 +47,14 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
   body {
     background: var(--color-background);
     color: var(--color-foreground);

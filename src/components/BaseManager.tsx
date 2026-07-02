@@ -316,9 +316,7 @@ export function BaseManager({
         {/* Header */}
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-start gap-4">
-            <div className="rounded-lg bg-[#042558]/10 p-2.5">
-              <Database className="h-5 w-5 text-[#042558]" />
-            </div>
+            
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-[#042558]">{title}</h1>
               <p className="mt-1 text-sm text-[#042558]/60">{description}</p>
