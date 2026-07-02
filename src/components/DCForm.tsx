@@ -235,6 +235,7 @@ export function DCForm({
                         onChange={(k, v) => updItem(arrayKey, i, k, v)}
                         areas={areas}
                         parentAreaId={field.data_source === "setores" ? itemParentArea : undefined}
+                        action={renderCommentButton(`${String(arrayKey)}[${i}].${field.field_key}`)}
                       />
                     </div>
                   );
