@@ -45,7 +45,7 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
   const [areas, setAreas] = useState<Area[]>([]);
   const [scopes, setScopes] = useState<Scope[]>([]);
   const [userId, setUserId] = useState("");
-  const [role, setRole] = useState<ProjectRoleValue>("usuario_comum");
+  const [role, setRole] = useState<ProjectRoleValue>("lider_operacional");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
