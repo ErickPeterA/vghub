@@ -32,12 +32,15 @@ const SectionShell = memo(function SectionShell({
   );
 });
 
-const FieldWrap = memo(function FieldWrap({ label, children }: { label: string; children: React.ReactNode }) {
+const FieldWrap = memo(function FieldWrap({ label, action, children }: { label: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className={lbl}>{label}</span>
+    <div className="block">
+      <div className="flex items-center justify-between gap-2">
+        <span className={lbl}>{label}</span>
+        {action}
+      </div>
       <div className="mt-1.5">{children}</div>
-    </label>
+    </div>
   );
 });
 
