@@ -204,12 +204,12 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
                       </button>
                     </div>
 
-                    {(m.role === "lider_setor" || m.role === "lider_superior") && (
+                    {LIDER_ROLES.has(m.role) && (
                       <div className="border-t border-[#042558]/10 bg-[#042558]/5 p-4">
                         <div className="space-y-4">
                           <ScopePicker
                             title="Áreas"
-                            subtitle={m.role === "lider_superior" ? "Obrigatório: escolha ao menos uma área que este líder gerencia." : "Obrigatório: áreas gerenciadas por este líder."}
+                            subtitle="Obrigatório: escolha ao menos uma área que este líder gerencia."
                             options={allAreas.filter((a) => a.parent_id === null)}
                             memberScopes={memberScopes}
                             onAdd={(id) => addScope(m, id)}
