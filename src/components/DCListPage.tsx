@@ -138,8 +138,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {STAGES.map((stage) => {
+          <div className={`grid gap-6 ${visibleStages.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
+            {visibleStages.map((stage) => {
               const items = rows.filter((r) => r.etapa === stage.key);
               return (
                 <section key={stage.key} className="flex flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-lg">
