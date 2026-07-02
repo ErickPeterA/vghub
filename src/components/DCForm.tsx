@@ -88,11 +88,16 @@ function findAreaValue(fields: DynamicField[], getter: (key: string) => DynamicI
 
 export function DCForm({
   projectId, initial, onSubmit, submitLabel = "Salvar",
+  readOnly = false, commentTarget, headerExtra, footerExtra,
 }: {
   projectId: string;
   initial: DescricaoCargo;
   onSubmit: (dc: DescricaoCargo) => Promise<void>;
   submitLabel?: string;
+  readOnly?: boolean;
+  commentTarget?: { dcId: string; versionId: string | null; canAddComment: boolean };
+  headerExtra?: React.ReactNode;
+  footerExtra?: React.ReactNode;
 }) {
   const [dc, setDc] = useState<DescricaoCargo>(initial);
   const [saving, setSaving] = useState(false);
