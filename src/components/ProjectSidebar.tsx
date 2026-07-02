@@ -52,7 +52,11 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
                 active ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
               }`}
             >
-              <it.icon className="h-4 w-4" /> {it.label}
+              <it.icon className="h-4 w-4" />
+              <span className="flex-1">{it.label}</span>
+              {it.badge && it.badge > 0 ? (
+                <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>
+              ) : null}
             </Link>
           );
         })}
