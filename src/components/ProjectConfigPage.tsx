@@ -23,14 +23,15 @@ type Member = {
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin do projeto",
   gp: "GP",
-  lider_superior: "Líder Superior",
-  lider_setor: "Líder de Setor",
-  usuario_comum: "Usuário Comum",
-  lider_estrategico: "Líder Estratégico (legado)",
-  lider_tatico: "Líder Tático (legado)",
-  lider_operacional: "Líder Operacional (legado)",
+  lider_estrategico: "Líder Estratégico",
+  lider_tatico: "Líder Tático",
+  lider_operacional: "Líder Operacional",
+  lider_superior: "Líder Superior (legado)",
+  lider_setor: "Líder de Setor (legado)",
+  usuario_comum: "Usuário Comum (legado)",
 };
-const ROLE_OPTIONS: ProjectRoleValue[] = ["admin", "gp", "lider_superior", "lider_setor", "usuario_comum"];
+const ROLE_OPTIONS: ProjectRoleValue[] = ["admin", "gp", "lider_estrategico", "lider_tatico", "lider_operacional"];
+const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
 
 const inputClass = "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2.5 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
 
