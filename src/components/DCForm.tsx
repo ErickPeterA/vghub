@@ -156,6 +156,18 @@ export function DCForm({
     return dc.dynamic_values[key];
   }, [dc]);
 
+  const renderCommentButton = (fieldKey: string) => {
+    if (!commentTarget) return null;
+    return (
+      <FieldCommentButton
+        dcId={commentTarget.dcId}
+        fieldKey={fieldKey}
+        versionId={commentTarget.versionId}
+        canAdd={commentTarget.canAddComment}
+      />
+    );
+  };
+
   const renderHeader = (sectionFields: DynamicField[]) => {
     if (sectionFields.length === 0) {
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
@@ -174,6 +186,7 @@ export function DCForm({
                 onChange={handleHeaderChange}
                 areas={areas}
                 parentAreaId={field.data_source === "setores" ? parentAreaId : undefined}
+                action={renderCommentButton(field.field_key)}
               />
             </div>
           );
