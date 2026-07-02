@@ -119,14 +119,16 @@ export function DCListPage({ projectId }: { projectId: string }) {
               </div>
             </div>
           </div>
-          <Link 
-            to="/projetos/$projectId/descricao-cargo/novo" 
-            params={{ projectId }} 
-            className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
-          >
-            <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
-            Nova Descrição
-          </Link>
+          {!isOnlyLider && (
+            <Link 
+              to="/projetos/$projectId/descricao-cargo/novo" 
+              params={{ projectId }} 
+              className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
+            >
+              <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
+              Nova Descrição
+            </Link>
+          )}
         </div>
 
         {/* Content */}
