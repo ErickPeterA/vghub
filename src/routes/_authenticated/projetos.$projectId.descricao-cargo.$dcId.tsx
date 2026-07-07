@@ -155,7 +155,7 @@ function EditDC() {
         onSubmit={onSubmit}
         submitLabel="Salvar alterações"
         readOnly={readOnly}
-        commentTarget={{ dcId, versionId: versionIdForComments, canAddComment: !viewingVersionId }}
+        commentTarget={{ dcId, versionId: versionIdForComments, canAddComment: (isLider || isAdmin) && !viewingVersionId }}
         footerExtra={showLiderActions ? (
           <button
             type="button"
