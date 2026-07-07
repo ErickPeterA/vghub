@@ -77,10 +77,12 @@ export function FieldCommentButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] transition ${count > 0 ? "border-amber-300 bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-secondary"}`}
-          title="Comentários"
+  <button
+    type="button"
+    form="field-comment-trigger"
+    className={`inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] transition ${count > 0 ? "border-amber-300 bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-secondary"}`}
+    title="Comentários"
+  
         >
           <MessageSquare className="h-3 w-3" />
           {count > 0 && <span className="font-semibold">{count}</span>}

@@ -59,6 +59,7 @@ const SingleField = memo(function SingleField({
   areas,
   parentAreaId,
   action,
+  disabled,
 }: {
   field: DynamicField;
   value: DynamicItem[string] | undefined;
@@ -66,6 +67,7 @@ const SingleField = memo(function SingleField({
   areas: ProjectArea[];
   parentAreaId?: string | null;
   action?: React.ReactNode;
+  disabled?: boolean;
 }) {
   const handleChange = useCallback(
     (next: string | number | boolean | string[]) => onChange(field.field_key, next),
@@ -73,7 +75,7 @@ const SingleField = memo(function SingleField({
   );
   return (
     <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`} action={action}>
-      <DynamicFieldControl field={field} value={value} onChange={handleChange} areas={areas} parentAreaId={parentAreaId} />
+      <DynamicFieldControl field={field} value={value} onChange={handleChange} areas={areas} parentAreaId={parentAreaId} disabled={disabled} />
     </FieldWrap>
   );
 });
@@ -187,6 +189,7 @@ export function DCForm({
                 areas={areas}
                 parentAreaId={field.data_source === "setores" ? parentAreaId : undefined}
                 action={renderCommentButton(field.field_key)}
+                disabled={readOnly}
               />
             </div>
           );
@@ -236,6 +239,7 @@ export function DCForm({
                         areas={areas}
                         parentAreaId={field.data_source === "setores" ? itemParentArea : undefined}
                         action={renderCommentButton(`${String(arrayKey)}[${i}].${field.field_key}`)}
+                        disabled={readOnly}
                       />
                     </div>
                   );
@@ -259,7 +263,7 @@ export function DCForm({
 
   return (
     <form onSubmit={handle} className="space-y-6">
-      <fieldset disabled={readOnly} className="space-y-6 border-0 p-0 disabled:opacity-100">
+      <fieldset className="space-y-6 border-0 p-0">
         {headerExtra}
         {loadingFields ? (
           <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>

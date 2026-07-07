@@ -72,14 +72,16 @@ export function DynamicFieldControl({
   onChange,
   areas,
   parentAreaId,
+  disabled,
 }: {
   field: DynamicField;
   value: string | number | boolean | string[] | undefined;
   onChange: (value: string | number | boolean | string[]) => void;
   areas?: ProjectArea[];
   parentAreaId?: string | null;
+  disabled?: boolean;
 }) {
-  const common = { required: field.is_required, className: controlClass };
+  const common = { required: field.is_required, className: controlClass, disabled };
 
   // Fontes dinâmicas: Áreas / Setores
   if (field.data_source === "areas") {
@@ -94,7 +96,7 @@ export function DynamicFieldControl({
   if (field.data_source === "setores") {
     const opts = (areas ?? []).filter((a) => a.parent_id && (!parentAreaId || a.parent_id === parentAreaId));
     return (
-      <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} disabled={!parentAreaId}>
+      <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} disabled={disabled || !parentAreaId}>
         <option value="">{parentAreaId ? "— Selecione —" : "Selecione a Área primeiro"}</option>
         {opts.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
       </select>
@@ -104,14 +106,14 @@ export function DynamicFieldControl({
   if (field.field_type === "textarea") return <textarea {...common} rows={4} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
   if (field.field_type === "number") return <input {...common} type="number" value={String(value ?? "")} onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} />;
   if (field.field_type === "date") return <input {...common} type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
-  if (field.field_type === "checkbox") return <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-primary" />;
+  if (field.field_type === "checkbox") return <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} disabled={disabled} className="h-5 w-5 accent-primary" />;
   if (field.field_type === "multi_select") {
     const selected = Array.isArray(value) ? value : [];
     return (
       <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
         {field.options.map((option) => (
           <label key={option.id} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} className="h-4 w-4 rounded" />
+            <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} disabled={disabled} className="h-4 w-4 rounded" />
             {option.label}
           </label>
         ))}
