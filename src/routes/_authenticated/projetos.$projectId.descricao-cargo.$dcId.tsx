@@ -70,7 +70,8 @@ function EditDC() {
 
   const isLider = projectRole !== null && LIDER_ROLES.has(projectRole);
   const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
-  const readOnly = (isLider && !hasFullControl) || viewingVersionId !== null;
+  const canEditDraft = isLider && !hasFullControl && current?.etapa === "em_criacao";
+  const readOnly = (!canEditDraft && isLider && !hasFullControl) || viewingVersionId !== null;
 
   const currentVersion = versions.length > 0 ? versions[versions.length - 1] : null;
   const viewingVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;

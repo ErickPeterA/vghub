@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, memo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
+import { canAccessSection, getCurrentUserPlan } from "@/lib/section-access";
 import { DynamicFieldControl, useProjectFields, useProjectAreas, useSectionLimits, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
 import { FieldCommentButton } from "@/components/FieldCommentButton";
 
@@ -105,29 +106,32 @@ export function DCForm({
   const [saving, setSaving] = useState(false);
   const { fields, loading: loadingFields } = useProjectFields(projectId);
   const areas = useProjectAreas(projectId);
-  const { limits: sectionLimits } = useSectionLimits(projectId);
+  const { limits: sectionLimits, enabledSections, loading: loadingSectionSettings } = useSectionLimits(projectId);
+  const currentPlan = getCurrentUserPlan();
 
   // Todo bloco repetidor precisa ter pelo menos 1 item já preenchido na tela
   // por padrão (a mesma pergunta já aparece pronta, e o "+" adiciona mais
   // itens até o limite configurado na Base do projeto).
   useEffect(() => {
-    if (loadingFields || readOnly) return;
+    if (loadingFields || loadingSectionSettings || readOnly) return;
     const repeaterSections = DC_SECTIONS.filter((s) => s.repeater && s.arrayKey);
     const hasFieldsFor = (sectionKey: string) => fields.some((f) => f.section === sectionKey);
     setDc((p) => {
       let changed = false;
       const next = { ...p };
       for (const section of repeaterSections) {
+        const isEnabled = enabledSections[section.key] ?? true;
+        const allowedByPlan = canAccessSection(section.key, currentPlan);
         const arrayKey = section.arrayKey as keyof DescricaoCargo;
         const current = next[arrayKey] as DynamicItem[];
-        if (current.length === 0 && hasFieldsFor(section.key)) {
+        if (isEnabled && allowedByPlan && current.length === 0 && hasFieldsFor(section.key)) {
           (next as Record<string, unknown>)[arrayKey as string] = [{}];
           changed = true;
         }
       }
       return changed ? next : p;
     });
-  }, [loadingFields, fields, readOnly]);
+  }, [loadingFields, loadingSectionSettings, enabledSections, fields, readOnly, currentPlan]);
 
   const setScalar = useCallback(<K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
     setDc((p) => ({ ...p, [k]: v })), []);
@@ -299,11 +303,14 @@ export function DCForm({
     <form onSubmit={handle} className="space-y-6">
       <fieldset className="space-y-6 border-0 p-0">
         {headerExtra}
-        {loadingFields ? (
+        {loadingFields || loadingSectionSettings ? (
           <p className="text-sm text-muted-foreground">Carregando configuração da base...</p>
         ) : (
           DC_SECTIONS.map((section) => {
             const sectionFields = fields.filter((field) => field.section === section.key);
+            const isEnabled = enabledSections[section.key] ?? true;
+            const allowedByPlan = canAccessSection(section.key, currentPlan);
+            if (!isEnabled || !allowedByPlan) return null;
             return (
               <SectionShell key={section.key} num={section.num} title={section.label}>
                 {section.repeater

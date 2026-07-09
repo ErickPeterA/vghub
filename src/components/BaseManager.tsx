@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { DC_SECTIONS, SECTION_KEYS } from "@/lib/dc-sections";
+import { canAccessSection, getCurrentUserPlan, SECTION_PLAN_LABELS } from "@/lib/section-access";
 
 type FieldType = "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select" | "competency_description";
 type Option = { id: string; label: string; value: string; description: string | null; display_order: number; is_active: boolean };
@@ -192,14 +193,18 @@ export function BaseManager({
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState<Record<string, string>>({});
   const [sectionLimits, setSectionLimits] = useState<Record<string, { id: string | null; max_items: number }>>({});
+  const [sectionEnabled, setSectionEnabled] = useState<Record<string, { id: string | null; is_enabled: boolean }>>({});
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
   const fieldsRef = useRef<Field[]>([]);
   const newLabelRef = useRef<Record<string, string>>({});
   const sectionLimitsRef = useRef<Record<string, { id: string | null; max_items: number }>>({});
+  const sectionEnabledRef = useRef<Record<string, { id: string | null; is_enabled: boolean }>>({});
   fieldsRef.current = fields;
   newLabelRef.current = newLabel;
   sectionLimitsRef.current = sectionLimits;
+  sectionEnabledRef.current = sectionEnabled;
+  const currentPlan = getCurrentUserPlan();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -213,13 +218,19 @@ export function BaseManager({
     if (error) toast.error(error.message);
     setFields((data ?? []) as Field[]);
 
-    let limitsQuery = supabase.from("base_section_settings").select("id,section,max_items");
+    let limitsQuery = supabase.from("base_section_settings").select("id,section,max_items,is_enabled");
     limitsQuery = projectIdRef.current ? limitsQuery.eq("project_id", projectIdRef.current) : limitsQuery.is("project_id", null);
     const { data: limitsData, error: limitsError } = await limitsQuery;
     if (limitsError) toast.error(limitsError.message);
-    const map: Record<string, { id: string | null; max_items: number }> = {};
-    (limitsData ?? []).forEach((row) => { map[row.section] = { id: row.id, max_items: row.max_items }; });
-    setSectionLimits(map);
+    const limitsMap: Record<string, { id: string | null; max_items: number }> = {};
+    const enabledMap: Record<string, { id: string | null; is_enabled: boolean }> = {};
+    DC_SECTIONS.forEach((section) => {
+      const existing = (limitsData ?? []).find((row) => row.section === section.key);
+      limitsMap[section.key] = { id: existing?.id ?? null, max_items: existing?.max_items ?? 3 };
+      enabledMap[section.key] = { id: existing?.id ?? null, is_enabled: existing?.is_enabled ?? true };
+    });
+    setSectionLimits(limitsMap);
+    setSectionEnabled(enabledMap);
   }, []);
 
   useEffect(() => {
@@ -278,13 +289,32 @@ export function BaseManager({
     } else {
       const { data, error } = await supabase
         .from("base_section_settings")
-        .insert({ project_id: projectIdRef.current, section: sectionKey, max_items: safeValue })
+        .insert({ project_id: projectIdRef.current, section: sectionKey, max_items: safeValue, is_enabled: sectionEnabledRef.current[sectionKey]?.is_enabled ?? true })
         .select("id")
         .single();
       if (error) return toast.error(error.message);
       setSectionLimits((cur) => ({ ...cur, [sectionKey]: { id: data.id, max_items: safeValue } }));
     }
     toast.success("Limite de itens atualizado");
+  }, []);
+
+  const saveSectionEnabled = useCallback(async (sectionKey: string, is_enabled: boolean) => {
+    const existing = sectionEnabledRef.current[sectionKey];
+    setSectionEnabled((cur) => ({ ...cur, [sectionKey]: { id: existing?.id ?? null, is_enabled } }));
+
+    if (existing?.id) {
+      const { error } = await supabase.from("base_section_settings").update({ is_enabled, max_items: sectionLimitsRef.current[sectionKey]?.max_items ?? 3 }).eq("id", existing.id);
+      if (error) return toast.error(error.message);
+    } else {
+      const { data, error } = await supabase
+        .from("base_section_settings")
+        .insert({ project_id: projectIdRef.current, section: sectionKey, max_items: sectionLimitsRef.current[sectionKey]?.max_items ?? 3, is_enabled })
+        .select("id")
+        .single();
+      if (error) return toast.error(error.message);
+      setSectionEnabled((cur) => ({ ...cur, [sectionKey]: { id: data.id, is_enabled } }));
+    }
+    toast.success(is_enabled ? "Bloco habilitado" : "Bloco desabilitado");
   }, []);
 
   const addOption = useCallback(async (fieldId: string, label: string) => {
@@ -367,6 +397,8 @@ export function BaseManager({
               const sectionFields = fields
                 .filter((f) => f.section === section.key)
                 .sort((a, b) => a.display_order - b.display_order);
+              const planAllowed = canAccessSection(section.key, currentPlan);
+              const isSectionEnabled = sectionEnabled[section.key]?.is_enabled ?? true;
               return (
                 <section key={section.key} className="overflow-hidden rounded-2xl border border-[#042558]/10 bg-white/60 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
                   <div className="border-b border-[#042558]/10 bg-[#042558]/5 p-5">
@@ -380,7 +412,17 @@ export function BaseManager({
                           Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center justify-end gap-3">
+                        <label className={`flex items-center gap-2 text-xs font-medium ${planAllowed ? "text-[#042558]/60" : "text-[#042558]/35"}`}>
+                          <input
+                            type="checkbox"
+                            checked={isSectionEnabled}
+                            onChange={() => saveSectionEnabled(section.key, !isSectionEnabled)}
+                            disabled={!planAllowed}
+                            className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20 disabled:cursor-not-allowed"
+                          />
+                          {isSectionEnabled ? "Ativo" : "Inativo"}
+                        </label>
                         {section.repeater && (
                           <label className="flex items-center gap-2 text-xs font-medium text-[#042558]/60">
                             Limite de itens do bloco:
@@ -397,6 +439,11 @@ export function BaseManager({
                               title="Quantas vezes as pessoas podem clicar em '+' neste bloco ao preencher a descrição de cargo. O primeiro item sempre aparece por padrão."
                             />
                           </label>
+                        )}
+                        {!planAllowed && (
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                            Bloqueado no plano {SECTION_PLAN_LABELS[currentPlan]}
+                          </span>
                         )}
                         <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
                           {sectionFields.length} campo{sectionFields.length !== 1 ? 's' : ''}

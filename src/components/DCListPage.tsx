@@ -77,7 +77,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const isLider = projectRole === "lider_estrategico" || projectRole === "lider_tatico" || projectRole === "lider_operacional" || projectRole === "lider_superior" || projectRole === "lider_setor";
   const isUsuarioComum = projectRole === "usuario_comum";
   const isOnlyLider = isLider && !hasFullControl;
-  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_aprovacao") : STAGES;
+  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_criacao" || s.key === "em_aprovacao") : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
     const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", row.id);
@@ -119,16 +119,14 @@ export function DCListPage({ projectId }: { projectId: string }) {
               </div>
             </div>
           </div>
-          {!isOnlyLider && (
-            <Link 
-              to="/projetos/$projectId/descricao-cargo/novo" 
-              params={{ projectId }} 
-              className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
-            >
-              <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
-              Nova Descrição
-            </Link>
-          )}
+          <Link 
+            to="/projetos/$projectId/descricao-cargo/novo" 
+            params={{ projectId }} 
+            className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
+          >
+            <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
+            Nova Descrição
+          </Link>
         </div>
 
         {/* Content */}
@@ -170,9 +168,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                         const responsavel = profileById.get(row.created_by);
                         const stageIdx = stageOrder(row.etapa);
                         const isOwner = user?.id === row.created_by;
-                        const canApprove =
-                          row.etapa === "em_aprovacao" &&
-                          (isAdmin || isResponsavel || isLider || (isUsuarioComum && isOwner));
+                        const canMoveToApproval = row.etapa === "em_criacao" && (projectRole === "gp" || projectRole === "admin" || isAdmin || isResponsavel);
+                        const canApprove = row.etapa === "em_aprovacao" && (hasFullControl || isLider || (isUsuarioComum && isOwner));
                         const setorInfo = getSetorInfo(row);
                         
                         return (
@@ -226,11 +223,11 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                     <ArrowLeft className="h-3.5 w-3.5" />
                                   </button>
                                 )}
-                                {hasFullControl && stageIdx < STAGES.length - 1 && (
+                                {canMoveToApproval && (
                                   <button 
-                                    onClick={() => moveStage(row, STAGES[stageIdx + 1].key)} 
+                                    onClick={() => moveStage(row, "em_aprovacao")} 
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
-                                    title="Próxima etapa"
+                                    title="Enviar para aprovação"
                                   >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </button>

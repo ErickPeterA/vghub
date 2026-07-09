@@ -52,7 +52,7 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
   ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
 
   const items = isLider
-    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Andamento")
+    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Base do Projeto" || i.label === "Andamento")
     : allItems;
 
   return (

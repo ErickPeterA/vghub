@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type DataSource = "manual" | "areas" | "setores";
 
@@ -56,23 +59,29 @@ export function useProjectFields(projectId: string) {
 // Se um bloco não tiver linha configurada, não há limite (retorna undefined).
 export function useSectionLimits(projectId: string) {
   const [limits, setLimits] = useState<Record<string, number>>({});
+  const [enabledSections, setEnabledSections] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     supabase
       .from("base_section_settings")
-      .select("section,max_items")
+      .select("section,max_items,is_enabled")
       .eq("project_id", projectId)
       .then(({ data }) => {
         const map: Record<string, number> = {};
-        (data ?? []).forEach((row) => { map[row.section] = row.max_items; });
+        const enabledMap: Record<string, boolean> = {};
+        (data ?? []).forEach((row) => {
+          map[row.section] = row.max_items;
+          enabledMap[row.section] = row.is_enabled ?? true;
+        });
         setLimits(map);
+        setEnabledSections(enabledMap);
         setLoading(false);
       });
   }, [projectId]);
 
-  return { limits, loading };
+  return { limits, enabledSections, loading };
 }
 
 export function useProjectAreas(projectId: string) {
@@ -104,7 +113,107 @@ export function DynamicFieldControl({
   parentAreaId?: string | null;
   disabled?: boolean;
 }) {
+  const [localOptions, setLocalOptions] = useState(field.options);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [newOptionLabel, setNewOptionLabel] = useState("");
+  const [newOptionDescription, setNewOptionDescription] = useState("");
+  const [savingOption, setSavingOption] = useState(false);
   const common = { required: field.is_required, className: controlClass, disabled };
+
+  useEffect(() => {
+    setLocalOptions(field.options);
+  }, [field.options]);
+
+  const slugify = (raw: string) =>
+    raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+  const handleAddOption = async () => {
+    const label = newOptionLabel.trim();
+    if (!label) return;
+
+    setSavingOption(true);
+    const valueKey = `${slugify(label)}_${Date.now()}`;
+    const { data, error } = await supabase
+      .from("base_options")
+      .insert({
+        field_id: field.id,
+        label,
+        value: valueKey,
+        description: field.field_type === "competency_description" ? (newOptionDescription.trim() || null) : null,
+        display_order: localOptions.length * 10 + 10,
+        is_active: true,
+      })
+      .select("id,label,value,description")
+      .single();
+
+    setSavingOption(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const nextOption = { id: data.id, label: data.label, value: data.value, description: data.description ?? null };
+    setLocalOptions((prev) => [...prev, nextOption]);
+    setNewOptionLabel("");
+    setNewOptionDescription("");
+    setModalOpen(false);
+    toast.success("Opção adicionada à base do projeto");
+  };
+
+  const renderOptionAdder = () => {
+    if (disabled || !["single_select", "multi_select", "competency_description"].includes(field.field_type)) return null;
+
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+          title="Adicionar opção"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Nova opção</DialogTitle>
+              <DialogDescription>Cadastre uma nova opção para este campo e ela será salva na base do projeto.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Rótulo</label>
+                <input
+                  value={newOptionLabel}
+                  onChange={(e) => setNewOptionLabel(e.target.value)}
+                  placeholder="Ex: Especialista"
+                  className={controlClass}
+                />
+              </div>
+              {field.field_type === "competency_description" && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">Descrição</label>
+                  <textarea
+                    value={newOptionDescription}
+                    onChange={(e) => setNewOptionDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Descrição da competência"
+                    className={controlClass}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
+              <button type="button" onClick={handleAddOption} disabled={savingOption || !newOptionLabel.trim()} className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">
+                {savingOption ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
 
   // Fontes dinâmicas: Áreas / Setores
   if (field.data_source === "areas") {
@@ -134,7 +243,11 @@ export function DynamicFieldControl({
     const selected = Array.isArray(value) ? value : [];
     return (
       <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
-        {field.options.map((option) => (
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">Opções</span>
+          {renderOptionAdder()}
+        </div>
+        {localOptions.map((option) => (
           <label key={option.id} className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} disabled={disabled} className="h-4 w-4 rounded" />
             {option.label}
@@ -144,13 +257,16 @@ export function DynamicFieldControl({
     );
   }
   if (field.field_type === "competency_description") {
-    const selected = field.options.find((o) => o.value === value);
+    const selected = localOptions.find((o) => o.value === value);
     return (
       <div className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_2.5fr]">
-        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
-          <option value="">— Selecione —</option>
-          {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
-        </select>
+        <div className="flex items-center gap-2">
+          <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={`${controlClass} flex-1`}>
+            <option value="">— Selecione —</option>
+            {localOptions.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
+          </select>
+          {renderOptionAdder()}
+        </div>
         <div className={`${controlClass} min-h-[4rem] rounded-lg bg-muted/20 text-muted-foreground`}>
           <div className="flex h-full items-center p-3 text-sm leading-6">
             {selected?.description || <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>}
@@ -161,10 +277,13 @@ export function DynamicFieldControl({
   }
   if (field.field_type === "single_select") {
     return (
-      <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
-        <option value="">— Selecione —</option>
-        {field.options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
-      </select>
+      <div className="flex items-center gap-2">
+        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={`${controlClass} flex-1`}>
+          <option value="">— Selecione —</option>
+          {localOptions.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
+        </select>
+        {renderOptionAdder()}
+      </div>
     );
   }
   return <input {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;

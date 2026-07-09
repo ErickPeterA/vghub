@@ -297,6 +297,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_enabled: boolean
           max_items: number
           project_id: string | null
           section: string
@@ -306,6 +307,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_enabled?: boolean
           max_items?: number
           project_id?: string | null
           section: string
@@ -315,6 +317,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_enabled?: boolean
           max_items?: number
           project_id?: string | null
           section?: string
