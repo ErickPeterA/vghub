@@ -292,6 +292,44 @@ export type Database = {
           },
         ]
       }
+      base_section_settings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          max_items: number
+          project_id: string | null
+          section: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_items?: number
+          project_id?: string | null
+          section: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_items?: number
+          project_id?: string | null
+          section?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_section_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       descricoes_cargo: {
         Row: {
           atividades: Json
@@ -923,7 +961,7 @@ export type Database = {
         | "lider_superior"
         | "lider_setor"
         | "usuario_comum"
-      project_status: "ativo" | "arquivado"
+      project_status: "ativo" | "desativado"
       user_status: "ativo" | "inativo"
     }
     CompositeTypes: {
@@ -1075,7 +1113,7 @@ export const Constants = {
         "lider_setor",
         "usuario_comum",
       ],
-      project_status: ["ativo", "arquivado"],
+      project_status: ["ativo", "desativado"],
       user_status: ["ativo", "inativo"],
     },
   },

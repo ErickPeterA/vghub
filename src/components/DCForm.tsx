@@ -1,8 +1,8 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useEffect, memo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
-import { DynamicFieldControl, useProjectFields, useProjectAreas, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
+import { DynamicFieldControl, useProjectFields, useProjectAreas, useSectionLimits, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
 import { FieldCommentButton } from "@/components/FieldCommentButton";
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
@@ -105,6 +105,29 @@ export function DCForm({
   const [saving, setSaving] = useState(false);
   const { fields, loading: loadingFields } = useProjectFields(projectId);
   const areas = useProjectAreas(projectId);
+  const { limits: sectionLimits } = useSectionLimits(projectId);
+
+  // Todo bloco repetidor precisa ter pelo menos 1 item já preenchido na tela
+  // por padrão (a mesma pergunta já aparece pronta, e o "+" adiciona mais
+  // itens até o limite configurado na Base do projeto).
+  useEffect(() => {
+    if (loadingFields || readOnly) return;
+    const repeaterSections = DC_SECTIONS.filter((s) => s.repeater && s.arrayKey);
+    const hasFieldsFor = (sectionKey: string) => fields.some((f) => f.section === sectionKey);
+    setDc((p) => {
+      let changed = false;
+      const next = { ...p };
+      for (const section of repeaterSections) {
+        const arrayKey = section.arrayKey as keyof DescricaoCargo;
+        const current = next[arrayKey] as DynamicItem[];
+        if (current.length === 0 && hasFieldsFor(section.key)) {
+          (next as Record<string, unknown>)[arrayKey as string] = [{}];
+          changed = true;
+        }
+      }
+      return changed ? next : p;
+    });
+  }, [loadingFields, fields, readOnly]);
 
   const setScalar = useCallback(<K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
     setDc((p) => ({ ...p, [k]: v })), []);
@@ -202,11 +225,14 @@ export function DCForm({
     arrayKey: keyof DescricaoCargo,
     itemSingular: string,
     sectionFields: DynamicField[],
+    sectionKey: string,
   ) => {
     const items = dc[arrayKey] as DynamicItem[];
     if (sectionFields.length === 0) {
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
     }
+    const maxItems = sectionLimits[sectionKey]; // undefined = sem limite
+    const reachedLimit = typeof maxItems === "number" && items.length >= maxItems;
     return (
       <div className="space-y-4">
         {items.length === 0 && (
@@ -216,16 +242,19 @@ export function DCForm({
         )}
         {items.map((item, i) => {
           const itemParentArea = findAreaValue(sectionFields, (k) => item[k]);
+          const canRemove = !readOnly && items.length > 1;
           return (
             <div key={i} className="relative rounded-lg border border-border bg-background/60 p-4">
-              <button
-                type="button"
-                onClick={() => delItem(arrayKey, i)}
-                className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                aria-label="Remover"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {canRemove && (
+                <button
+                  type="button"
+                  onClick={() => delItem(arrayKey, i)}
+                  className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Remover"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
               <p className="mb-3 text-xs text-muted-foreground">#{i + 1}</p>
               <div className="grid gap-3 grid-cols-1 md:grid-cols-2 auto-rows-min">
                 {sectionFields.map((field) => {
@@ -248,7 +277,7 @@ export function DCForm({
             </div>
           );
         })}
-        {!readOnly && (
+        {!readOnly && !reachedLimit && (
           <button
             type="button"
             onClick={() => addItem(arrayKey)}
@@ -256,6 +285,11 @@ export function DCForm({
           >
             <Plus className="h-4 w-4" /> Adicionar {itemSingular}
           </button>
+        )}
+        {!readOnly && reachedLimit && (
+          <p className="text-xs text-muted-foreground">
+            Limite de {maxItems} itens atingido para este bloco.
+          </p>
         )}
       </div>
     );
@@ -273,7 +307,7 @@ export function DCForm({
             return (
               <SectionShell key={section.key} num={section.num} title={section.label}>
                 {section.repeater
-                  ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields)
+                  ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields, section.key)
                   : renderHeader(sectionFields)}
               </SectionShell>
             );

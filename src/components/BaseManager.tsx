@@ -191,12 +191,15 @@ export function BaseManager({
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState<Record<string, string>>({});
+  const [sectionLimits, setSectionLimits] = useState<Record<string, { id: string | null; max_items: number }>>({});
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
   const fieldsRef = useRef<Field[]>([]);
   const newLabelRef = useRef<Record<string, string>>({});
+  const sectionLimitsRef = useRef<Record<string, { id: string | null; max_items: number }>>({});
   fieldsRef.current = fields;
   newLabelRef.current = newLabel;
+  sectionLimitsRef.current = sectionLimits;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -209,6 +212,14 @@ export function BaseManager({
     const { data, error } = await query;
     if (error) toast.error(error.message);
     setFields((data ?? []) as Field[]);
+
+    let limitsQuery = supabase.from("base_section_settings").select("id,section,max_items");
+    limitsQuery = projectIdRef.current ? limitsQuery.eq("project_id", projectIdRef.current) : limitsQuery.is("project_id", null);
+    const { data: limitsData, error: limitsError } = await limitsQuery;
+    if (limitsError) toast.error(limitsError.message);
+    const map: Record<string, { id: string | null; max_items: number }> = {};
+    (limitsData ?? []).forEach((row) => { map[row.section] = { id: row.id, max_items: row.max_items }; });
+    setSectionLimits(map);
   }, []);
 
   useEffect(() => {
@@ -255,6 +266,25 @@ export function BaseManager({
     if (error) return toast.error(error.message);
     setFields((cur) => cur.filter((f) => f.id !== id));
     toast.success("Campo excluído");
+  }, []);
+
+  const saveSectionLimit = useCallback(async (sectionKey: string, maxItems: number) => {
+    const safeValue = Number.isFinite(maxItems) && maxItems >= 1 ? Math.floor(maxItems) : 1;
+    const existing = sectionLimitsRef.current[sectionKey];
+    setSectionLimits((cur) => ({ ...cur, [sectionKey]: { id: existing?.id ?? null, max_items: safeValue } }));
+    if (existing?.id) {
+      const { error } = await supabase.from("base_section_settings").update({ max_items: safeValue }).eq("id", existing.id);
+      if (error) return toast.error(error.message);
+    } else {
+      const { data, error } = await supabase
+        .from("base_section_settings")
+        .insert({ project_id: projectIdRef.current, section: sectionKey, max_items: safeValue })
+        .select("id")
+        .single();
+      if (error) return toast.error(error.message);
+      setSectionLimits((cur) => ({ ...cur, [sectionKey]: { id: data.id, max_items: safeValue } }));
+    }
+    toast.success("Limite de itens atualizado");
   }, []);
 
   const addOption = useCallback(async (fieldId: string, label: string) => {
@@ -350,9 +380,28 @@ export function BaseManager({
                           Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
                         </p>
                       </div>
-                      <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-                        {sectionFields.length} campo{sectionFields.length !== 1 ? 's' : ''}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        {section.repeater && (
+                          <label className="flex items-center gap-2 text-xs font-medium text-[#042558]/60">
+                            Limite de itens do bloco:
+                            <input
+                              type="number"
+                              min={1}
+                              value={sectionLimits[section.key]?.max_items ?? 3}
+                              onChange={(e) => setSectionLimits((cur) => ({
+                                ...cur,
+                                [section.key]: { id: cur[section.key]?.id ?? null, max_items: Number(e.target.value) },
+                              }))}
+                              onBlur={(e) => saveSectionLimit(section.key, Number(e.target.value))}
+                              className="w-16 rounded-lg border border-[#042558]/20 bg-white/50 px-2 py-1 text-center text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20"
+                              title="Quantas vezes as pessoas podem clicar em '+' neste bloco ao preencher a descrição de cargo. O primeiro item sempre aparece por padrão."
+                            />
+                          </label>
+                        )}
+                        <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
+                          {sectionFields.length} campo{sectionFields.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

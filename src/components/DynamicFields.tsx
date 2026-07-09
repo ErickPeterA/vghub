@@ -52,6 +52,29 @@ export function useProjectFields(projectId: string) {
   return { fields, loading };
 }
 
+// Limite de itens por bloco (repeater), configurado na Base do projeto.
+// Se um bloco não tiver linha configurada, não há limite (retorna undefined).
+export function useSectionLimits(projectId: string) {
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    supabase
+      .from("base_section_settings")
+      .select("section,max_items")
+      .eq("project_id", projectId)
+      .then(({ data }) => {
+        const map: Record<string, number> = {};
+        (data ?? []).forEach((row) => { map[row.section] = row.max_items; });
+        setLimits(map);
+        setLoading(false);
+      });
+  }, [projectId]);
+
+  return { limits, loading };
+}
+
 export function useProjectAreas(projectId: string) {
   const [areas, setAreas] = useState<ProjectArea[]>([]);
   useEffect(() => {

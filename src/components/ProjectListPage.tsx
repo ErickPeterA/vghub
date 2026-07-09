@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Plus, FolderKanban, Archive } from "lucide-react";
+import { Plus, FolderKanban, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -59,11 +59,21 @@ export function ProjectListPage() {
 
   useEffect(() => { void load(); }, []);
 
-  const arquivar = async (id: string, atual: string) => {
-    const novo = atual === "arquivado" ? "ativo" : "arquivado";
+  // Ativa/desativa o projeto inteiro. Ao desativar, os dados continuam
+  // intactos, mas todos os vinculados perdem acesso, exceto GPs e admins
+  // (regra aplicada no banco, via RLS). Pensado para o fluxo de
+  // mensalidade: se não pagar, o admin desativa e o pessoal perde acesso.
+  const alternarStatus = async (id: string, atual: string, nome: string) => {
+    const novo = atual === "desativado" ? "ativo" : "desativado";
+    if (novo === "desativado") {
+      const confirmado = confirm(
+        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuários vinculados perdem acesso, exceto GPs e administradores.`
+      );
+      if (!confirmado) return;
+    }
     const { error } = await supabase.from("projects").update({ status: novo }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success(novo === "arquivado" ? "Projeto arquivado" : "Projeto reativado");
+    toast.success(novo === "desativado" ? "Projeto desativado" : "Projeto ativado");
     void load();
   };
 
@@ -101,7 +111,7 @@ export function ProjectListPage() {
                   {p.empresa && <p className="mt-1 text-sm text-muted-foreground">{p.empresa}</p>}
                 </Link>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${p.status === "ativo" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>
-                  {p.status}
+                  {p.status === "ativo" ? "Ativo" : "Desativado"}
                 </span>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
@@ -111,8 +121,16 @@ export function ProjectListPage() {
               {isAdmin && (
                 <div className="mt-4 flex gap-2 border-t border-border pt-3">
                   <button onClick={() => navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId: p.id } })} className="flex-1 rounded-md bg-[#173c78] px-3 py-1.5 text-xs text-white hover:bg-[#042558] cursor-pointer">Abrir</button>
-                  <button onClick={() => arquivar(p.id, p.status)} className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-                    <Archive className="h-3 w-3" />
+                  <button
+                    onClick={() => alternarStatus(p.id, p.status, p.nome)}
+                    className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
+                      p.status === "ativo"
+                        ? "border-border text-muted-foreground hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                        : "border-accent/40 text-accent hover:bg-accent/10"
+                    }`}
+                    title={p.status === "ativo" ? "Desativar projeto (bloqueia acesso, mantém os dados)" : "Ativar projeto (libera o acesso novamente)"}
+                  >
+                    {p.status === "ativo" ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
                   </button>
                 </div>
               )}
