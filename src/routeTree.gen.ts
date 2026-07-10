@@ -24,6 +24,7 @@ import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './route
 import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './routes/_authenticated/gerenciamento.usuarios.index'
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
+import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
@@ -121,6 +122,12 @@ const ApiPublicActivityFormTokenRoute =
     path: '/api/public/activity-form/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicActivityDraftTokenRoute =
+  ApiPublicActivityDraftTokenRouteImport.update({
+    id: '/api/public/activity-draft/$token',
+    path: '/api/public/activity-draft/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedProjetosProjectIdHistoricoRoute =
   AuthenticatedProjetosProjectIdHistoricoRouteImport.update({
     id: '/historico',
@@ -207,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
@@ -230,6 +238,7 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
@@ -259,6 +268,7 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/_authenticated/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
+    | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
     | '/gerenciamento/usuarios/'
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
+    | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
     | '/gerenciamento/usuarios'
@@ -339,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
+    | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
     | '/_authenticated/gerenciamento/usuarios/'
@@ -353,6 +366,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
+  ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
 }
@@ -462,6 +476,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/activity-form/$token'
       fullPath: '/api/public/activity-form/$token'
       preLoaderRoute: typeof ApiPublicActivityFormTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/activity-draft/$token': {
+      id: '/api/public/activity-draft/$token'
+      path: '/api/public/activity-draft/$token'
+      fullPath: '/api/public/activity-draft/$token'
+      preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projetos/$projectId/historico': {
@@ -662,6 +683,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   AtividadesPreencherTokenRoute: AtividadesPreencherTokenRoute,
+  ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,
 }

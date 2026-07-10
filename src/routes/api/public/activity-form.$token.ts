@@ -12,7 +12,7 @@ export const Route = createFileRoute("/api/public/activity-form/$token")({
 
         const { data: link, error } = await supabaseAdmin
           .from("activity_links")
-          .select("id,status,expires_at,label,config_id,answered_at")
+          .select("id,status,expires_at,label,config_id,answered_at,header_answers,draft_header_answers,draft_question_answers,draft_saved_at")
           .eq("token", token)
           .maybeSingle();
 
@@ -45,11 +45,18 @@ export const Route = createFileRoute("/api/public/activity-form/$token")({
           return Response.json({ error: "inactive", message: "O formulário está inativo no momento." }, { status: 410 });
         }
 
+        const header = Array.isArray(config.header_schema) ? config.header_schema.filter((field) => field?.active ?? true) : config.header_schema;
+        const questions = Array.isArray(config.questions_schema) ? config.questions_schema.filter((field) => field?.active ?? true) : config.questions_schema;
+
         return Response.json({
           ok: true,
           label: link.label,
-          header: config.header_schema,
-          questions: config.questions_schema,
+          prefilledHeader: link.header_answers ?? {},
+          draftHeader: link.draft_header_answers ?? {},
+          draftQuestions: link.draft_question_answers ?? {},
+          draftSavedAt: link.draft_saved_at,
+          header,
+          questions,
         });
       },
     },

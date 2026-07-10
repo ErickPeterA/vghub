@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback, memo } from "react";
-import { Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical, Database, Layers } from "lucide-react";
+import { useEffect, useState, useRef, useCallback, memo, type ReactNode } from "react";
+import { Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical, Layers } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -19,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
-import { DC_SECTIONS, SECTION_KEYS } from "@/lib/dc-sections";
+import { DC_SECTIONS } from "@/lib/dc-sections";
 import { canAccessSection, getCurrentUserPlan, SECTION_PLAN_LABELS } from "@/lib/section-access";
 
 type FieldType = "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select" | "competency_description";
@@ -45,6 +46,8 @@ const types: Array<{ value: FieldType; label: string }> = [
 
 const slugify = (raw: string) =>
   raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+const sectionDropId = (sectionKey: string) => `section:${sectionKey}`;
 
 const OptionRow = memo(function OptionRow({
   option,
@@ -115,14 +118,11 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
 
   return (
     <div ref={setNodeRef} style={style} className="rounded-xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md">
-      <div className="grid gap-3 md:grid-cols-[auto_1.4fr_1fr_1fr_auto]">
+      <div className="grid gap-3 md:grid-cols-[auto_1.8fr_1fr_auto]">
         <button type="button" {...attributes} {...listeners} className="flex cursor-grab items-center justify-center rounded-lg border border-[#042558]/20 bg-white/50 px-2 transition-colors hover:bg-[#042558]/10 active:cursor-grabbing" title="Arrastar para reordenar">
           <GripVertical className="h-4 w-4 text-[#042558]/40" />
         </button>
         <input value={field.label} onChange={(e) => onPatch(field.id, { label: e.target.value })} className={inputClass} aria-label="Nome do campo" />
-        <select value={field.section} onChange={(e) => onPatch(field.id, { section: e.target.value })} className={inputClass} aria-label="Bloco">
-          {SECTION_KEYS.map((key) => <option key={key} value={key}>{key}</option>)}
-        </select>
         <select value={field.field_type} onChange={(e) => onPatch(field.id, { field_type: e.target.value as FieldType, allows_multiple: e.target.value === "multi_select" })} className={inputClass} aria-label="Tipo do campo">
           {types.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
         </select>
@@ -176,6 +176,22 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
           )}
         </div>
       )}
+    </div>
+  );
+});
+
+const SectionDropZone = memo(function SectionDropZone({
+  sectionKey,
+  children,
+}: {
+  sectionKey: string;
+  children: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: sectionDropId(sectionKey) });
+
+  return (
+    <div ref={setNodeRef} className={`p-5 transition-colors ${isOver ? "bg-[#042558]/5" : ""}`}>
+      {children}
     </div>
   );
 });
@@ -348,26 +364,72 @@ export function BaseManager({
     setFields((cur) => cur.map((f) => f.id === fieldId ? { ...f, base_options: f.base_options.map((o) => o.id === optionId ? { ...o, description } : o) } : f));
   }, []);
 
-  const handleDragEnd = useCallback(async (sectionKey: string, event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const sectionFields = fieldsRef.current
-      .filter((f) => f.section === sectionKey)
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const activeField = fieldsRef.current.find((f) => f.id === activeId);
+    if (!activeField) return;
+
+    const overField = fieldsRef.current.find((f) => f.id === overId);
+    const targetSection = overId.startsWith("section:")
+      ? overId.replace(/^section:/, "")
+      : overField?.section;
+    if (!targetSection) return;
+
+    const sourceSection = activeField.section;
+    const sourceFields = fieldsRef.current
+      .filter((f) => f.section === sourceSection)
       .sort((a, b) => a.display_order - b.display_order);
-    const oldIndex = sectionFields.findIndex((f) => f.id === active.id);
-    const newIndex = sectionFields.findIndex((f) => f.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove(sectionFields, oldIndex, newIndex);
-    const updates = reordered.map((f, i) => ({ id: f.id, display_order: (i + 1) * 10 }));
+    const targetFields = fieldsRef.current
+      .filter((f) => f.section === targetSection && f.id !== activeId)
+      .sort((a, b) => a.display_order - b.display_order);
+
+    if (sourceSection === targetSection && overField) {
+      const oldIndex = sourceFields.findIndex((f) => f.id === activeId);
+      const newIndex = sourceFields.findIndex((f) => f.id === overId);
+      if (oldIndex < 0 || newIndex < 0) return;
+      const reordered = arrayMove(sourceFields, oldIndex, newIndex);
+      const updates = reordered.map((f, i) => ({ id: f.id, section: targetSection, display_order: (i + 1) * 10 }));
+      setFields((cur) => cur.map((f) => {
+        const u = updates.find((x) => x.id === f.id);
+        return u ? { ...f, section: u.section, display_order: u.display_order } : f;
+      }));
+      const results = await Promise.all(updates.map((u) =>
+        supabase.from("base_fields").update({ section: u.section, display_order: u.display_order }).eq("id", u.id)
+      ));
+      const failed = results.find((result) => result.error);
+      if (failed?.error) toast.error(failed.error.message);
+      return;
+    }
+
+    const targetIndex = overField
+      ? Math.max(0, targetFields.findIndex((f) => f.id === overId))
+      : targetFields.length;
+    const nextTargetFields = [...targetFields];
+    nextTargetFields.splice(targetIndex, 0, { ...activeField, section: targetSection });
+
+    const sourceUpdates = sourceSection === targetSection
+      ? []
+      : sourceFields
+        .filter((f) => f.id !== activeId)
+        .map((f, i) => ({ id: f.id, section: sourceSection, display_order: (i + 1) * 10 }));
+    const targetUpdates = nextTargetFields.map((f, i) => ({ id: f.id, section: targetSection, display_order: (i + 1) * 10 }));
+    const updates = [...sourceUpdates, ...targetUpdates];
+
     // Optimistic update
     setFields((cur) => cur.map((f) => {
       const u = updates.find((x) => x.id === f.id);
-      return u ? { ...f, display_order: u.display_order } : f;
+      return u ? { ...f, section: u.section, display_order: u.display_order } : f;
     }));
     // Persist
-    await Promise.all(updates.map((u) =>
-      supabase.from("base_fields").update({ display_order: u.display_order }).eq("id", u.id)
+    const results = await Promise.all(updates.map((u) =>
+      supabase.from("base_fields").update({ section: u.section, display_order: u.display_order }).eq("id", u.id)
     ));
+    const failed = results.find((result) => result.error);
+    if (failed?.error) toast.error(failed.error.message);
   }, []);
 
   return (
@@ -392,6 +454,7 @@ export function BaseManager({
             </div>
           </div>
         ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="space-y-8">
             {DC_SECTIONS.map((section) => {
               const sectionFields = fields
@@ -409,7 +472,7 @@ export function BaseManager({
                         </p>
                         <h2 className="text-xl font-bold text-[#042558]">{section.label}</h2>
                         <p className="mt-0.5 text-xs text-[#042558]/40">
-                          Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
+                          Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar ou mover entre blocos
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -452,7 +515,7 @@ export function BaseManager({
                     </div>
                   </div>
 
-                  <div className="p-5">
+                  <SectionDropZone sectionKey={section.key}>
                     <div className="mb-4 flex gap-2">
                       <input
                         value={newLabel[section.key] ?? ""}
@@ -473,31 +536,30 @@ export function BaseManager({
                         <p className="text-xs text-[#042558]/30">Crie seu primeiro campo acima</p>
                       </div>
                     ) : (
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(section.key, e)}>
-                        <SortableContext items={sectionFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-3">
-                            {sectionFields.map((field) => (
-                              <SortableFieldRow
-                                key={field.id}
-                                field={field}
-                                onPatch={patchLocal}
-                                onSave={save}
-                                onRemove={removeField}
-                                onAddOption={addOption}
-                                onToggleOption={toggleOption}
-                                onRemoveOption={removeOption}
-                                onUpdateOptionDescription={updateOptionDescription}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
+                      <SortableContext items={sectionFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-3">
+                          {sectionFields.map((field) => (
+                            <SortableFieldRow
+                              key={field.id}
+                              field={field}
+                              onPatch={patchLocal}
+                              onSave={save}
+                              onRemove={removeField}
+                              onAddOption={addOption}
+                              onToggleOption={toggleOption}
+                              onRemoveOption={removeOption}
+                              onUpdateOptionDescription={updateOptionDescription}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
                     )}
-                  </div>
+                  </SectionDropZone>
                 </section>
               );
             })}
           </div>
+          </DndContext>
         )}
       </div>
     </main>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/api/public/activity-response/$token")({
+export const Route = createFileRoute("/api/public/activity-draft/$token")({
   server: {
     handlers: {
       POST: async ({ params, request }) => {
@@ -16,14 +16,10 @@ export const Route = createFileRoute("/api/public/activity-response/$token")({
           return Response.json({ error: "invalid_body", message: "Payload inválido." }, { status: 400 });
         }
 
-        const header_answers = body.header_answers ?? {};
-        const question_answers = body.question_answers ?? {};
-
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
         const { data: link } = await supabaseAdmin
           .from("activity_links")
-          .select("id,project_id,status,expires_at,header_answers")
+          .select("id,status,expires_at")
           .eq("token", token)
           .maybeSingle();
 
@@ -35,29 +31,18 @@ export const Route = createFileRoute("/api/public/activity-response/$token")({
           return Response.json({ error: "expired", message: "Link expirado." }, { status: 410 });
         }
 
-        const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-
-        const { error: insErr } = await supabaseAdmin.from("activity_responses").insert({
-          link_id: link.id,
-          project_id: link.project_id,
-          header_answers: { ...((link.header_answers as Record<string, string> | null) ?? {}), ...header_answers },
-          question_answers,
-          submitted_ip: ip,
-        });
-        if (insErr) return Response.json({ error: "server_error", message: insErr.message }, { status: 500 });
-
-        await supabaseAdmin
+        const savedAt = new Date().toISOString();
+        const { error } = await supabaseAdmin
           .from("activity_links")
           .update({
-            status: "answered",
-            answered_at: new Date().toISOString(),
-            draft_header_answers: {},
-            draft_question_answers: {},
-            draft_saved_at: null,
+            draft_header_answers: body.header_answers ?? {},
+            draft_question_answers: body.question_answers ?? {},
+            draft_saved_at: savedAt,
           })
           .eq("id", link.id);
 
-        return Response.json({ ok: true });
+        if (error) return Response.json({ error: "server_error", message: error.message }, { status: 500 });
+        return Response.json({ ok: true, savedAt });
       },
     },
   },

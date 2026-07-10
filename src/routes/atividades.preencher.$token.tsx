@@ -1,10 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
-type Field = { id: string; label: string; type: "text" | "textarea" | "date" | "select"; required: boolean; options?: string[] };
+type Field = {
+  id: string;
+  label: string;
+  type: "text" | "textarea" | "date" | "select";
+  required: boolean;
+  options?: string[];
+  filledBy?: "gp" | "collaborator";
+  helpText?: string;
+};
 
-type FormData = { ok: true; label: string | null; header: Field[]; questions: Field[] };
+type FormData = {
+  ok: true;
+  label: string | null;
+  prefilledHeader?: Record<string, string>;
+  draftHeader?: Record<string, string>;
+  draftQuestions?: Record<string, string>;
+  draftSavedAt?: string | null;
+  header: Field[];
+  questions: Field[];
+};
 type FormError = { error: string; message: string };
 
 export const Route = createFileRoute("/atividades/preencher/$token")({
@@ -18,6 +35,9 @@ function PublicForm() {
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [headerAns, setHeaderAns] = useState<Record<string, string>>({});
   const [questionAns, setQuestionAns] = useState<Record<string, string>>({});
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +50,11 @@ function PublicForm() {
           setState("error");
         } else {
           setForm(json);
+          setHeaderAns({ ...(json.prefilledHeader ?? {}), ...(json.draftHeader ?? {}) });
+          setQuestionAns(json.draftQuestions ?? {});
+          setDraftSavedAt(json.draftSavedAt ?? null);
           setState("ready");
+          hydratedRef.current = true;
         }
       })
       .catch(() => {
@@ -39,9 +63,36 @@ function PublicForm() {
     return () => { cancelled = true; };
   }, [token]);
 
+  useEffect(() => {
+    if (!hydratedRef.current || state !== "ready") return;
+    const timeout = window.setTimeout(async () => {
+      setDraftState("saving");
+      try {
+        const r = await fetch(`/api/public/activity-draft/${token}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ header_answers: headerAns, question_answers: questionAns }),
+        });
+        const json = (await r.json()) as { ok?: true; savedAt?: string } | FormError;
+        if (!r.ok || "error" in json) {
+          setDraftState("error");
+          return;
+        }
+        setDraftSavedAt(json.savedAt ?? new Date().toISOString());
+        setDraftState("saved");
+      } catch {
+        setDraftState("error");
+      }
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [headerAns, questionAns, state, token]);
+
   const validate = (): string | null => {
     if (!form) return null;
-    for (const f of form.header) if (f.required && !headerAns[f.id]?.trim()) return `Preencha: ${f.label}`;
+    for (const f of form.header) {
+      if ((f.filledBy ?? "collaborator") === "gp") continue;
+      if (f.required && !headerAns[f.id]?.trim()) return `Preencha: ${f.label}`;
+    }
     for (const f of form.questions) if (f.required && !questionAns[f.id]?.trim()) return `Preencha: ${f.label}`;
     return null;
   };
@@ -51,6 +102,7 @@ function PublicForm() {
     const err = validate();
     if (err) { setErrorMsg(err); return; }
     setErrorMsg("");
+    setDraftState("idle");
     setState("submitting");
     try {
       const r = await fetch(`/api/public/activity-response/${token}`, {
@@ -78,6 +130,14 @@ function PublicForm() {
           <p className="text-xs uppercase tracking-widest text-[#042558]/60">Formulário de atividades</p>
           <h1 className="mt-2 font-display text-3xl text-[#042558]">Preenchimento</h1>
           {form?.label && <p className="mt-1 text-sm text-[#042558]/60">{form.label}</p>}
+          {(state === "ready" || state === "submitting") && (
+            <p className="mt-2 text-xs text-[#042558]/45">
+              {draftState === "saving" && "Salvando rascunho..."}
+              {draftState === "saved" && `Rascunho salvo${draftSavedAt ? ` às ${new Date(draftSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+              {draftState === "error" && "Não foi possível salvar o rascunho agora."}
+              {draftState === "idle" && draftSavedAt && `Rascunho carregado de ${new Date(draftSavedAt).toLocaleDateString("pt-BR")}`}
+            </p>
+          )}
         </div>
 
         {state === "loading" && (
@@ -108,7 +168,13 @@ function PublicForm() {
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#042558]">Identificação</h2>
                 <div className="space-y-4">
                   {form.header.map((f) => (
-                    <FieldInput key={f.id} field={f} value={headerAns[f.id] ?? ""} onChange={(v) => setHeaderAns({ ...headerAns, [f.id]: v })} />
+                    <FieldInput
+                      key={f.id}
+                      field={f}
+                      value={headerAns[f.id] ?? ""}
+                      readOnly={(f.filledBy ?? "collaborator") === "gp"}
+                      onChange={(v) => setHeaderAns({ ...headerAns, [f.id]: v })}
+                    />
                   ))}
                 </div>
               </section>
@@ -137,25 +203,27 @@ function PublicForm() {
   );
 }
 
-function FieldInput({ field, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
-  const base = "w-full rounded-lg border border-[#042558]/20 bg-white px-3 py-2.5 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
+function FieldInput({ field, value, onChange, readOnly = false }: { field: Field; value: string; onChange: (v: string) => void; readOnly?: boolean }) {
+  const base = `w-full rounded-lg border border-[#042558]/20 px-3 py-2.5 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 ${readOnly ? "bg-[#042558]/5 text-[#042558]/70" : "bg-white"}`;
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-[#042558]">
         {field.label} {field.required && <span className="text-red-500">*</span>}
       </span>
+      {field.helpText && <span className="mb-2 block text-xs text-[#042558]/50">{field.helpText}</span>}
       {field.type === "textarea" ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={base} />
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={base} readOnly={readOnly} />
       ) : field.type === "select" ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={base} disabled={readOnly}>
           <option value="">— Selecione —</option>
           {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : field.type === "date" ? (
-        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={base} readOnly={readOnly} />
       ) : (
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className={base} readOnly={readOnly} />
       )}
+      {readOnly && <span className="mt-1 block text-xs text-[#042558]/40">Preenchido pela GP</span>}
     </label>
   );
 }

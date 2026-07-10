@@ -61,7 +61,11 @@ export type Database = {
           config_id: string
           created_at: string
           created_by: string | null
+          draft_header_answers: Json
+          draft_question_answers: Json
+          draft_saved_at: string | null
           expires_at: string
+          header_answers: Json
           id: string
           label: string | null
           project_id: string
@@ -75,7 +79,11 @@ export type Database = {
           config_id: string
           created_at?: string
           created_by?: string | null
+          draft_header_answers?: Json
+          draft_question_answers?: Json
+          draft_saved_at?: string | null
           expires_at: string
+          header_answers?: Json
           id?: string
           label?: string | null
           project_id: string
@@ -89,7 +97,11 @@ export type Database = {
           config_id?: string
           created_at?: string
           created_by?: string | null
+          draft_header_answers?: Json
+          draft_question_answers?: Json
+          draft_saved_at?: string | null
           expires_at?: string
+          header_answers?: Json
           id?: string
           label?: string | null
           project_id?: string

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Link2, Copy, Eye, Trash2, Plus } from "lucide-react";
+import { Copy, Eye, Link2, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActivityField } from "./ActivityConfigManager";
 
@@ -11,6 +11,7 @@ type LinkRow = {
   expires_at: string;
   answered_at: string | null;
   reviewed_at: string | null;
+  header_answers: Record<string, string> | null;
   label: string | null;
   created_at: string;
 };
@@ -41,6 +42,7 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
+  const [headerAnswers, setHeaderAnswers] = useState<Record<string, string>>({});
   const [days, setDays] = useState<number>(3);
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
       setConfigId(null);
       setConfigFields(null);
     }
-    // Auto-mark expired
+
     const now = new Date().toISOString();
     const rows = (ls ?? []) as LinkRow[];
     const toExpire = rows.filter((l) => l.status === "pending" && l.expires_at < now).map((l) => l.id);
@@ -68,26 +70,32 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
       rows.forEach((l) => { if (toExpire.includes(l.id)) l.status = "expired"; });
     }
     setLinks(rows);
-    const unread = rows.filter((l) => l.status === "answered" && !l.reviewed_at).length;
-    onUnreviewedChange?.(unread);
+    onUnreviewedChange?.(rows.filter((l) => l.status === "answered" && !l.reviewed_at).length);
     setLoading(false);
   }, [projectId, onUnreviewedChange]);
 
   useEffect(() => { void load(); }, [load]);
 
+  const gpHeaderFields = configFields?.header.filter((field) => (field.active ?? true) && (field.filledBy ?? "collaborator") === "gp") ?? [];
+
   const gerar = async () => {
     if (!configId) return toast.error("Configure o formulário primeiro.");
+    const missing = gpHeaderFields.find((field) => field.required && !headerAnswers[field.id]?.trim());
+    if (missing) return toast.error(`Preencha no cabeçalho: ${missing.label}`);
+
     const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     const { data: userData } = await supabase.auth.getUser();
     const { error } = await supabase.from("activity_links").insert({
       project_id: projectId,
       config_id: configId,
       expires_at,
+      header_answers: headerAnswers,
       label: label || null,
       created_by: userData.user?.id ?? null,
     });
     if (error) return toast.error(error.message);
     setLabel("");
+    setHeaderAnswers({});
     toast.success("Link gerado");
     void load();
   };
@@ -122,6 +130,23 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Gerar novo link</h3>
+
+        {gpHeaderFields.length > 0 && (
+          <div className="mt-3 rounded-xl border border-[#042558]/10 bg-white/50 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#042558]/60">Cabeçalho preenchido pela GP</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              {gpHeaderFields.map((field) => (
+                <FieldInput
+                  key={field.id}
+                  field={field}
+                  value={headerAnswers[field.id] ?? ""}
+                  onChange={(value) => setHeaderAnswers((current) => ({ ...current, [field.id]: value }))}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto]">
           <input placeholder="Rótulo (ex: João - RH)" value={label} onChange={(e) => setLabel(e.target.value)} className="rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm outline-none focus:border-[#042558]" />
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm">
@@ -148,7 +173,7 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
             {links.map((l) => (
               <div key={l.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-[#042558]/10 bg-white/60 p-3">
                 <Link2 className="h-4 w-4 text-[#042558]/50" />
-                <div className="flex-1 min-w-[180px]">
+                <div className="min-w-[180px] flex-1">
                   <p className="text-sm font-medium text-[#042558]">{l.label ?? "Sem rótulo"}</p>
                   <p className="text-xs text-[#042558]/50">
                     Criado {new Date(l.created_at).toLocaleDateString("pt-BR")} · Expira {new Date(l.expires_at).toLocaleDateString("pt-BR")}
@@ -157,7 +182,7 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[l.status]}`}>
                   {STATUS_LABEL[l.status]}
-                  {l.status === "answered" && !l.reviewed_at && " ·  novo"}
+                  {l.status === "answered" && !l.reviewed_at && " · novo"}
                 </span>
                 <button onClick={() => copiar(l.token)} className="rounded-lg p-2 text-[#042558]/60 hover:bg-[#042558]/5" title="Copiar link">
                   <Copy className="h-4 w-4" />
@@ -185,13 +210,36 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   );
 }
 
+function FieldInput({ field, value, onChange }: { field: ActivityField; value: string; onChange: (value: string) => void }) {
+  const base = "w-full rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558]";
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
+        {field.label} {field.required && <span className="text-red-500">*</span>}
+      </span>
+      {field.type === "textarea" ? (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className={base} />
+      ) : field.type === "select" ? (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+          <option value="">— Selecione —</option>
+          {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      ) : field.type === "date" ? (
+        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+      ) : (
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+      )}
+    </label>
+  );
+}
+
 function ResponseDrawer({ data, fields, onClose }: { data: { link: LinkRow; response: ResponseRow | null }; fields: { header: ActivityField[]; questions: ActivityField[] }; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-xl text-[#042558]">Resposta</h3>
-          <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">✕</button>
+          <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">×</button>
         </div>
         <p className="text-xs text-[#042558]/50">{data.link.label ?? "Sem rótulo"} · Enviado {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}</p>
 
@@ -199,8 +247,8 @@ function ResponseDrawer({ data, fields, onClose }: { data: { link: LinkRow; resp
           <p className="mt-6 text-sm text-[#042558]/60">Sem resposta registrada.</p>
         ) : (
           <>
-            <Section title="Cabeçalho" fields={fields.header} answers={data.response.header_answers} />
-            <Section title="Perguntas" fields={fields.questions} answers={data.response.question_answers} />
+            <Section title="Cabeçalho" fields={fields.header.filter((field) => field.active ?? true)} answers={data.response.header_answers} />
+            <Section title="Perguntas" fields={fields.questions.filter((field) => field.active ?? true)} answers={data.response.question_answers} />
           </>
         )}
       </div>
