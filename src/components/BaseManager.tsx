@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, memo, type ReactNode } from "react";
-import { Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical, Layers } from "lucide-react";
+import { ClipboardPaste, Copy, Plus, Save, Trash2, ChevronDown, ChevronUp, GripVertical, Layers } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -94,13 +94,14 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
   field: Field;
   onPatch: (id: string, patch: Partial<Field>) => void;
   onSave: (field: Field) => void;
+  onCopy: (field: Field) => void;
   onRemove: (id: string) => void;
   onAddOption: (fieldId: string, label: string) => void;
   onToggleOption: (fieldId: string, optionId: string, active: boolean) => void;
   onRemoveOption: (fieldId: string, optionId: string) => void;
   onUpdateOptionDescription: (fieldId: string, optionId: string, description: string) => void;
 }) {
-  const { field, onPatch, onSave, onRemove, onAddOption, onToggleOption, onRemoveOption, onUpdateOptionDescription } = props;
+  const { field, onPatch, onSave, onCopy, onRemove, onAddOption, onToggleOption, onRemoveOption, onUpdateOptionDescription } = props;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [newOptionLabel, setNewOptionLabel] = useState("");
@@ -127,6 +128,9 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
           {types.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
         </select>
         <div className="flex gap-1.5">
+          <button type="button" onClick={() => onCopy(field)} className="rounded-lg border border-[#042558]/20 bg-white/50 p-2 text-[#042558] transition-colors hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20" title="Copiar campo">
+            <Copy className="h-4 w-4" />
+          </button>
           <button type="button" onClick={() => onSave(field)} className="rounded-lg border border-[#042558]/20 bg-white/50 p-2 text-[#042558] transition-colors hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20" title="Salvar">
             <Save className="h-4 w-4" />
           </button>
@@ -208,6 +212,7 @@ export function BaseManager({
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState<Record<string, string>>({});
+  const [copiedField, setCopiedField] = useState<Field | null>(null);
   const [sectionLimits, setSectionLimits] = useState<Record<string, { id: string | null; max_items: number }>>({});
   const [sectionEnabled, setSectionEnabled] = useState<Record<string, { id: string | null; is_enabled: boolean }>>({});
   const projectIdRef = useRef(projectId);
@@ -286,6 +291,84 @@ export function BaseManager({
     setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
     toast.success("Campo criado");
   }, []);
+
+  const copyField = useCallback((field: Field) => {
+    setCopiedField({ ...field, base_options: [...field.base_options] });
+    toast.success(`Campo "${field.label}" copiado`);
+  }, []);
+
+  const pasteCopiedField = useCallback(async (sectionKey: string) => {
+    const field = copiedField;
+    if (!field) return;
+    const sectionFields = fieldsRef.current
+      .filter((f) => f.section === sectionKey)
+      .sort((a, b) => a.display_order - b.display_order);
+    const insertIndex = sectionFields.length;
+    const nextLabel = `${field.label} (cópia)`;
+    const fieldKey = `${slugify(field.label || "campo")}_copia_${Date.now()}`;
+
+    const { data: createdField, error: fieldError } = await supabase
+      .from("base_fields")
+      .insert({
+        project_id: projectIdRef.current,
+        field_key: fieldKey,
+        label: nextLabel,
+        section: sectionKey,
+        field_type: field.field_type,
+        is_required: field.is_required,
+        display_order: (insertIndex + 1) * 10,
+        allows_multiple: field.allows_multiple,
+        allows_free_text: field.allows_free_text,
+        is_active: field.is_active,
+        data_source: "manual",
+      })
+      .select("*,base_options(*)")
+      .single();
+
+    if (fieldError) return toast.error(fieldError.message);
+
+    const sortedOptions = [...field.base_options].sort((a, b) => a.display_order - b.display_order);
+    let createdOptions: Option[] = [];
+    if (sortedOptions.length > 0) {
+      const { data: optionsData, error: optionsError } = await supabase
+        .from("base_options")
+        .insert(sortedOptions.map((option, index) => ({
+          field_id: createdField.id,
+          label: option.label,
+          value: `${slugify(option.label || "opcao")}_${Date.now()}_${index}`,
+          description: option.description,
+          display_order: (index + 1) * 10,
+          is_active: option.is_active,
+        })))
+        .select("*");
+
+      if (optionsError) {
+        toast.error(optionsError.message);
+      } else {
+        createdOptions = (optionsData ?? []) as Option[];
+      }
+    }
+
+    const reordered = [...sectionFields];
+    reordered.splice(insertIndex, 0, { ...(createdField as Field), base_options: createdOptions });
+    const orderUpdates = reordered.map((item, index) => ({ id: item.id, display_order: (index + 1) * 10 }));
+
+    setFields((cur) => {
+      const created = { ...(createdField as Field), base_options: createdOptions };
+      return [...cur.filter((item) => item.id !== createdField.id), created].map((item) => {
+        const update = orderUpdates.find((order) => order.id === item.id);
+        return update ? { ...item, display_order: update.display_order } : item;
+      });
+    });
+
+    const results = await Promise.all(orderUpdates.map((update) =>
+      supabase.from("base_fields").update({ display_order: update.display_order }).eq("id", update.id)
+    ));
+    const failed = results.find((result) => result.error);
+    if (failed?.error) return toast.error(failed.error.message);
+
+    toast.success("Campo copiado com opções");
+  }, [copiedField]);
 
   const removeField = useCallback(async (id: string) => {
     if (!confirm("Excluir este campo e todas as opções?")) return;
@@ -527,6 +610,11 @@ export function BaseManager({
                       <button type="button" onClick={() => addField(section.key)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30">
                         <Plus className="h-4 w-4" /> Criar campo
                       </button>
+                      {copiedField && (
+                        <button type="button" onClick={() => pasteCopiedField(section.key)} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#042558]/20 bg-white/70 px-4 py-2.5 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20" title={`Colar "${copiedField.label}" neste bloco`}>
+                          <ClipboardPaste className="h-4 w-4" /> Colar campo
+                        </button>
+                      )}
                     </div>
 
                     {sectionFields.length === 0 ? (
@@ -544,6 +632,7 @@ export function BaseManager({
                               field={field}
                               onPatch={patchLocal}
                               onSave={save}
+                              onCopy={copyField}
                               onRemove={removeField}
                               onAddOption={addOption}
                               onToggleOption={toggleOption}
