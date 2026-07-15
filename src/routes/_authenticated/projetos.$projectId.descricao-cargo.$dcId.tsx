@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/descri
 
 type DCRow = DescricaoCargo & { etapa?: "em_criacao" | "em_aprovacao" | "concluido" };
 type VersionRow = { id: string; version_number: number; created_at: string; snapshot: unknown };
+type OrgPositionRow = { id: string; nome: string; parent_id: string | null };
 
 const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
 
@@ -28,6 +29,27 @@ function fromSnapshot(snapshot: unknown): DescricaoCargo {
     data_versao: data.data_versao ?? "",
     data_revisao: data.data_revisao ?? "",
   } as DescricaoCargo;
+}
+
+async function getOrgSuperiorName(projectId: string, positionId: string) {
+  const { data: position } = await (supabase as any)
+    .from("project_positions")
+    .select("id,nome,parent_id")
+    .eq("project_id", projectId)
+    .eq("id", positionId)
+    .maybeSingle();
+
+  const orgPosition = position as OrgPositionRow | null;
+  if (!orgPosition?.parent_id) return "";
+
+  const { data: parent } = await (supabase as any)
+    .from("project_positions")
+    .select("nome")
+    .eq("project_id", projectId)
+    .eq("id", orgPosition.parent_id)
+    .maybeSingle();
+
+  return parent?.nome ?? "";
 }
 
 function EditDC() {
@@ -52,9 +74,13 @@ function EditDC() {
   };
 
   useEffect(() => {
-    void supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(({ data, error }) => {
+    void supabase.from("descricoes_cargo").select("*").eq("id", dcId).maybeSingle().then(async ({ data, error }) => {
       if (error || !data) { toast.error("Não encontrado"); navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } }); return; }
-      setCurrent({ ...(fromSnapshot(data) as DCRow), etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
+      const next = fromSnapshot(data) as DCRow;
+      if (next.organization_position_id) {
+        next.superior_imediato = await getOrgSuperiorName(projectId, next.organization_position_id);
+      }
+      setCurrent({ ...next, etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
     });
     void loadVersions();
     void supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle().then(({ data }) => {
@@ -86,6 +112,10 @@ function EditDC() {
     if (readOnly) return;
     const { id: _omit, ...payload } = dc;
     void _omit;
+    if (current?.organization_position_id) {
+      payload.superior_imediato = await getOrgSuperiorName(projectId, current.organization_position_id);
+      payload.organization_position_id = current.organization_position_id;
+    }
     const { error } = await supabase
       .from("descricoes_cargo")
       .update({ ...payload, data_versao: payload.data_versao || null, data_revisao: payload.data_revisao || null })

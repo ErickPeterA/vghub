@@ -8,6 +8,7 @@ export const empty = {
 
 export type DescricaoCargo = {
   id?: string;
+  organization_position_id?: string | null;
   // Cabeçalho — colunas fixas (mantidas por compatibilidade). Demais campos
   // do cabeçalho criados via base ficam em dynamic_values.
   cargo: string;

@@ -11,30 +11,27 @@ type PositionFormModalProps = {
   positions: OrganizationPosition[];
   position?: OrganizationPosition | null;
   defaultParentId?: string | null;
+  defaultDisplayOrder?: number | null;
   onClose: () => void;
   onSubmit: (values: { nome: string; descricao: string | null; parent_id: string | null; display_order: number; status: PositionStatus }) => void;
 };
 
 const inputClass = "w-full rounded-lg border border-[#042558]/20 bg-white px-3 py-2 text-sm text-[#042558] outline-none transition focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/15";
 
-export function PositionFormModal({ open, mode, positions, position, defaultParentId, onClose, onSubmit }: PositionFormModalProps) {
+export function PositionFormModal({ open, mode, positions, position, defaultParentId, defaultDisplayOrder, onClose, onSubmit }: PositionFormModalProps) {
   const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
-  const [displayOrder, setDisplayOrder] = useState(10);
-  const [status, setStatus] = useState<PositionStatus>("active");
 
   useEffect(() => {
     if (!open) return;
     setNome(position?.nome ?? "");
-    setDescricao(position?.descricao ?? "");
     setParentId(mode === "edit" ? position?.parent_id ?? null : defaultParentId ?? null);
-    setDisplayOrder(position?.display_order ?? 10);
-    setStatus(position?.status ?? "active");
   }, [defaultParentId, mode, open, position]);
 
   const parentOptions = availableParents(positions, mode === "edit" ? position : null);
   const title = mode === "edit" ? "Editar cargo" : mode === "insertAbove" ? "Inserir cargo acima" : "Novo cargo";
+  const hiddenDisplayOrder = position?.display_order ?? defaultDisplayOrder ?? 10;
+  const hiddenStatus: PositionStatus = position?.status ?? "active";
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
@@ -49,10 +46,10 @@ export function PositionFormModal({ open, mode, positions, position, defaultPare
             event.preventDefault();
             onSubmit({
               nome: nome.trim(),
-              descricao: descricao.trim() || null,
+              descricao: position?.descricao ?? null,
               parent_id: parentId,
-              display_order: Number.isFinite(displayOrder) ? displayOrder : 0,
-              status,
+              display_order: hiddenDisplayOrder,
+              status: hiddenStatus,
             });
           }}
         >
@@ -62,36 +59,16 @@ export function PositionFormModal({ open, mode, positions, position, defaultPare
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">Descrição</span>
-            <textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} rows={3} className={`${inputClass} resize-y`} />
+            <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">Superior imediato</span>
+            <select value={parentId ?? ""} onChange={(event) => setParentId(event.target.value || null)} className={inputClass}>
+              <option value="">Sem superior imediato</option>
+              {parentOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.nome}
+                </option>
+              ))}
+            </select>
           </label>
-
-          {mode !== "insertAbove" && (
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">Superior imediato</span>
-              <select value={parentId ?? ""} onChange={(event) => setParentId(event.target.value || null)} className={inputClass}>
-                <option value="">Sem superior imediato</option>
-                {parentOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.nome}</option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">Ordem de exibição</span>
-              <input type="number" value={displayOrder} onChange={(event) => setDisplayOrder(Number(event.target.value))} className={inputClass} />
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">Status</span>
-              <select value={status} onChange={(event) => setStatus(event.target.value as PositionStatus)} className={inputClass}>
-                <option value="active">Ativo</option>
-                <option value="inactive">Inativo</option>
-              </select>
-            </label>
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-lg border border-[#042558]/20 bg-white px-4 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">

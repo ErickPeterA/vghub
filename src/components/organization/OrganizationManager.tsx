@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Network, Loader2 } from "lucide-react";
+import { Network, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -25,9 +25,10 @@ type FormState = {
   mode: "create" | "edit" | "insertAbove";
   position: OrganizationPosition | null;
   defaultParentId: string | null;
+  defaultDisplayOrder: number | null;
 };
 
-const initialFormState: FormState = { open: false, mode: "create", position: null, defaultParentId: null };
+const initialFormState: FormState = { open: false, mode: "create", position: null, defaultParentId: null, defaultDisplayOrder: null };
 
 export function OrganizationManager({ projectId }: { projectId: string }) {
   const { user } = useCurrentUser();
@@ -91,20 +92,31 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     return () => window.clearTimeout(timeout);
   }, [collapsed, highlightedId, positions]);
 
-  const openCreate = (parentId: string | null = null) => {
-    setFormState({ open: true, mode: "create", position: null, defaultParentId: parentId });
+  const getAppendDisplayOrder = (parentId: string | null) => {
+    const siblings = getChildren(positions, parentId);
+    return siblings.length > 0 ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10 : 10;
+  };
+
+  const openCreate = (parentId: string | null = null, displayOrder: number | null = null) => {
+    setFormState({
+      open: true,
+      mode: "create",
+      position: null,
+      defaultParentId: parentId,
+      defaultDisplayOrder: displayOrder ?? getAppendDisplayOrder(parentId),
+    });
   };
 
   const openSibling = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "create", position: null, defaultParentId: position.parent_id });
+    setFormState({ open: true, mode: "create", position: null, defaultParentId: position.parent_id, defaultDisplayOrder: getAppendDisplayOrder(position.parent_id) });
   };
 
   const openEdit = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "edit", position, defaultParentId: position.parent_id });
+    setFormState({ open: true, mode: "edit", position, defaultParentId: position.parent_id, defaultDisplayOrder: position.display_order });
   };
 
   const openInsertAbove = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "insertAbove", position, defaultParentId: position.parent_id });
+    setFormState({ open: true, mode: "insertAbove", position, defaultParentId: position.parent_id, defaultDisplayOrder: position.display_order });
   };
 
   const savePosition = async (values: { nome: string; descricao: string | null; parent_id: string | null; display_order: number; status: PositionStatus }) => {
@@ -138,12 +150,30 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       toast.success("Cargo atualizado");
     } else {
       const siblings = getChildren(positions, values.parent_id);
+      const fallbackOrder = siblings.length > 0 ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10 : 10;
+      const displayOrder = Number.isFinite(values.display_order) ? values.display_order : fallbackOrder;
+      const positionsToShift = siblings.filter((sibling) => sibling.display_order >= displayOrder);
+
+      if (positionsToShift.length > 0) {
+        const updates = await Promise.all(
+          positionsToShift.map((sibling) =>
+            (supabase as any)
+              .from("project_positions")
+              .update({ display_order: sibling.display_order + 10 })
+              .eq("id", sibling.id)
+              .eq("project_id", projectId)
+          )
+        );
+        const shiftError = updates.find((result) => result.error)?.error;
+        if (shiftError) return toast.error(shiftError.message);
+      }
+
       const { error } = await (supabase as any).from("project_positions").insert({
         project_id: projectId,
         parent_id: values.parent_id,
         nome: values.nome,
         descricao: values.descricao,
-        display_order: Number.isFinite(values.display_order) ? values.display_order : siblings.length * 10 + 10,
+        display_order: displayOrder,
         status: values.status,
         created_by: user?.id ?? null,
       });
@@ -227,10 +257,6 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
                 Cadastre cargos e organize relações de liderança. A posição visual é calculada automaticamente pela hierarquia.
               </p>
             </div>
-            <button type="button" onClick={() => openCreate(null)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 hover:bg-[#042558]/90">
-              <Plus className="h-4 w-4" />
-              Novo cargo
-            </button>
           </div>
         </div>
 
@@ -277,6 +303,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
               return next;
             })}
             onAddChild={(position) => openCreate(position.id)}
+            onAddAt={(parentId, displayOrder) => openCreate(parentId, displayOrder)}
             onAddSibling={openSibling}
             onInsertAbove={openInsertAbove}
             onEdit={openEdit}
@@ -293,6 +320,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       </div>
 
       <PositionDetailsPanel
+        projectId={projectId}
         position={selected}
         positions={positions}
         onClose={() => setSelected(null)}
@@ -307,6 +335,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         positions={positions}
         position={formState.position}
         defaultParentId={formState.defaultParentId}
+        defaultDisplayOrder={formState.defaultDisplayOrder}
         onClose={() => setFormState(initialFormState)}
         onSubmit={savePosition}
       />

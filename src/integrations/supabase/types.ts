@@ -365,6 +365,7 @@ export type Database = {
           instrucao: Json
           nivelamento: string | null
           objetivo: string | null
+          organization_position_id: string | null
           postura: Json
           project_id: string
           status: string
@@ -392,6 +393,7 @@ export type Database = {
           instrucao?: Json
           nivelamento?: string | null
           objetivo?: string | null
+          organization_position_id?: string | null
           postura?: Json
           project_id: string
           status?: string
@@ -419,6 +421,7 @@ export type Database = {
           instrucao?: Json
           nivelamento?: string | null
           objetivo?: string | null
+          organization_position_id?: string | null
           postura?: Json
           project_id?: string
           status?: string
@@ -428,6 +431,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "descricoes_cargo_organization_position_id_fkey"
+            columns: ["organization_position_id"]
+            isOneToOne: true
+            referencedRelation: "project_positions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "descricoes_cargo_project_id_fkey"
             columns: ["project_id"]
