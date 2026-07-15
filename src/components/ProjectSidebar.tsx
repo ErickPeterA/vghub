@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Database, FileText, History, BarChart3, ArrowLeft, Network, Settings, ClipboardList } from "lucide-react";
+import { ArrowLeft, BarChart3, ClipboardList, Database, FileText, GitFork, History, Network, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -44,6 +44,7 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
   const allItems = [
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
+    { to: "/projetos/$projectId/organograma", href: `/projetos/${projectId}/organograma`, icon: GitFork, label: "Organograma" },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
     { to: "/projetos/$projectId/base", href: `/projetos/${projectId}/base`, icon: Database, label: "Base do Projeto" },
     { to: "/projetos/$projectId/andamento", href: `/projetos/${projectId}/andamento`, icon: BarChart3, label: "Andamento" },
@@ -52,7 +53,7 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
   ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
 
   const items = isLider
-    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Base do Projeto" || i.label === "Andamento")
+    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Organograma" || i.label === "Base do Projeto" || i.label === "Andamento")
     : allItems;
 
   return (

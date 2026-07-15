@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type FieldType = "text" | "textarea" | "date" | "select";
 export type FilledBy = "gp" | "collaborator";
+export type ActivityDataSource = "manual" | "areas" | "setores";
 
 export type ActivityField = {
   id: string;
@@ -32,13 +33,15 @@ export type ActivityField = {
   options?: string[];
   filledBy?: FilledBy;
   helpText?: string;
+  dataSource?: ActivityDataSource;
 };
 
 const uid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
 export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   { id: "nome", label: "Nome", type: "text", required: true, active: true, filledBy: "gp" },
-  { id: "area_setor", label: "Área e setor", type: "text", required: true, active: true, filledBy: "gp" },
+  { id: "area", label: "Área", type: "select", required: true, active: true, filledBy: "gp", dataSource: "areas" },
+  { id: "setor", label: "Setor", type: "select", required: true, active: true, filledBy: "gp", dataSource: "setores" },
   { id: "data_inicio", label: "Data de início", type: "date", required: true, active: true, filledBy: "gp" },
   { id: "data_finalizacao", label: "Data de finalização", type: "date", required: true, active: true, filledBy: "collaborator" },
   { id: "cargo", label: "Cargo", type: "text", required: true, active: true, filledBy: "gp" },
@@ -127,7 +130,19 @@ const filledByOptions: Array<{ value: FilledBy; label: string }> = [
 const inputClass = "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
 
 const cloneDefaults = (fields: ActivityField[]) => fields.map((field) => ({ ...field, id: `${field.id}_${uid()}` }));
-const normalizeFields = (fields: ActivityField[]) => fields.map((field) => ({ ...field, active: field.active ?? true }));
+export const normalizeActivityFields = (fields: ActivityField[]) =>
+  fields.flatMap((field) => {
+    const normalized = { ...field, active: field.active ?? true, dataSource: field.dataSource ?? "manual" };
+    const key = `${field.id} ${field.label}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (key.includes("area_setor") || key.includes("area e setor")) {
+      return [
+        { ...normalized, id: "area", label: "Área", type: "select" as FieldType, dataSource: "areas" as ActivityDataSource },
+        { ...normalized, id: "setor", label: "Setor", type: "select" as FieldType, dataSource: "setores" as ActivityDataSource },
+      ];
+    }
+    return [normalized];
+  });
+const normalizeFields = normalizeActivityFields;
 
 export function ActivityConfigManager({ projectId }: { projectId: string }) {
   const [configId, setConfigId] = useState<string | null>(null);
@@ -373,7 +388,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [newOption, setNewOption] = useState("");
-  const showOptions = field.type === "select";
+  const showOptions = field.type === "select" && (field.dataSource ?? "manual") === "manual";
 
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const options = field.options ?? [];
@@ -415,6 +430,11 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-5 text-sm">
+        {(field.dataSource === "areas" || field.dataSource === "setores") && (
+          <span className="rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
+            Opções da Base do Projeto
+          </span>
+        )}
         <label className="flex cursor-pointer items-center gap-1.5 text-[#042558]/60 transition-colors hover:text-[#042558]">
           <input type="checkbox" checked={field.required} onChange={(e) => onPatch(field.id, { required: e.target.checked })} className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20" /> Obrigatório
         </label>

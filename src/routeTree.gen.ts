@@ -25,6 +25,7 @@ import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './r
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
+import { Route as AuthenticatedProjetosProjectIdOrganogramaRouteImport } from './routes/_authenticated/projetos.$projectId.organograma'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
@@ -128,6 +129,12 @@ const ApiPublicActivityDraftTokenRoute =
     path: '/api/public/activity-draft/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedProjetosProjectIdOrganogramaRoute =
+  AuthenticatedProjetosProjectIdOrganogramaRouteImport.update({
+    id: '/organograma',
+    path: '/organograma',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdHistoricoRoute =
   AuthenticatedProjetosProjectIdHistoricoRouteImport.update({
     id: '/historico',
@@ -214,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -238,6 +246,7 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -268,6 +277,7 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  '/_authenticated/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
+    | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
+    | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
+    | '/_authenticated/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -485,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/projetos/$projectId/organograma': {
+      id: '/_authenticated/projetos/$projectId/organograma'
+      path: '/organograma'
+      fullPath: '/projetos/$projectId/organograma'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdOrganogramaRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
     '/_authenticated/projetos/$projectId/historico': {
       id: '/_authenticated/projetos/$projectId/historico'
       path: '/historico'
@@ -594,6 +614,7 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
+  AuthenticatedProjetosProjectIdOrganogramaRoute: typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 
@@ -613,6 +634,8 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren,
     AuthenticatedProjetosProjectIdHistoricoRoute:
       AuthenticatedProjetosProjectIdHistoricoRoute,
+    AuthenticatedProjetosProjectIdOrganogramaRoute:
+      AuthenticatedProjetosProjectIdOrganogramaRoute,
     AuthenticatedProjetosProjectIdIndexRoute:
       AuthenticatedProjetosProjectIdIndexRoute,
   }

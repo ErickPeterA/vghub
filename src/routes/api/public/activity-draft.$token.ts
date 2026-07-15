@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+type QuestionAnswers = Record<string, string> | Array<Record<string, string>>;
+
 export const Route = createFileRoute("/api/public/activity-draft/$token")({
   server: {
     handlers: {
@@ -9,7 +11,7 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
           return Response.json({ error: "invalid_token", message: "Link inválido." }, { status: 400 });
         }
 
-        let body: { header_answers?: Record<string, string>; question_answers?: Record<string, string> };
+        let body: { header_answers?: Record<string, string>; question_answers?: QuestionAnswers };
         try {
           body = await request.json();
         } catch {
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
           .from("activity_links")
           .update({
             draft_header_answers: body.header_answers ?? {},
-            draft_question_answers: body.question_answers ?? {},
+            draft_question_answers: body.question_answers ?? [],
             draft_saved_at: savedAt,
           })
           .eq("id", link.id);

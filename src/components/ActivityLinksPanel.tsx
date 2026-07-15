@@ -3,7 +3,8 @@ import type { ComponentType } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock3, Copy, Download, Eye, Link2, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { ActivityField } from "./ActivityConfigManager";
+import { normalizeActivityFields, type ActivityField } from "./ActivityConfigManager";
+import { useProjectAreas, type ProjectArea } from "./DynamicFields";
 
 type ActivityStage = "creating" | "sent" | "answered";
 
@@ -25,9 +26,11 @@ type ResponseRow = {
   link_id: string;
   project_id?: string;
   header_answers: Record<string, string>;
-  question_answers: Record<string, string>;
+  question_answers: QuestionAnswerGroup | QuestionAnswerGroup[];
   submitted_at: string;
 };
+
+type QuestionAnswerGroup = Record<string, string>;
 
 const STATUS_LABEL: Record<LinkRow["status"], string> = {
   pending: "Pendente",
@@ -63,8 +66,8 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   const [days, setDays] = useState<number>(3);
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(true);
-  const [compiling, setCompiling] = useState(false);
   const [openResp, setOpenResp] = useState<{ link: LinkRow; response: ResponseRow | null } | null>(null);
+  const areas = useProjectAreas(projectId);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,7 +77,10 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     ]);
     if (cfg) {
       setConfigId(cfg.id);
-      setConfigFields({ header: (cfg.header_schema as ActivityField[]) ?? [], questions: (cfg.questions_schema as ActivityField[]) ?? [] });
+      setConfigFields({
+        header: normalizeActivityFields((cfg.header_schema as ActivityField[]) ?? []),
+        questions: normalizeActivityFields((cfg.questions_schema as ActivityField[]) ?? []),
+      });
     } else {
       setConfigId(null);
       setConfigFields(null);
@@ -95,6 +101,8 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   useEffect(() => { void load(); }, [load]);
 
   const gpHeaderFields = configFields?.header.filter((field) => (field.active ?? true) && (field.filledBy ?? "collaborator") === "gp") ?? [];
+  const areaField = gpHeaderFields.find((field) => field.dataSource === "areas");
+  const setorField = gpHeaderFields.find((field) => field.dataSource === "setores");
 
   const stageFor = (link: LinkRow): ActivityStage => {
     if (link.status === "answered") return "answered";
@@ -161,38 +169,6 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     }
   };
 
-  const gerarCompilacao = async () => {
-    setCompiling(true);
-    try {
-      const { data, error } = await supabase
-        .from("activity_responses")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("submitted_at", { ascending: true });
-
-      if (error) throw error;
-
-      const responses = ((data ?? []) as ResponseRow[]).filter((response) => response.link_id);
-      if (!responses.length) {
-        toast.error("Ainda não há respostas para compilar.");
-        return;
-      }
-
-      const linksById = new Map(links.map((link) => [link.id, link]));
-      const blob = buildActivityResponsesPdf({
-        responses,
-        linksById,
-        fields: configFields ?? { header: [], questions: [] },
-      });
-      downloadBlob(blob, `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`);
-      toast.success("Compilação gerada");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível gerar a compilação.");
-    } finally {
-      setCompiling(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
@@ -207,7 +183,13 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
                   key={field.id}
                   field={field}
                   value={headerAnswers[field.id] ?? ""}
-                  onChange={(value) => setHeaderAnswers((current) => ({ ...current, [field.id]: value }))}
+                  areas={areas}
+                  parentAreaId={field.dataSource === "setores" && areaField ? headerAnswers[areaField.id] : undefined}
+                  onChange={(value) => setHeaderAnswers((current) => {
+                    const next = { ...current, [field.id]: value };
+                    if (field.dataSource === "areas" && setorField) next[setorField.id] = "";
+                    return next;
+                  })}
                 />
               ))}
             </div>
@@ -232,14 +214,6 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Kanban de atividades ({links.length})</h3>
-          <button
-            onClick={gerarCompilacao}
-            disabled={compiling || links.every((link) => link.status !== "answered")}
-            className="hidden"
-          >
-            <Download className="h-4 w-4" />
-            {compiling ? "Gerando..." : "Gerar compilação de respostas"}
-          </button>
         </div>
         {loading ? (
           <div className="py-6 text-center text-sm text-[#042558]/60">Carregando...</div>
@@ -296,15 +270,196 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
         <ResponseDrawer data={openResp} fields={configFields} onClose={() => setOpenResp(null)} />
       )}
 
-      <button
-        onClick={gerarCompilacao}
-        disabled={compiling || links.every((link) => link.status !== "answered")}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center justify-center gap-2 rounded-full bg-[#042558] px-5 py-3 text-sm font-medium text-white shadow-xl shadow-[#042558]/25 transition-all hover:-translate-y-0.5 hover:bg-[#042558]/90 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
-        title="Gerar compilação de respostas"
-      >
-        <Download className="h-4 w-4" />
-        <span className="hidden sm:inline">{compiling ? "Gerando..." : "Gerar compilação de respostas"}</span>
-      </button>
+    </div>
+  );
+}
+
+export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
+  const [links, setLinks] = useState<LinkRow[]>([]);
+  const [responses, setResponses] = useState<ResponseRow[]>([]);
+  const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [{ data: cfg }, { data: ls }, { data: rs, error }] = await Promise.all([
+      supabase.from("activity_configs").select("header_schema,questions_schema").eq("project_id", projectId).maybeSingle(),
+      supabase.from("activity_links").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+      supabase.from("activity_responses").select("*").eq("project_id", projectId).order("submitted_at", { ascending: true }),
+    ]);
+
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setConfigFields({
+      header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(includeInCompilation),
+      questions: normalizeActivityFields((cfg?.questions_schema as ActivityField[] | null) ?? []).filter(includeInCompilation),
+    });
+    setLinks(((ls ?? []) as LinkRow[]).filter((link) => link.status === "answered"));
+    setResponses(((rs ?? []) as ResponseRow[]).filter((response) => response.link_id));
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const linksById = new Map(links.map((link) => [link.id, link]));
+  const completedResponses = responses.filter((response) => linksById.has(response.link_id));
+  const fields = configFields ?? { header: [], questions: [] };
+
+  const previewCompilation = () => {
+    if (!completedResponses.length) {
+      toast.error("Ainda não há atividades concluídas para compilar.");
+      return;
+    }
+    setPreviewOpen(true);
+  };
+
+  const downloadCompilation = () => {
+    const blob = buildActivityResponsesPdf({
+      responses: completedResponses,
+      linksById,
+      fields,
+    });
+    downloadBlob(blob, `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("PDF da compilação baixado");
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Atividades concluídas</h3>
+            <p className="mt-1 text-sm text-[#042558]/60">{completedResponses.length} resposta(s) pronta(s) para compilar</p>
+          </div>
+          <button
+            onClick={previewCompilation}
+            disabled={loading || completedResponses.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Eye className="h-4 w-4" />
+            Gerar compilação
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-8 text-center text-sm text-[#042558]/60">Carregando...</div>
+      ) : completedResponses.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-[#042558]/15 bg-white/50 p-8 text-center text-sm text-[#042558]/40">
+          Nenhuma atividade respondida ainda.
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {completedResponses.map((response) => {
+            const link = linksById.get(response.link_id);
+            return (
+              <article key={response.id} className="rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#042558]">{link?.label ?? "Sem rótulo"}</h4>
+                    <p className="mt-1 text-xs text-[#042558]/50">Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Concluído</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {previewOpen && (
+        <CompilationPreview
+          responses={completedResponses}
+          linksById={linksById}
+          fields={fields}
+          onClose={() => setPreviewOpen(false)}
+          onDownload={downloadCompilation}
+        />
+      )}
+    </div>
+  );
+}
+
+function CompilationPreview({
+  responses,
+  linksById,
+  fields,
+  onClose,
+  onDownload,
+}: {
+  responses: ResponseRow[];
+  linksById: Map<string, LinkRow>;
+  fields: { header: ActivityField[]; questions: ActivityField[] };
+  onClose: () => void;
+  onDownload: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 md:p-8" onClick={onClose}>
+      <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-[#042558]/10 bg-white/95 p-5 backdrop-blur md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da compilação</h3>
+            <p className="text-sm text-[#042558]/60">{responses.length} resposta(s) serão incluídas no PDF</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onClose} className="rounded-lg border border-[#042558]/20 bg-white px-4 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">
+              Fechar
+            </button>
+            <button onClick={onDownload} className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white hover:bg-[#042558]/90">
+              <Download className="h-4 w-4" />
+              Baixar PDF
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-slate-100 p-4 md:p-8">
+          <div className="mx-auto min-h-[860px] max-w-[760px] bg-white p-8 text-[#042558] shadow-sm">
+            <h1 className="text-2xl font-bold">Compilação de respostas das atividades</h1>
+            <p className="mt-2 text-sm text-[#042558]/60">Total de respostas: {responses.length}</p>
+
+            <div className="mt-8 space-y-8">
+              {responses.map((response, index) => {
+                const link = linksById.get(response.link_id);
+                return (
+                  <section key={response.id} className="border-t border-[#042558]/10 pt-6">
+                    <h2 className="text-lg font-semibold">Resposta {index + 1} - {link?.label ?? "Sem rótulo"}</h2>
+                    <CompilationPreviewSection title="Cabeçalho" fields={fields.header} answers={response.header_answers} />
+                    {questionAnswerGroups(response.question_answers).map((answers, groupIndex) => (
+                      <CompilationPreviewSection
+                        key={groupIndex}
+                        title={`Pergunta ${groupIndex + 1}`}
+                        fields={fields.questions}
+                        answers={answers}
+                      />
+                    ))}
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompilationPreviewSection({ title, fields, answers }: { title: string; fields: ActivityField[]; answers: Record<string, string> }) {
+  return (
+    <div className="mt-5">
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/60">{title}</h4>
+      <dl className="mt-3 space-y-3">
+        {fields.map((field) => (
+          <div key={field.id}>
+            <dt className="text-xs font-medium text-[#042558]/70">{field.label}</dt>
+            <dd className="mt-0.5 whitespace-pre-wrap text-sm leading-6 text-[#042558]">{answers?.[field.id] || <span className="italic text-[#042558]/30">sem resposta</span>}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -373,6 +528,31 @@ function ActivityLinkCard({
   );
 }
 
+function includeInCompilation(field: ActivityField) {
+  const key = normalizeCompilationField(`${field.id} ${field.label}`);
+  return !(
+    key.includes("data inicio") ||
+    key.includes("data de inicio") ||
+    key.includes("data finalizacao") ||
+    key.includes("data de finalizacao") ||
+    key.includes("data fim") ||
+    key.includes("data de fim")
+  );
+}
+
+function normalizeCompilationField(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function questionAnswerGroups(answers?: QuestionAnswerGroup | QuestionAnswerGroup[] | null): QuestionAnswerGroup[] {
+  if (Array.isArray(answers)) return answers.length ? answers : [{}];
+  if (answers && typeof answers === "object") return [answers];
+  return [{}];
+}
+
 function buildActivityResponsesPdf({
   responses,
   linksById,
@@ -383,7 +563,11 @@ function buildActivityResponsesPdf({
   fields: { header: ActivityField[]; questions: ActivityField[] };
 }) {
   const fieldLabelById = new Map<string, string>();
-  [...fields.header, ...fields.questions].forEach((field) => fieldLabelById.set(field.id, field.label));
+  const compilationFields = {
+    header: fields.header.filter(includeInCompilation),
+    questions: fields.questions.filter(includeInCompilation),
+  };
+  [...compilationFields.header, ...compilationFields.questions].forEach((field) => fieldLabelById.set(field.id, field.label));
 
   const lines: Array<{ text: string; size?: number; gap?: number }> = [
     { text: "Compilação de respostas das atividades", size: 18, gap: 10 },
@@ -398,9 +582,11 @@ function buildActivityResponsesPdf({
       { text: `Enviado em ${new Date(response.submitted_at).toLocaleString("pt-BR")}`, size: 10, gap: 12 },
       { text: "Cabeçalho", size: 12, gap: 6 },
     );
-    pushAnswerLines(lines, fields.header, response.header_answers, fieldLabelById);
-    lines.push({ text: "Perguntas", size: 12, gap: 6 });
-    pushAnswerLines(lines, fields.questions, response.question_answers, fieldLabelById);
+    pushAnswerLines(lines, compilationFields.header, response.header_answers, fieldLabelById);
+    questionAnswerGroups(response.question_answers).forEach((answers, groupIndex) => {
+      lines.push({ text: `Pergunta ${groupIndex + 1}`, size: 12, gap: 6 });
+      pushAnswerLines(lines, compilationFields.questions, answers, fieldLabelById);
+    });
     lines.push({ text: "", gap: 18 });
   });
 
@@ -426,7 +612,10 @@ function pushAnswerLines(
   });
 
   Object.entries(answers ?? {}).forEach(([id, value]) => {
-    if (!knownIds.has(id)) pushWrappedAnswer(lines, fieldLabelById.get(id) ?? id, value);
+    const label = fieldLabelById.get(id) ?? id;
+    if (!knownIds.has(id) && includeInCompilation({ id, label, type: "text", required: false })) {
+      pushWrappedAnswer(lines, label, value);
+    }
   });
 }
 
@@ -566,8 +755,22 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function FieldInput({ field, value, onChange }: { field: ActivityField; value: string; onChange: (value: string) => void }) {
+function FieldInput({
+  field,
+  value,
+  onChange,
+  areas = [],
+  parentAreaId,
+}: {
+  field: ActivityField;
+  value: string;
+  onChange: (value: string) => void;
+  areas?: ProjectArea[];
+  parentAreaId?: string;
+}) {
   const base = "w-full rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558]";
+  const areaOptions = areas.filter((area) => !area.parent_id);
+  const setorOptions = areas.filter((area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId));
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
@@ -575,6 +778,16 @@ function FieldInput({ field, value, onChange }: { field: ActivityField; value: s
       </span>
       {field.type === "textarea" ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className={base} />
+      ) : field.dataSource === "areas" ? (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+          <option value="">Selecione</option>
+          {areaOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+        </select>
+      ) : field.dataSource === "setores" ? (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={base} disabled={!parentAreaId}>
+          <option value="">{parentAreaId ? "Selecione" : "Selecione a Área primeiro"}</option>
+          {setorOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+        </select>
       ) : field.type === "select" ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
           <option value="">Selecione</option>
@@ -604,7 +817,14 @@ function ResponseDrawer({ data, fields, onClose }: { data: { link: LinkRow; resp
         ) : (
           <>
             <Section title="Cabeçalho" fields={fields.header.filter((field) => field.active ?? true)} answers={data.response.header_answers} />
-            <Section title="Perguntas" fields={fields.questions.filter((field) => field.active ?? true)} answers={data.response.question_answers} />
+            {questionAnswerGroups(data.response.question_answers).map((answers, index) => (
+              <Section
+                key={index}
+                title={`Pergunta ${index + 1}`}
+                fields={fields.questions.filter((field) => field.active ?? true)}
+                answers={answers}
+              />
+            ))}
           </>
         )}
       </div>
