@@ -321,7 +321,6 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
   const downloadCompilation = () => {
     const blob = buildActivityResponsesPdf({
       responses: completedResponses,
-      linksById,
       fields,
     });
     downloadBlob(blob, `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -375,7 +374,6 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       {previewOpen && (
         <CompilationPreview
           responses={completedResponses}
-          linksById={linksById}
           fields={fields}
           onClose={() => setPreviewOpen(false)}
           onDownload={downloadCompilation}
@@ -387,17 +385,17 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
 
 function CompilationPreview({
   responses,
-  linksById,
   fields,
   onClose,
   onDownload,
 }: {
   responses: ResponseRow[];
-  linksById: Map<string, LinkRow>;
   fields: { header: ActivityField[]; questions: ActivityField[] };
   onClose: () => void;
   onDownload: () => void;
 }) {
+  const sections = buildCompilationSections(responses, fields);
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 md:p-8" onClick={onClose}>
       <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
@@ -423,23 +421,29 @@ function CompilationPreview({
             <p className="mt-2 text-sm text-[#042558]/60">Total de respostas: {responses.length}</p>
 
             <div className="mt-8 space-y-8">
-              {responses.map((response, index) => {
-                const link = linksById.get(response.link_id);
-                return (
-                  <section key={response.id} className="border-t border-[#042558]/10 pt-6">
-                    <h2 className="text-lg font-semibold">Resposta {index + 1} - {link?.label ?? "Sem rótulo"}</h2>
-                    <CompilationPreviewSection title="Cabeçalho" fields={fields.header} answers={response.header_answers} />
-                    {questionAnswerGroups(response.question_answers).map((answers, groupIndex) => (
-                      <CompilationPreviewSection
-                        key={groupIndex}
-                        title={`Pergunta ${groupIndex + 1}`}
-                        fields={fields.questions}
-                        answers={answers}
-                      />
+              {sections.map((section) => (
+                <section key={section.title} className="border-t border-[#042558]/10 pt-6">
+                  <h2 className="text-lg font-semibold">{section.title}</h2>
+                  <div className="mt-5 space-y-6">
+                    {section.items.map((item) => (
+                      <div key={item.id}>
+                        <h3 className="text-sm font-semibold text-[#042558]/80">{item.label}</h3>
+                        {item.answers.length ? (
+                          <div className="mt-2 space-y-2">
+                            {item.answers.map((answer, index) => (
+                              <p key={`${item.id}-${index}`} className="whitespace-pre-wrap rounded-lg bg-[#042558]/5 px-3 py-2 text-sm leading-6 text-[#042558]">
+                                {answer}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 italic text-[#042558]/30">sem respostas registradas</p>
+                        )}
+                      </div>
                     ))}
-                  </section>
-                );
-              })}
+                  </div>
+                </section>
+              ))}
             </div>
           </div>
         </div>
@@ -448,21 +452,6 @@ function CompilationPreview({
   );
 }
 
-function CompilationPreviewSection({ title, fields, answers }: { title: string; fields: ActivityField[]; answers: Record<string, string> }) {
-  return (
-    <div className="mt-5">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/60">{title}</h4>
-      <dl className="mt-3 space-y-3">
-        {fields.map((field) => (
-          <div key={field.id}>
-            <dt className="text-xs font-medium text-[#042558]/70">{field.label}</dt>
-            <dd className="mt-0.5 whitespace-pre-wrap text-sm leading-6 text-[#042558]">{answers?.[field.id] || <span className="italic text-[#042558]/30">sem resposta</span>}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
 
 function ActivityLinkCard({
   link,
@@ -555,37 +544,32 @@ function questionAnswerGroups(answers?: QuestionAnswerGroup | QuestionAnswerGrou
 
 function buildActivityResponsesPdf({
   responses,
-  linksById,
   fields,
 }: {
   responses: ResponseRow[];
-  linksById: Map<string, LinkRow>;
   fields: { header: ActivityField[]; questions: ActivityField[] };
 }) {
-  const fieldLabelById = new Map<string, string>();
-  const compilationFields = {
-    header: fields.header.filter(includeInCompilation),
-    questions: fields.questions.filter(includeInCompilation),
-  };
-  [...compilationFields.header, ...compilationFields.questions].forEach((field) => fieldLabelById.set(field.id, field.label));
-
+  const sections = buildCompilationSections(responses, fields);
   const lines: Array<{ text: string; size?: number; gap?: number }> = [
-    { text: "Compilação de respostas das atividades", size: 18, gap: 10 },
+    { text: "Compilacao de respostas das atividades", size: 18, gap: 10 },
     { text: `Gerado em ${new Date().toLocaleString("pt-BR")}`, size: 10, gap: 18 },
     { text: `Total de respostas: ${responses.length}`, size: 11, gap: 20 },
   ];
 
-  responses.forEach((response, index) => {
-    const link = linksById.get(response.link_id);
-    lines.push(
-      { text: `Resposta ${index + 1} - ${link?.label ?? "Sem rótulo"}`, size: 14, gap: 8 },
-      { text: `Enviado em ${new Date(response.submitted_at).toLocaleString("pt-BR")}`, size: 10, gap: 12 },
-      { text: "Cabeçalho", size: 12, gap: 6 },
-    );
-    pushAnswerLines(lines, compilationFields.header, response.header_answers, fieldLabelById);
-    questionAnswerGroups(response.question_answers).forEach((answers, groupIndex) => {
-      lines.push({ text: `Pergunta ${groupIndex + 1}`, size: 12, gap: 6 });
-      pushAnswerLines(lines, compilationFields.questions, answers, fieldLabelById);
+  sections.forEach((section) => {
+    lines.push({ text: section.title, size: 14, gap: 10 });
+    section.items.forEach((item) => {
+      lines.push({ text: `${item.label}:`, size: 11, gap: 6 });
+      if (item.answers.length) {
+        item.answers.forEach((answer) => {
+          wrapPdfText(answer, 92).forEach((line) => {
+            lines.push({ text: `  ${line}`, size: 10, gap: 3 });
+          });
+          lines.push({ text: "", gap: 5 });
+        });
+      } else {
+        lines.push({ text: "  sem respostas registradas", size: 10, gap: 8 });
+      }
     });
     lines.push({ text: "", gap: 18 });
   });
@@ -593,38 +577,37 @@ function buildActivityResponsesPdf({
   return createPdfBlob(lines);
 }
 
-function pushAnswerLines(
-  lines: Array<{ text: string; size?: number; gap?: number }>,
-  fields: ActivityField[],
-  answers: Record<string, string>,
-  fieldLabelById: Map<string, string>,
-) {
-  const activeFields = fields.filter((field) => field.active ?? true);
-  const knownIds = new Set(activeFields.map((field) => field.id));
-
-  if (!activeFields.length && Object.keys(answers ?? {}).length === 0) {
-    lines.push({ text: "Sem respostas registradas.", size: 10, gap: 8 });
-    return;
-  }
-
-  activeFields.forEach((field) => {
-    pushWrappedAnswer(lines, field.label, answers?.[field.id]);
-  });
-
-  Object.entries(answers ?? {}).forEach(([id, value]) => {
-    const label = fieldLabelById.get(id) ?? id;
-    if (!knownIds.has(id) && includeInCompilation({ id, label, type: "text", required: false })) {
-      pushWrappedAnswer(lines, label, value);
-    }
-  });
+function buildCompilationSections(responses: ResponseRow[], fields: { header: ActivityField[]; questions: ActivityField[] }) {
+  return [
+    {
+      title: "Cabecalho",
+      items: fields.header
+        .filter((field) => (field.active ?? true) && includeInCompilation(field))
+        .map((field) => ({
+          id: field.id,
+          label: field.label,
+          answers: responses.map((response) => response.header_answers?.[field.id]?.trim()).filter(isFilledAnswer),
+        })),
+    },
+    {
+      title: "Perguntas",
+      items: fields.questions
+        .filter((field) => (field.active ?? true) && includeInCompilation(field))
+        .map((field) => ({
+          id: field.id,
+          label: field.label,
+          answers: responses.flatMap((response) =>
+            questionAnswerGroups(response.question_answers)
+              .map((answers) => answers?.[field.id]?.trim())
+              .filter(isFilledAnswer),
+          ),
+        })),
+    },
+  ].filter((section) => section.items.length);
 }
 
-function pushWrappedAnswer(lines: Array<{ text: string; size?: number; gap?: number }>, label: string, value?: string) {
-  lines.push({ text: `${label}:`, size: 10, gap: 3 });
-  wrapPdfText(value?.trim() || "sem resposta", 92).forEach((line) => {
-    lines.push({ text: `  ${line}`, size: 10, gap: 3 });
-  });
-  lines.push({ text: "", gap: 5 });
+function isFilledAnswer(value: string | undefined): value is string {
+  return Boolean(value && value.trim());
 }
 
 function wrapPdfText(text: string, maxChars: number) {
