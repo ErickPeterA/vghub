@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, MoreVertical, MoveDown, MoveUp, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, FileText, MoreVertical, MoveDown, MoveUp, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ type OrganizationNodeProps = {
   highlighted: boolean;
   collapsed: boolean;
   descendantCount: number;
+  hasDescription: boolean;
   onSelect: (position: OrganizationPosition) => void;
   onToggle: (id: string) => void;
   onAddChild: (position: OrganizationPosition) => void;
@@ -32,6 +33,7 @@ export function OrganizationNode({
   highlighted,
   collapsed,
   descendantCount,
+  hasDescription,
   onSelect,
   onToggle,
   onAddChild,
@@ -65,7 +67,11 @@ export function OrganizationNode({
         }
       }}
       className={`group relative w-64 rounded-xl border bg-white p-4 text-left shadow-sm transition-all ${
-        selected ? "border-[#042558] ring-2 ring-[#042558]/15" : "border-[#042558]/10 hover:border-[#042558]/35"
+        selected
+          ? "border-[#042558] ring-2 ring-[#042558]/15"
+          : hasDescription
+            ? "border-emerald-300/80 hover:border-emerald-500"
+            : "border-[#042558]/10 hover:border-[#042558]/35"
       } ${highlighted ? "bg-amber-50 ring-2 ring-amber-300" : ""}`}
     >
       <div className="flex items-start gap-2">
@@ -80,6 +86,15 @@ export function OrganizationNode({
 
         <button type="button" onClick={() => onSelect(node)} className="min-w-0 flex-1 text-left">
           <span className="block truncate text-sm font-semibold text-[#042558]">{node.nome}</span>
+          <span
+            className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              hasDescription ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+            }`}
+            title={hasDescription ? "Descricao de cargo criada" : "Descricao de cargo ainda nao criada"}
+          >
+            {hasDescription ? <CheckCircle2 className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+            {hasDescription ? "Descricao criada" : "Sem descricao"}
+          </span>
           <span className="mt-1 block text-xs text-[#042558]/45">
             {node.status === "active" ? "Ativo" : "Inativo"} · {descendantCount} abaixo
           </span>

@@ -39,6 +39,7 @@ function clampZoom(value: number) {
 export function OrganizationManager({ projectId }: { projectId: string }) {
   const { user } = useCurrentUser();
   const [positions, setPositions] = useState<OrganizationPosition[]>([]);
+  const [positionsWithDescription, setPositionsWithDescription] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<OrganizationPosition | null>(null);
   const [formState, setFormState] = useState<FormState>(initialFormState);
@@ -52,15 +53,24 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any)
-      .from("project_positions")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("display_order")
-      .order("created_at");
+    const [{ data, error }, { data: descriptions, error: descriptionsError }] = await Promise.all([
+      (supabase as any)
+        .from("project_positions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("display_order")
+        .order("created_at"),
+      (supabase as any)
+        .from("descricoes_cargo")
+        .select("organization_position_id")
+        .eq("project_id", projectId)
+        .not("organization_position_id", "is", null),
+    ]);
 
     if (error) toast.error(error.message);
+    if (descriptionsError) toast.error(descriptionsError.message);
     setPositions((data ?? []) as OrganizationPosition[]);
+    setPositionsWithDescription(new Set((descriptions ?? []).map((description: { organization_position_id: string | null }) => description.organization_position_id).filter(Boolean)));
     setLoading(false);
   }, [projectId]);
 
@@ -328,6 +338,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
           <OrganizationChart
             nodes={tree}
             positions={positions}
+            positionsWithDescription={positionsWithDescription}
             zoom={zoom}
             onZoomChange={setZoom}
             collapsed={collapsed}

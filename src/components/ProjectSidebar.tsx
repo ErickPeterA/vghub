@@ -6,7 +6,17 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 
 const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional"]);
 
-export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId: string; projectName: string; isAdmin?: boolean }) {
+export function ProjectSidebar({
+  projectId,
+  projectName,
+  isAdmin,
+  fixed = false,
+}: {
+  projectId: string;
+  projectName: string;
+  isAdmin?: boolean;
+  fixed?: boolean;
+}) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user } = useCurrentUser();
   const [unreviewed, setUnreviewed] = useState(0);
@@ -57,7 +67,7 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
     : allItems;
 
   return (
-    <aside className="w-64 shrink-0 border-r border-border bg-card/30">
+    <aside className={`w-64 shrink-0 border-r border-border bg-card/30 ${fixed ? "sticky top-12 h-[calc(100vh-3rem)] overflow-y-auto" : ""}`}>
       <div className="border-b border-border p-4">
         <Link to="/projetos" className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3 w-3" /> Todos os projetos

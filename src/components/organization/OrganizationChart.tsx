@@ -7,6 +7,7 @@ import { OrganizationNode } from "./OrganizationNode";
 type OrganizationChartProps = {
   nodes: OrganizationNodeData[];
   positions: OrganizationPosition[];
+  positionsWithDescription: Set<string>;
   zoom: number;
   collapsed: Set<string>;
   selectedId: string | null;
@@ -210,6 +211,7 @@ function OrganizationBranch({ node, ...props }: Omit<OrganizationChartProps, "no
         highlighted={props.highlightedId === node.id}
         collapsed={isCollapsed}
         descendantCount={countDescendants(props.positions, node.id)}
+        hasDescription={props.positionsWithDescription.has(node.id)}
         onSelect={props.onSelect}
         onToggle={props.onToggle}
         onAddChild={props.onAddChild}

@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
 
 function ProjectLayout() {
   const { projectId } = Route.useParams();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { isAdmin } = useCurrentUser();
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -70,7 +71,7 @@ function ProjectLayout() {
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
-      <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} />
+      <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} fixed={!pathname.includes("/organograma")} />
       <div className="min-w-0 flex-1 overflow-x-hidden">
         <Outlet />
       </div>
