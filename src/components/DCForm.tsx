@@ -98,7 +98,7 @@ export function DCForm({
   onSubmit: (dc: DescricaoCargo) => Promise<void>;
   submitLabel?: string;
   readOnly?: boolean;
-  commentTarget?: { dcId: string; versionId: string | null; canAddComment: boolean };
+  commentTarget?: { dcId: string; versionId: string | null; canAddComment: boolean; canDecideComment?: boolean; onCommentDecision?: () => void };
   headerExtra?: React.ReactNode;
   footerExtra?: React.ReactNode;
 }) {
@@ -193,6 +193,8 @@ export function DCForm({
         fieldKey={fieldKey}
         versionId={commentTarget.versionId}
         canAdd={commentTarget.canAddComment}
+        canDecide={commentTarget.canDecideComment}
+        onChange={commentTarget.onCommentDecision}
       />
     );
   };

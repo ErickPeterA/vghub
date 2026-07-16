@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/descri
 });
 
 type DCRow = DescricaoCargo & { etapa?: "em_criacao" | "em_aprovacao" | "concluido" };
-type VersionRow = { id: string; version_number: number; created_at: string; snapshot: unknown };
+type VersionRow = { id: string; version_number: number; created_at: string; snapshot: unknown; source_comment_version_id: string | null };
 type OrgPositionRow = { id: string; nome: string; parent_id: string | null };
 
 const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
@@ -67,7 +67,7 @@ function EditDC() {
   const loadVersions = async () => {
     const { data } = await supabase
       .from("job_description_versions")
-      .select("id,version_number,created_at,snapshot")
+      .select("id,version_number,created_at,snapshot,source_comment_version_id")
       .eq("job_description_id", dcId)
       .order("version_number", { ascending: true });
     setVersions((data ?? []) as VersionRow[]);
@@ -186,7 +186,13 @@ function EditDC() {
         onSubmit={onSubmit}
         submitLabel="Salvar alterações"
         readOnly={readOnly}
-        commentTarget={{ dcId, versionId: versionIdForComments, canAddComment: (isLider || isAdmin) && !viewingVersionId }}
+        commentTarget={{
+          dcId,
+          versionId: versionIdForComments,
+          canAddComment: (isLider || isAdmin) && !viewingVersionId,
+          canDecideComment: hasFullControl,
+          onCommentDecision: loadVersions,
+        }}
         footerExtra={showLiderActions ? (
           <button
             type="button"

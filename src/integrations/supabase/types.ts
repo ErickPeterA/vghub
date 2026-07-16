@@ -449,33 +449,52 @@ export type Database = {
       }
       field_comments: {
         Row: {
+          approved_version_id: string | null
           author_id: string
           content: string
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: string
           field_key: string
           id: string
           job_description_id: string
           version_id: string | null
         }
         Insert: {
+          approved_version_id?: string | null
           author_id: string
           content: string
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
           field_key: string
           id?: string
           job_description_id: string
           version_id?: string | null
         }
         Update: {
+          approved_version_id?: string | null
           author_id?: string
           content?: string
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
           field_key?: string
           id?: string
           job_description_id?: string
           version_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "field_comments_approved_version_id_fkey"
+            columns: ["approved_version_id"]
+            isOneToOne: false
+            referencedRelation: "job_description_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "field_comments_job_description_id_fkey"
             columns: ["job_description_id"]
@@ -499,6 +518,7 @@ export type Database = {
           id: string
           job_description_id: string
           snapshot: Json
+          source_comment_version_id: string | null
           version_number: number
         }
         Insert: {
@@ -507,6 +527,7 @@ export type Database = {
           id?: string
           job_description_id: string
           snapshot: Json
+          source_comment_version_id?: string | null
           version_number: number
         }
         Update: {
@@ -515,6 +536,7 @@ export type Database = {
           id?: string
           job_description_id?: string
           snapshot?: Json
+          source_comment_version_id?: string | null
           version_number?: number
         }
         Relationships: [
@@ -945,6 +967,10 @@ export type Database = {
       }
       create_dc_version_snapshot: {
         Args: { _created_by: string; _dc_id: string }
+        Returns: string
+      }
+      decide_field_comment: {
+        Args: { _comment_id: string; _decision: string }
         Returns: string
       }
       get_project_role: {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,10 @@ type Comment = {
   content: string;
   created_at: string;
   version_id: string | null;
+  decision: "pending" | "approved" | "rejected";
+  decided_at: string | null;
+  decided_by: string | null;
+  approved_version_id: string | null;
 };
 
 export function FieldCommentButton({
@@ -18,12 +22,14 @@ export function FieldCommentButton({
   fieldKey,
   versionId,
   canAdd,
+  canDecide = false,
   onChange,
 }: {
   dcId: string;
   fieldKey: string;
   versionId: string | null;
   canAdd: boolean;
+  canDecide?: boolean;
   onChange?: () => void;
 }) {
   const { user } = useCurrentUser();
@@ -36,7 +42,7 @@ export function FieldCommentButton({
   const load = async () => {
     let query = supabase
       .from("field_comments")
-      .select("id,author_id,content,created_at,version_id")
+      .select("id,author_id,content,created_at,version_id,decision,decided_at,decided_by,approved_version_id")
       .eq("job_description_id", dcId)
       .eq("field_key", fieldKey)
       .order("created_at", { ascending: true });
@@ -44,13 +50,30 @@ export function FieldCommentButton({
     const { data } = await query;
     const list = (data ?? []) as Comment[];
     setComments(list);
-    const missing = Array.from(new Set(list.map((c) => c.author_id))).filter((id) => !authors[id]);
+    const authorIds = list.flatMap((comment) => [comment.author_id, comment.decided_by]).filter(Boolean) as string[];
+    const missing = Array.from(new Set(authorIds)).filter((id) => !authors[id]);
     if (missing.length) {
       const { data: profs } = await supabase.from("profiles").select("id,nome").in("id", missing);
       const next = { ...authors };
       (profs ?? []).forEach((p) => { next[p.id] = p.nome; });
       setAuthors(next);
     }
+  };
+
+  const decide = async (commentId: string, decision: "approved" | "rejected") => {
+    setLoading(true);
+    const { error } = await (supabase as any).rpc("decide_field_comment", {
+      _comment_id: commentId,
+      _decision: decision,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(decision === "approved" ? "ComentÃ¡rio aprovado" : "ComentÃ¡rio reprovado");
+    await load();
+    onChange?.();
   };
 
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [dcId, fieldKey, versionId]);
@@ -99,6 +122,39 @@ export function FieldCommentButton({
                 <span>{new Date(c.created_at).toLocaleString("pt-BR")}</span>
               </div>
               <p className="whitespace-pre-wrap">{c.content}</p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+                {c.decision === "pending" ? (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Pendente</span>
+                ) : (
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.decision === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                    {c.decision === "approved" ? "Aprovado" : "Reprovado"}
+                  </span>
+                )}
+                {canDecide && c.decision === "pending" && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => decide(c.id, "approved")}
+                      disabled={loading}
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                      title="Aprovar comentario"
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                      Aprovar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => decide(c.id, "rejected")}
+                      disabled={loading}
+                      className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                      title="Reprovar comentario"
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                      Reprovar
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
