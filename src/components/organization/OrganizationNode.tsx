@@ -23,7 +23,7 @@ type OrganizationNodeProps = {
   onMove: (position: OrganizationPosition) => void;
   onDelete: (position: OrganizationPosition) => void;
   onReorder: (position: OrganizationPosition, direction: "up" | "down") => void;
-  onDropOn: (sourceId: string, target: OrganizationPosition) => void;
+  onDropOn: (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => void;
 };
 
 export function OrganizationNode({
@@ -57,7 +57,12 @@ export function OrganizationNode({
       onDrop={(event) => {
         event.preventDefault();
         const sourceId = event.dataTransfer.getData("text/plain");
-        if (sourceId) onDropOn(sourceId, node);
+        if (sourceId) {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const placement = x < rect.width * 0.33 ? "before" : x > rect.width * 0.67 ? "after" : "inside";
+          onDropOn(sourceId, node, placement);
+        }
       }}
       className={`group relative w-64 rounded-xl border bg-white p-4 text-left shadow-sm transition-all ${
         selected ? "border-[#042558] ring-2 ring-[#042558]/15" : "border-[#042558]/10 hover:border-[#042558]/35"

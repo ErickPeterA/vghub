@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, FileText, ArrowRight, ArrowLeft, Check, Trash2, Layers, Users, Clock } from "lucide-react";
+import { FileText, ArrowRight, ArrowLeft, Check, Trash2, Users, Clock, GitFork } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -114,18 +114,18 @@ export function DCListPage({ projectId }: { projectId: string }) {
               <div className="">
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[#042558]">Descrições de Cargo</h1>
-                <p className="text-sm text-[#042558]/60">Gerencie as descrições de cargos do projeto</p>
+                <h1 className="text-2xl font-bold tracking-tight text-[#042558]">Aprovações e acompanhamento</h1>
+                <p className="text-sm text-[#042558]/60">Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.</p>
               </div>
             </div>
           </div>
           <Link 
-            to="/projetos/$projectId/descricao-cargo/novo" 
+            to="/projetos/$projectId/organograma" 
             params={{ projectId }} 
-            className="group inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
+            className="group inline-flex items-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
           >
-            <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" /> 
-            Nova Descrição
+            <GitFork className="h-4 w-4" />
+            Ir para o organograma
           </Link>
         </div>
 

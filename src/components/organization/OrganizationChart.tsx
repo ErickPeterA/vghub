@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrganizationNodeData, OrganizationPosition } from "@/lib/organization";
 import { countDescendants } from "@/lib/organization";
 import { Plus } from "lucide-react";
@@ -10,6 +11,7 @@ type OrganizationChartProps = {
   collapsed: Set<string>;
   selectedId: string | null;
   highlightedId: string | null;
+  onZoomChange: (zoom: number) => void;
   onSelect: (position: OrganizationPosition) => void;
   onToggle: (id: string) => void;
   onAddAt: (parentId: string | null, displayOrder: number) => void;
@@ -20,14 +22,117 @@ type OrganizationChartProps = {
   onMove: (position: OrganizationPosition) => void;
   onDelete: (position: OrganizationPosition) => void;
   onReorder: (position: OrganizationPosition, direction: "up" | "down") => void;
-  onDropOn: (sourceId: string, target: OrganizationPosition) => void;
+  onDropOn: (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => void;
 };
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 1.6;
+
+function clampZoom(value: number) {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
+}
+
+function getPageScroller() {
+  const scroller = document.scrollingElement as HTMLElement | null;
+  if (!scroller || scroller.scrollWidth <= scroller.clientWidth) return null;
+  return scroller;
+}
+
 export function OrganizationChart(props: OrganizationChartProps) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number; pageScrollLeft: number | null } | null>(
+    null,
+  );
+  const [isPanning, setIsPanning] = useState(false);
+  const nodesKey = useMemo(() => props.nodes.map((node) => node.id).join("|"), [props.nodes]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    window.requestAnimationFrame(() => {
+      viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
+      viewport.scrollTop = 0;
+    });
+  }, [nodesKey]);
+
+  const canStartPan = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return !target.closest("[data-position-id], button, input, textarea, select, a, [role='menuitem']");
+  };
+
   return (
-    <div className="h-[calc(100vh-280px)] min-h-[520px] overflow-auto rounded-2xl border border-[#042558]/10 bg-white/55 p-8 shadow-inner">
+    <div
+      ref={viewportRef}
+      onWheel={(event) => {
+        event.preventDefault();
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+
+        const nextZoom = clampZoom(props.zoom + (event.deltaY > 0 ? -0.08 : 0.08));
+        if (nextZoom === props.zoom) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const pointerX = event.clientX - rect.left;
+        const pointerY = event.clientY - rect.top;
+        const contentX = viewport.scrollLeft + pointerX;
+        const contentY = viewport.scrollTop + pointerY;
+        const ratio = nextZoom / props.zoom;
+
+        props.onZoomChange(nextZoom);
+        window.requestAnimationFrame(() => {
+          viewport.scrollLeft = contentX * ratio - pointerX;
+          viewport.scrollTop = contentY * ratio - pointerY;
+        });
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0 || !canStartPan(event.target)) return;
+        const viewport = viewportRef.current;
+        if (!viewport) return;
+
+        dragStateRef.current = {
+          x: event.clientX,
+          y: event.clientY,
+          scrollLeft: viewport.scrollLeft,
+          scrollTop: viewport.scrollTop,
+          pageScrollLeft: getPageScroller()?.scrollLeft ?? null,
+        };
+        setIsPanning(true);
+        viewport.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const viewport = viewportRef.current;
+        const dragState = dragStateRef.current;
+        if (!viewport || !dragState) return;
+
+        event.preventDefault();
+        const deltaX = event.clientX - dragState.x;
+        const pageScroller = getPageScroller();
+        if (pageScroller && dragState.pageScrollLeft !== null) {
+          pageScroller.scrollLeft = dragState.pageScrollLeft - deltaX;
+        } else {
+          viewport.scrollLeft = dragState.scrollLeft - deltaX;
+        }
+        viewport.scrollTop = dragState.scrollTop - (event.clientY - dragState.y);
+      }}
+      onPointerUp={(event) => {
+        const viewport = viewportRef.current;
+        dragStateRef.current = null;
+        setIsPanning(false);
+        if (viewport?.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      }}
+      onPointerCancel={(event) => {
+        const viewport = viewportRef.current;
+        dragStateRef.current = null;
+        setIsPanning(false);
+        if (viewport?.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      }}
+      className={`min-h-0 flex-1 overflow-auto rounded-xl border border-[#042558]/10 bg-white/55 p-4 shadow-inner sm:p-6 ${
+        isPanning ? "cursor-grabbing select-none" : "cursor-grab"
+      }`}
+    >
       <div
-        className="inline-flex min-w-full justify-center py-8 transition-transform"
+        className="mx-auto flex min-h-full min-w-max justify-center px-6 py-6 transition-transform sm:px-10"
         style={{ transform: `scale(${props.zoom})`, transformOrigin: "top center" }}
       >
         <div className="flex items-start justify-center gap-4">

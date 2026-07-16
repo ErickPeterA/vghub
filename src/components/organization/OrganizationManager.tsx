@@ -29,6 +29,12 @@ type FormState = {
 };
 
 const initialFormState: FormState = { open: false, mode: "create", position: null, defaultParentId: null, defaultDisplayOrder: null };
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 1.6;
+
+function clampZoom(value: number) {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
+}
 
 export function OrganizationManager({ projectId }: { projectId: string }) {
   const { user } = useCurrentUser();
@@ -231,29 +237,60 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     await load();
   };
 
-  const handleDropOn = async (sourceId: string, target: OrganizationPosition) => {
+  const reorderAsSibling = async (source: OrganizationPosition, target: OrganizationPosition, placement: "before" | "after") => {
+    const nextParentId = target.parent_id;
+    const siblings = getChildren(positions, nextParentId).filter((position) => position.id !== source.id);
+    const targetIndex = siblings.findIndex((position) => position.id === target.id);
+    if (targetIndex < 0) return;
+
+    const next = [...siblings];
+    next.splice(placement === "before" ? targetIndex : targetIndex + 1, 0, source);
+
+    const updates = await Promise.all(
+      next.map((position, index) =>
+        (supabase as any)
+          .from("project_positions")
+          .update({ parent_id: nextParentId, display_order: (index + 1) * 10 })
+          .eq("id", position.id)
+          .eq("project_id", projectId)
+      )
+    );
+    const error = updates.find((result) => result.error)?.error;
+    if (error) return toast.error(error.message);
+    toast.success("Cargo reposicionado");
+    await load();
+  };
+
+  const handleDropOn = async (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => {
     const source = positions.find((position) => position.id === sourceId);
     if (!source || source.id === target.id) return;
-    if (getDescendantIds(positions, source.id).has(target.id)) {
+    const nextParentId = placement === "inside" ? target.id : target.parent_id;
+    if (nextParentId && getDescendantIds(positions, source.id).has(nextParentId)) {
       toast.error("Não é permitido mover um cargo para baixo de um subordinado.");
       return;
     }
-    if (!confirm(`Deseja mover o cargo ${source.nome} para baixo de ${target.nome}?`)) return;
-    await movePosition(source, target.id);
+    if (placement === "inside") {
+      if (!confirm(`Deseja mover o cargo ${source.nome} para baixo de ${target.nome}?`)) return;
+      await movePosition(source, target.id);
+      return;
+    }
+
+    if (!confirm(`Deseja mover o cargo ${source.nome} para ${placement === "before" ? "antes" : "depois"} de ${target.nome}?`)) return;
+    await reorderAsSibling(source, target, placement);
   };
 
   const expandAll = () => setCollapsed(new Set());
   const collapseAll = () => setCollapsed(new Set(positions.filter((position) => getChildren(positions, position.id).length > 0).map((position) => position.id)));
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <div className="rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
+    <main className="h-[calc(100vh-3rem)] min-h-0 overflow-hidden bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-3 py-3 sm:px-4 sm:py-4">
+      <div className="flex h-full min-w-0 flex-col gap-3">
+        <div className="shrink-0 rounded-xl border border-[#042558]/10 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">Projeto</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">Organograma</h1>
-              <p className="mt-2 max-w-2xl text-sm text-[#042558]/55">
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#042558]">Organograma</h1>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-[#042558]/55">
                 Cadastre cargos e organize relações de liderança. A posição visual é calculada automaticamente pela hierarquia.
               </p>
             </div>
@@ -264,8 +301,8 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
           query={query}
           zoom={zoom}
           onQueryChange={setQuery}
-          onZoomIn={() => setZoom((value) => Math.min(1.6, Number((value + 0.1).toFixed(2))))}
-          onZoomOut={() => setZoom((value) => Math.max(0.5, Number((value - 0.1).toFixed(2))))}
+          onZoomIn={() => setZoom((value) => clampZoom(value + 0.1))}
+          onZoomOut={() => setZoom((value) => clampZoom(value - 0.1))}
           onResetZoom={() => setZoom(1)}
           onFit={() => setZoom(0.75)}
           onExpandAll={expandAll}
@@ -273,14 +310,14 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         />
 
         {loading ? (
-          <div className="flex h-80 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-[#042558]/10 bg-white/60">
             <div className="flex items-center gap-3 text-sm text-[#042558]/60">
               <Loader2 className="h-5 w-5 animate-spin" />
               Carregando organograma...
             </div>
           </div>
         ) : positions.length === 0 ? (
-          <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-10 text-center">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-6 text-center">
             <Network className="mb-4 h-12 w-12 text-[#042558]/25" />
             <h2 className="text-lg font-semibold text-[#042558]">Este projeto ainda não possui um organograma.</h2>
             <button type="button" onClick={() => openCreate(null)} className="mt-5 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#042558]/90">
@@ -292,6 +329,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
             nodes={tree}
             positions={positions}
             zoom={zoom}
+            onZoomChange={setZoom}
             collapsed={collapsed}
             selectedId={selected?.id ?? null}
             highlightedId={highlightedId}
@@ -314,7 +352,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
           />
         )}
 
-        <p className="text-xs text-[#042558]/45">
+        <p className="shrink-0 text-xs text-[#042558]/45">
           {positions.length} cargo(s) cadastrado(s). {flatTree.length} cargo(s) visível(is) na hierarquia atual.
         </p>
       </div>

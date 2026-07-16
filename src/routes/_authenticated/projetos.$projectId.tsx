@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
@@ -16,7 +16,7 @@ function ProjectLayout() {
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  // useRef para evitar que navigate mude a referência e cause loop no useEffect
+  // useRef para evitar que navigate mude a referencia e cause loop no useEffect
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
 
@@ -31,7 +31,7 @@ function ProjectLayout() {
         .eq("id", projectIdRef.current)
         .maybeSingle(),
       10_000,
-      "Não foi possível carregar o projeto.",
+      "Nao foi possivel carregar o projeto.",
     )
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -63,7 +63,7 @@ function ProjectLayout() {
   if (notFound) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-        Projeto não encontrado.
+        Projeto nao encontrado.
       </div>
     );
   }
@@ -71,7 +71,7 @@ function ProjectLayout() {
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
       <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} />
-      <div className="flex-1 overflow-x-auto">
+      <div className="min-w-0 flex-1 overflow-x-hidden">
         <Outlet />
       </div>
     </div>

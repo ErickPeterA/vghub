@@ -42,7 +42,7 @@ export function ProjectSidebar({ projectId, projectName, isAdmin }: { projectId:
   const isLider = !isAdmin && projectRole !== null && LIDER_ROLES.has(projectRole);
 
   const allItems = [
-    { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Descrição de Cargo" },
+    { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Aprovações" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
     { to: "/projetos/$projectId/organograma", href: `/projetos/${projectId}/organograma`, icon: GitFork, label: "Organograma" },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
