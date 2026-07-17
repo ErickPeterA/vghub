@@ -95,7 +95,9 @@ function EditDC() {
   }, [dcId, projectId, user?.id]);
 
   const isLider = projectRole !== null && LIDER_ROLES.has(projectRole);
-  const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
+  const canApproveDescription = isAdmin || projectRole === "gp" || projectRole === "admin" || isLider;
+  const canDecideComment = isAdmin || projectRole === "gp" || projectRole === "admin";
+  const hasFullControl = canDecideComment || isResponsavel;
   const canEditDraft = isLider && !hasFullControl && current?.etapa === "em_criacao";
   const readOnly = (!canEditDraft && isLider && !hasFullControl) || viewingVersionId !== null;
 
@@ -148,9 +150,24 @@ function EditDC() {
     }
   };
 
+  const approveDescription = async () => {
+    setFinalizando(true);
+    try {
+      const { error } = await supabase.from("descricoes_cargo").update({ etapa: "concluido" }).eq("id", dcId);
+      if (error) throw error;
+      await logAction({ projectId, acao: "dc_aprovada", entidade: "descricao_cargo", entidadeId: dcId, detalhes: { para: "concluido" } });
+      toast.success("Descrição aprovada");
+      navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao aprovar");
+    } finally {
+      setFinalizando(false);
+    }
+  };
+
   if (!displayedInitial) return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Carregando...</div>;
 
-  const showLiderActions = isLider && !hasFullControl && current?.etapa === "em_aprovacao" && !viewingVersionId;
+  const showApprovalActions = canApproveDescription && current?.etapa === "em_aprovacao" && !viewingVersionId;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -189,18 +206,18 @@ function EditDC() {
         commentTarget={{
           dcId,
           versionId: versionIdForComments,
-          canAddComment: (isLider || isAdmin) && !viewingVersionId,
-          canDecideComment: hasFullControl,
+          canAddComment: (isLider || canDecideComment) && !viewingVersionId,
+          canDecideComment: canDecideComment,
           onCommentDecision: loadVersions,
         }}
-        footerExtra={showLiderActions ? (
+        footerExtra={showApprovalActions ? (
           <button
             type="button"
-            onClick={finalizarRevisao}
+            onClick={approveDescription}
             disabled={finalizando}
             className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
           >
-            {finalizando ? "Finalizando..." : "Finalizar revisão"}
+            {finalizando ? "Aprovando..." : "Aprovar"}
           </button>
         ) : null}
       />

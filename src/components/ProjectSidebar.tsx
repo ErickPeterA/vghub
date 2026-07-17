@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional"]);
+const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
 
 export function ProjectSidebar({
   projectId,
@@ -63,7 +63,7 @@ export function ProjectSidebar({
   ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
 
   const items = isLider
-    ? allItems.filter((i) => i.label === "Descrição de Cargo" || i.label === "Organograma" || i.label === "Base do Projeto" || i.label === "Andamento")
+    ? allItems.filter((i) => i.href.endsWith("/descricao-cargo") || i.label === "Organograma" || i.label === "Base do Projeto" || i.label === "Andamento")
     : allItems;
 
   return (

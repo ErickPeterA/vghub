@@ -73,11 +73,11 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const areaById = useMemo(() => new Map(areas.map((a) => [a.id, a])), [areas]);
   const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
-  const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
   const isLider = projectRole === "lider_estrategico" || projectRole === "lider_tatico" || projectRole === "lider_operacional" || projectRole === "lider_superior" || projectRole === "lider_setor";
-  const isUsuarioComum = projectRole === "usuario_comum";
+  const canDecideApproval = isAdmin || projectRole === "gp" || projectRole === "admin" || isLider;
+  const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
   const isOnlyLider = isLider && !hasFullControl;
-  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_criacao" || s.key === "em_aprovacao") : STAGES;
+  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_aprovacao" || s.key === "concluido") : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
     const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", row.id);
@@ -167,9 +167,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                       {items.map((row) => {
                         const responsavel = profileById.get(row.created_by);
                         const stageIdx = stageOrder(row.etapa);
-                        const isOwner = user?.id === row.created_by;
                         const canMoveToApproval = row.etapa === "em_criacao" && (projectRole === "gp" || projectRole === "admin" || isAdmin || isResponsavel);
-                        const canApprove = row.etapa === "em_aprovacao" && (hasFullControl || isLider || (isUsuarioComum && isOwner));
+                        const canApprove = row.etapa === "em_aprovacao" && canDecideApproval && !isOnlyLider;
                         const setorInfo = getSetorInfo(row);
                         
                         return (
@@ -241,7 +240,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 )}
-                                {!hasFullControl && canApprove && (
+                                {canApprove && (
                                   <button 
                                     onClick={() => moveStage(row, "concluido")} 
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl"
