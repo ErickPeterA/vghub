@@ -31,6 +31,7 @@ import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/pub
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
 import { Route as AuthenticatedProjetosProjectIdOrganogramaRouteImport } from './routes/_authenticated/projetos.$projectId.organograma'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
+import { Route as AuthenticatedProjetosProjectIdFuncionariosRouteImport } from './routes/_authenticated/projetos.$projectId.funcionarios'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
@@ -171,6 +172,12 @@ const AuthenticatedProjetosProjectIdHistoricoRoute =
     path: '/historico',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
+const AuthenticatedProjetosProjectIdFuncionariosRoute =
+  AuthenticatedProjetosProjectIdFuncionariosRouteImport.update({
+    id: '/funcionarios',
+    path: '/funcionarios',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdDescricaoCargoRoute =
   AuthenticatedProjetosProjectIdDescricaoCargoRouteImport.update({
     id: '/descricao-cargo',
@@ -267,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  '/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
+  '/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -335,6 +344,7 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  '/_authenticated/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/_authenticated/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId/funcionarios'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/avaliacao-desempenho'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
+    | '/projetos/$projectId/funcionarios'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -439,6 +451,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/base'
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
+    | '/_authenticated/projetos/$projectId/funcionarios'
     | '/_authenticated/projetos/$projectId/historico'
     | '/_authenticated/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -625,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdHistoricoRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
+    '/_authenticated/projetos/$projectId/funcionarios': {
+      id: '/_authenticated/projetos/$projectId/funcionarios'
+      path: '/funcionarios'
+      fullPath: '/projetos/$projectId/funcionarios'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdFuncionariosRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
     '/_authenticated/projetos/$projectId/descricao-cargo': {
       id: '/_authenticated/projetos/$projectId/descricao-cargo'
       path: '/descricao-cargo'
@@ -756,6 +776,7 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
   AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
+  AuthenticatedProjetosProjectIdFuncionariosRoute: typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
   AuthenticatedProjetosProjectIdOrganogramaRoute: typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
@@ -777,6 +798,8 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdConfiguracoesRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
       AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren,
+    AuthenticatedProjetosProjectIdFuncionariosRoute:
+      AuthenticatedProjetosProjectIdFuncionariosRoute,
     AuthenticatedProjetosProjectIdHistoricoRoute:
       AuthenticatedProjetosProjectIdHistoricoRoute,
     AuthenticatedProjetosProjectIdOrganogramaRoute:
