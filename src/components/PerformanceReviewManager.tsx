@@ -53,6 +53,9 @@ type PerfEmployeeRow = {
   id: string;
   project_id: string;
   position_id: string;
+  area_id: string | null;
+  sector_id: string | null;
+  superior_imediato_id: string | null;
   nome: string;
   admission_date: string;
   last_performance_review_date: string | null;
@@ -1271,7 +1274,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [configId, setConfigId] = useState("");
   const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [leaderPositionId, setLeaderPositionId] = useState("");
+  const [leaderEmployeeId, setLeaderEmployeeId] = useState("");
   const [days, setDays] = useState(14);
 
   const load = useCallback(async () => {
@@ -1291,7 +1294,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           .order("display_order"),
         (supabase as any)
           .from("project_employees")
-          .select("id,project_id,position_id,nome,admission_date,last_performance_review_date")
+          .select("id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date")
           .eq("project_id", projectId)
           .order("nome"),
         supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
@@ -1317,22 +1320,23 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   }, [load]);
 
   const selectedEmployee = employees.find((employee) => employee.id === employeeId) ?? null;
+  const selectedLeader = employees.find((employee) => employee.id === leaderEmployeeId) ?? null;
   const employeePositionId = selectedEmployee?.position_id ?? "";
   const selectedDc =
     descriptions.find((dc) => dc.organization_position_id === employeePositionId) ?? null;
-  const subordinatePositions = leaderPositionId
-    ? positions.filter((position) =>
-        getDescendantPositionIds(positions, leaderPositionId).has(position.id),
-      )
-    : [];
-  const subordinatePositionIds = new Set(subordinatePositions.map((position) => position.id));
-  const subordinateEmployees = leaderPositionId
-    ? employees.filter((employee) => subordinatePositionIds.has(employee.position_id))
+  const subordinateCountByLeader = employees.reduce((acc, employee) => {
+    if (!employee.superior_imediato_id) return acc;
+    acc.set(employee.superior_imediato_id, (acc.get(employee.superior_imediato_id) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
+  const leaderEmployees = employees.filter((employee) => (subordinateCountByLeader.get(employee.id) ?? 0) > 0);
+  const subordinateEmployees = leaderEmployeeId
+    ? employees.filter((employee) => employee.superior_imediato_id === leaderEmployeeId)
     : [];
   const selectedEmployeeIsBelowLeader =
     !!selectedEmployee &&
-    !!leaderPositionId &&
-    subordinatePositionIds.has(selectedEmployee.position_id);
+    !!leaderEmployeeId &&
+    selectedEmployee.superior_imediato_id === leaderEmployeeId;
   const selectedConfig = configs.find((config) => config.id === configId) ?? null;
   const expectedReviewDate =
     selectedEmployee && selectedConfig?.period_days
@@ -1341,21 +1345,21 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     setEmployeeId("");
-  }, [leaderPositionId]);
+  }, [leaderEmployeeId]);
 
   const createReview = async () => {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
-    if (!selectedEmployee || !leaderPositionId)
+    if (!selectedEmployee || !selectedLeader)
       return toast.error("Informe colaborador e líder.");
     if (!selectedEmployeeIsBelowLeader)
-      return toast.error("Selecione um colaborador abaixo do lider no organograma.");
+      return toast.error("Selecione um colaborador que responda diretamente para este lider.");
     if (!selectedDc)
       return toast.error("Este colaborador não possui descrição de cargo vinculada.");
     if (!selectedConfig || !selectedConfig.is_active)
       return toast.error("Selecione um modelo de periodo ativo antes de criar.");
     const employeePosition = positions.find((p) => p.id === employeePositionId);
-    const leader = positions.find((p) => p.id === leaderPositionId);
-    if (!employeePosition || !leader) return toast.error("Colaborador ou líder inválido.");
+    const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
+    if (!employeePosition || !leaderPosition) return toast.error("Colaborador ou líder inválido.");
 
     const activities = buildActivityQuestions(selectedDc);
     const questions = (selectedConfig.questions_schema ?? [])
@@ -1371,10 +1375,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         employee_id: selectedEmployee.id,
         name: name.trim(),
         employee_position_id: employeePositionId,
-        leader_position_id: leaderPositionId,
+        leader_position_id: selectedLeader.position_id,
         job_description_id: selectedDc.id,
         employee_name: selectedEmployee.nome,
-        leader_name: leader.nome,
+        leader_name: selectedLeader.nome,
         job_title: selectedDc.cargo || employeePosition.nome,
         period_name: periodLabel(selectedConfig),
         period_days: selectedConfig.period_days,
@@ -1395,7 +1399,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     if (partErr) return toast.error(partErr.message);
     setName("");
     setEmployeeId("");
-    setLeaderPositionId("");
+    setLeaderEmployeeId("");
     toast.success("Avaliação criada");
     await load();
   };
@@ -1457,16 +1461,20 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               Lider avaliador
             </span>
             <select
-              value={leaderPositionId}
-              onChange={(e) => setLeaderPositionId(e.target.value)}
+              value={leaderEmployeeId}
+              onChange={(e) => setLeaderEmployeeId(e.target.value)}
               className={inputClass}
             >
               <option value="">Selecione</option>
-              {positions.map((position) => (
-                <option key={position.id} value={position.id}>
-                  {position.nome}
-                </option>
-              ))}
+              {leaderEmployees.map((employee) => {
+                const position = positions.find((item) => item.id === employee.position_id);
+                const count = subordinateCountByLeader.get(employee.id) ?? 0;
+                return (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.nome} - {position?.nome ?? "sem cargo"} - {count} subordinado(s)
+                  </option>
+                );
+              })}
             </select>
           </label>
           <label className="block">
@@ -1477,10 +1485,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               className={inputClass}
-              disabled={!leaderPositionId}
+              disabled={!leaderEmployeeId}
             >
               <option value="">
-                {leaderPositionId ? "Selecione" : "Selecione o líder primeiro"}
+                {leaderEmployeeId ? "Selecione" : "Selecione o lider primeiro"}
               </option>
               {subordinateEmployees.map((employee) => {
                 const position = positions.find((item) => item.id === employee.position_id);
@@ -1494,7 +1502,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                   </option>
                 );
               })}
-              {leaderPositionId && subordinateEmployees.length === 0 && (
+              {leaderEmployeeId && subordinateEmployees.length === 0 && (
                 <option value="" disabled>
                   Nenhum funcionario cadastrado abaixo deste lider
                 </option>
@@ -1927,4 +1935,6 @@ export function validatePerformanceAnswers(
   );
   return missing ? `Preencha: ${missing.label}` : null;
 }
+
+
 

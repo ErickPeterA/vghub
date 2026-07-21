@@ -30,6 +30,7 @@ type EmployeeRow = {
   position_id: string;
   area_id: string | null;
   sector_id: string | null;
+  superior_imediato_id: string | null;
   nome: string;
   admission_date: string;
   last_performance_review_date: string | null;
@@ -41,6 +42,7 @@ type EmployeeFormState = {
   positionId: string;
   areaId: string;
   sectorId: string;
+  superiorImediatoId: string;
   admissionDate: string;
   lastPerformanceReviewDate: string;
 };
@@ -50,6 +52,7 @@ const emptyForm: EmployeeFormState = {
   positionId: "",
   areaId: "",
   sectorId: "",
+  superiorImediatoId: "",
   admissionDate: "",
   lastPerformanceReviewDate: "",
 };
@@ -116,12 +119,65 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
   );
   const positionsById = useMemo(() => new Map(positions.map((position) => [position.id, position])), [positions]);
   const areasById = useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
+  const employeesById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
+  const ancestorPositionIds = useMemo(() => {
+    if (!form.positionId) return [];
+
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    let currentId: string | null = form.positionId;
+
+    while (currentId) {
+      const current = positionsById.get(currentId);
+      const parentId = current?.parent_id ?? null;
+      if (!parentId || seen.has(parentId)) break;
+      seen.add(parentId);
+      ids.push(parentId);
+      currentId = parentId;
+    }
+
+    return ids;
+  }, [form.positionId, positionsById]);
+  const leaderOptions = useMemo(() => {
+    const ancestorDepthByPosition = new Map(
+      ancestorPositionIds.map((positionId, index) => [positionId, index + 1]),
+    );
+
+    return employees
+      .filter((employee) => ancestorDepthByPosition.has(employee.position_id))
+      .map((employee) => ({
+        employee,
+        position: positionsById.get(employee.position_id),
+        depth: ancestorDepthByPosition.get(employee.position_id) ?? 999,
+      }))
+      .sort((a, b) => a.depth - b.depth || a.employee.nome.localeCompare(b.employee.nome, "pt-BR"));
+  }, [ancestorPositionIds, employees, positionsById]);
+
+  useEffect(() => {
+    const optionIds = new Set(leaderOptions.map((option) => option.employee.id));
+    if (!form.positionId) {
+      setForm((current) =>
+        current.superiorImediatoId ? { ...current, superiorImediatoId: "" } : current,
+      );
+      return;
+    }
+
+    if (form.superiorImediatoId && !optionIds.has(form.superiorImediatoId)) {
+      setForm((current) => ({ ...current, superiorImediatoId: "" }));
+      return;
+    }
+
+    if (!form.superiorImediatoId && leaderOptions.length === 1) {
+      setForm((current) => ({ ...current, superiorImediatoId: leaderOptions[0].employee.id }));
+    }
+  }, [form.positionId, form.superiorImediatoId, leaderOptions]);
 
   const setField = (field: keyof EmployeeFormState, value: string) => {
     setForm((current) => ({
       ...current,
       [field]: value,
       ...(field === "areaId" ? { sectorId: "" } : null),
+      ...(field === "positionId" ? { superiorImediatoId: "" } : null),
     }));
   };
 
@@ -130,6 +186,9 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     const nome = form.nome.trim();
     if (!nome) return toast.error("Nome do funcionario e obrigatorio.");
     if (!form.positionId) return toast.error("Selecione um cargo do organograma.");
+    if (leaderOptions.length > 0 && !form.superiorImediatoId) {
+      return toast.error("Selecione o lider sugerido pelo organograma.");
+    }
     if (!form.admissionDate) return toast.error("Informe a data de admissao.");
     if (form.lastPerformanceReviewDate && form.lastPerformanceReviewDate < form.admissionDate) {
       return toast.error("A ultima avaliacao nao pode ser anterior a admissao.");
@@ -141,6 +200,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
       position_id: form.positionId,
       area_id: form.areaId || null,
       sector_id: form.sectorId || null,
+      superior_imediato_id: form.superiorImediatoId || null,
       nome,
       admission_date: form.admissionDate,
       last_performance_review_date: form.lastPerformanceReviewDate || null,
@@ -211,6 +271,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   <TableHead>Nome</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Area / Setor</TableHead>
+                  <TableHead>Superior imediato</TableHead>
                   <TableHead>Admissao</TableHead>
                   <TableHead>Ultima avaliacao</TableHead>
                 </TableRow>
@@ -225,6 +286,9 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                         <span>{areasById.get(employee.area_id ?? "")?.nome ?? "-"}</span>
                         <span className="text-xs text-[#042558]/45">{areasById.get(employee.sector_id ?? "")?.nome ?? "Sem setor"}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-[#042558]/70">
+                      {employeesById.get(employee.superior_imediato_id ?? "")?.nome ?? "-"}
                     </TableCell>
                     <TableCell className="text-[#042558]/70">
                       <span className="inline-flex items-center gap-1">
@@ -301,6 +365,42 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                     <option key={sector.id} value={sector.id}>{sector.nome}</option>
                   ))}
                 </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Lider pelo organograma</span>
+                <select
+                  value={form.superiorImediatoId}
+                  onChange={(event) => setField("superiorImediatoId", event.target.value)}
+                  className={inputClass}
+                  disabled={!form.positionId || leaderOptions.length === 0}
+                >
+                  <option value="">
+                    {!form.positionId
+                      ? "Selecione um cargo primeiro"
+                      : leaderOptions.length === 0
+                        ? "Nenhum funcionario em cargos superiores"
+                        : "Selecione o lider"}
+                  </option>
+                  {leaderOptions.map(({ employee, position, depth }) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.nome} - {position?.nome ?? "cargo removido"}
+                      {depth === 1 ? " - superior direto" : ` - ${depth} niveis acima`}
+                    </option>
+                  ))}
+                </select>
+                {form.positionId && leaderOptions.length > 0 && (
+                  <p className="mt-1 text-xs text-[#042558]/45">
+                    Opcoes puxadas dos cargos acima:{" "}
+                    {ancestorPositionIds.map((positionId) => positionsById.get(positionId)?.nome).filter(Boolean).join(" > ")}.
+                  </p>
+                )}
+                {form.positionId && leaderOptions.length === 0 && ancestorPositionIds.length > 0 && (
+                  <p className="mt-1 text-xs text-[#042558]/45">
+                    Cargos acima encontrados, mas sem funcionarios cadastrados neles:{" "}
+                    {ancestorPositionIds.map((positionId) => positionsById.get(positionId)?.nome).filter(Boolean).join(" > ")}.
+                  </p>
+                )}
               </label>
 
               <label className="block">
