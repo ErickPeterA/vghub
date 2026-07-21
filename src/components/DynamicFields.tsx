@@ -27,6 +27,22 @@ export type DynamicField = {
 
 const controlClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-ring";
 
+function normalizeDataSource(field: {
+  field_key: string;
+  label: string;
+  data_source?: string | null;
+}): DataSource {
+  const current = field.data_source;
+  if (current === "areas" || current === "setores") return current;
+
+  const key = field.field_key.toLowerCase();
+  const label = field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  if (key === "unidade_negocio" || key === "area" || label === "area") return "areas";
+  if (key === "departamento" || key === "setor" || label === "setor") return "setores";
+  return "manual";
+}
+
 export function useProjectFields(projectId: string) {
   const [fields, setFields] = useState<DynamicField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +58,7 @@ export function useProjectFields(projectId: string) {
       .then(({ data }) => {
         setFields((data ?? []).map((field) => ({
           ...field,
-          data_source: (field.data_source ?? "manual") as DataSource,
+          data_source: normalizeDataSource(field),
           options: (field.base_options ?? [])
             .filter((option) => option.is_active)
             .sort((a, b) => a.display_order - b.display_order)
@@ -93,7 +109,14 @@ export function useProjectAreas(projectId: string) {
       .eq("project_id", projectId)
       .order("display_order")
       .order("created_at")
-      .then(({ data }) => setAreas((data ?? []) as ProjectArea[]));
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error(error.message);
+          setAreas([]);
+          return;
+        }
+        setAreas((data ?? []) as ProjectArea[]);
+      });
   }, [projectId]);
   return areas;
 }
