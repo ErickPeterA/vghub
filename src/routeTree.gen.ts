@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
+import { Route as AvaliacaoDesempenhoPreencherTokenRouteImport } from './routes/avaliacao-desempenho.preencher.$token'
 import { Route as AtividadesPreencherTokenRouteImport } from './routes/atividades.preencher.$token'
 import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
 import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
@@ -22,6 +23,9 @@ import { Route as AuthenticatedGerenciamentoBasesRouteImport } from './routes/_a
 import { Route as AuthenticatedGerenciamentoAtrelarRouteImport } from './routes/_authenticated/gerenciamento.atrelar'
 import { Route as AuthenticatedProjetosProjectIdIndexRouteImport } from './routes/_authenticated/projetos.$projectId.index'
 import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './routes/_authenticated/gerenciamento.usuarios.index'
+import { Route as ApiPublicPerformanceResponseTokenRouteImport } from './routes/api/public/performance-response.$token'
+import { Route as ApiPublicPerformanceFormTokenRouteImport } from './routes/api/public/performance-form.$token'
+import { Route as ApiPublicPerformanceDraftTokenRouteImport } from './routes/api/public/performance-draft.$token'
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
@@ -30,6 +34,7 @@ import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './r
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
+import { Route as AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteImport } from './routes/_authenticated/projetos.$projectId.avaliacao-desempenho'
 import { Route as AuthenticatedProjetosProjectIdAtividadesRouteImport } from './routes/_authenticated/projetos.$projectId.atividades'
 import { Route as AuthenticatedProjetosProjectIdAreasRouteImport } from './routes/_authenticated/projetos.$projectId.areas'
 import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
@@ -37,6 +42,7 @@ import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './ro
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.index'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.$dcId'
+import { Route as AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRouteImport } from './routes/_authenticated/projetos.$projectId.avaliacao-desempenho.comparar.$reviewId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -62,6 +68,12 @@ const AuthenticatedProjetosIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedProjetosRoute,
+  } as any)
+const AvaliacaoDesempenhoPreencherTokenRoute =
+  AvaliacaoDesempenhoPreencherTokenRouteImport.update({
+    id: '/avaliacao-desempenho/preencher/$token',
+    path: '/avaliacao-desempenho/preencher/$token',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AtividadesPreencherTokenRoute =
   AtividadesPreencherTokenRouteImport.update({
@@ -111,6 +123,24 @@ const AuthenticatedGerenciamentoUsuariosIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGerenciamentoUsuariosRoute,
   } as any)
+const ApiPublicPerformanceResponseTokenRoute =
+  ApiPublicPerformanceResponseTokenRouteImport.update({
+    id: '/api/public/performance-response/$token',
+    path: '/api/public/performance-response/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPerformanceFormTokenRoute =
+  ApiPublicPerformanceFormTokenRouteImport.update({
+    id: '/api/public/performance-form/$token',
+    path: '/api/public/performance-form/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPerformanceDraftTokenRoute =
+  ApiPublicPerformanceDraftTokenRouteImport.update({
+    id: '/api/public/performance-draft/$token',
+    path: '/api/public/performance-draft/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicActivityResponseTokenRoute =
   ApiPublicActivityResponseTokenRouteImport.update({
     id: '/api/public/activity-response/$token',
@@ -159,6 +189,12 @@ const AuthenticatedProjetosProjectIdBaseRoute =
     path: '/base',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
+const AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute =
+  AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteImport.update({
+    id: '/avaliacao-desempenho',
+    path: '/avaliacao-desempenho',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
 const AuthenticatedProjetosProjectIdAtividadesRoute =
   AuthenticatedProjetosProjectIdAtividadesRouteImport.update({
     id: '/atividades',
@@ -201,6 +237,15 @@ const AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute =
     path: '/$dcId',
     getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
   } as any)
+const AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute =
+  AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRouteImport.update(
+    {
+      id: '/comparar/$reviewId',
+      path: '/comparar/$reviewId',
+      getParentRoute: () =>
+        AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -212,11 +257,13 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/atividades/preencher/$token': typeof AtividadesPreencherTokenRoute
+  '/avaliacao-desempenho/preencher/$token': typeof AvaliacaoDesempenhoPreencherTokenRoute
   '/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
+  '/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
@@ -225,11 +272,15 @@ export interface FileRoutesByFullPath {
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
+  '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
+  '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
   '/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
+  '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -238,11 +289,13 @@ export interface FileRoutesByTo {
   '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/atividades/preencher/$token': typeof AtividadesPreencherTokenRoute
+  '/avaliacao-desempenho/preencher/$token': typeof AvaliacaoDesempenhoPreencherTokenRoute
   '/projetos': typeof AuthenticatedProjetosIndexRoute
   '/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
+  '/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
@@ -250,11 +303,15 @@ export interface FileRoutesByTo {
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
+  '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
+  '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
+  '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -268,11 +325,13 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
   '/atividades/preencher/$token': typeof AtividadesPreencherTokenRoute
+  '/avaliacao-desempenho/preencher/$token': typeof AvaliacaoDesempenhoPreencherTokenRoute
   '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/_authenticated/gerenciamento/usuarios/novo': typeof AuthenticatedGerenciamentoUsuariosNovoRoute
   '/_authenticated/projetos/$projectId/andamento': typeof AuthenticatedProjetosProjectIdAndamentoRoute
   '/_authenticated/projetos/$projectId/areas': typeof AuthenticatedProjetosProjectIdAreasRoute
   '/_authenticated/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
+  '/_authenticated/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
@@ -281,11 +340,15 @@ export interface FileRoutesById {
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
+  '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
+  '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
   '/_authenticated/gerenciamento/usuarios/': typeof AuthenticatedGerenciamentoUsuariosIndexRoute
   '/_authenticated/projetos/$projectId/': typeof AuthenticatedProjetosProjectIdIndexRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
+  '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -299,11 +362,13 @@ export interface FileRouteTypes {
     | '/projetos/$projectId'
     | '/projetos/novo'
     | '/atividades/preencher/$token'
+    | '/avaliacao-desempenho/preencher/$token'
     | '/projetos/'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/areas'
     | '/projetos/$projectId/atividades'
+    | '/projetos/$projectId/avaliacao-desempenho'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
@@ -312,11 +377,15 @@ export interface FileRouteTypes {
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/performance-draft/$token'
+    | '/api/public/performance-form/$token'
+    | '/api/public/performance-response/$token'
     | '/gerenciamento/usuarios/'
     | '/projetos/$projectId/'
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
     | '/projetos/$projectId/descricao-cargo/'
+    | '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -325,11 +394,13 @@ export interface FileRouteTypes {
     | '/gerenciamento/bases'
     | '/projetos/novo'
     | '/atividades/preencher/$token'
+    | '/avaliacao-desempenho/preencher/$token'
     | '/projetos'
     | '/gerenciamento/usuarios/novo'
     | '/projetos/$projectId/andamento'
     | '/projetos/$projectId/areas'
     | '/projetos/$projectId/atividades'
+    | '/projetos/$projectId/avaliacao-desempenho'
     | '/projetos/$projectId/base'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
@@ -337,11 +408,15 @@ export interface FileRouteTypes {
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/performance-draft/$token'
+    | '/api/public/performance-form/$token'
+    | '/api/public/performance-response/$token'
     | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
     | '/projetos/$projectId/descricao-cargo'
+    | '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
   id:
     | '__root__'
     | '/'
@@ -354,11 +429,13 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId'
     | '/_authenticated/projetos/novo'
     | '/atividades/preencher/$token'
+    | '/avaliacao-desempenho/preencher/$token'
     | '/_authenticated/projetos/'
     | '/_authenticated/gerenciamento/usuarios/novo'
     | '/_authenticated/projetos/$projectId/andamento'
     | '/_authenticated/projetos/$projectId/areas'
     | '/_authenticated/projetos/$projectId/atividades'
+    | '/_authenticated/projetos/$projectId/avaliacao-desempenho'
     | '/_authenticated/projetos/$projectId/base'
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
@@ -367,11 +444,15 @@ export interface FileRouteTypes {
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/performance-draft/$token'
+    | '/api/public/performance-form/$token'
+    | '/api/public/performance-response/$token'
     | '/_authenticated/gerenciamento/usuarios/'
     | '/_authenticated/projetos/$projectId/'
     | '/_authenticated/projetos/$projectId/descricao-cargo/$dcId'
     | '/_authenticated/projetos/$projectId/descricao-cargo/novo'
     | '/_authenticated/projetos/$projectId/descricao-cargo/'
+    | '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -379,9 +460,13 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
+  AvaliacaoDesempenhoPreencherTokenRoute: typeof AvaliacaoDesempenhoPreencherTokenRoute
   ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
+  ApiPublicPerformanceDraftTokenRoute: typeof ApiPublicPerformanceDraftTokenRoute
+  ApiPublicPerformanceFormTokenRoute: typeof ApiPublicPerformanceFormTokenRoute
+  ApiPublicPerformanceResponseTokenRoute: typeof ApiPublicPerformanceResponseTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -420,6 +505,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projetos/'
       preLoaderRoute: typeof AuthenticatedProjetosIndexRouteImport
       parentRoute: typeof AuthenticatedProjetosRoute
+    }
+    '/avaliacao-desempenho/preencher/$token': {
+      id: '/avaliacao-desempenho/preencher/$token'
+      path: '/avaliacao-desempenho/preencher/$token'
+      fullPath: '/avaliacao-desempenho/preencher/$token'
+      preLoaderRoute: typeof AvaliacaoDesempenhoPreencherTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/atividades/preencher/$token': {
       id: '/atividades/preencher/$token'
@@ -477,6 +569,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGerenciamentoUsuariosIndexRouteImport
       parentRoute: typeof AuthenticatedGerenciamentoUsuariosRoute
     }
+    '/api/public/performance-response/$token': {
+      id: '/api/public/performance-response/$token'
+      path: '/api/public/performance-response/$token'
+      fullPath: '/api/public/performance-response/$token'
+      preLoaderRoute: typeof ApiPublicPerformanceResponseTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/performance-form/$token': {
+      id: '/api/public/performance-form/$token'
+      path: '/api/public/performance-form/$token'
+      fullPath: '/api/public/performance-form/$token'
+      preLoaderRoute: typeof ApiPublicPerformanceFormTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/performance-draft/$token': {
+      id: '/api/public/performance-draft/$token'
+      path: '/api/public/performance-draft/$token'
+      fullPath: '/api/public/performance-draft/$token'
+      preLoaderRoute: typeof ApiPublicPerformanceDraftTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/activity-response/$token': {
       id: '/api/public/activity-response/$token'
       path: '/api/public/activity-response/$token'
@@ -533,6 +646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdBaseRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
+    '/_authenticated/projetos/$projectId/avaliacao-desempenho': {
+      id: '/_authenticated/projetos/$projectId/avaliacao-desempenho'
+      path: '/avaliacao-desempenho'
+      fullPath: '/projetos/$projectId/avaliacao-desempenho'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
     '/_authenticated/projetos/$projectId/atividades': {
       id: '/_authenticated/projetos/$projectId/atividades'
       path: '/atividades'
@@ -582,8 +702,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
     }
+    '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': {
+      id: '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
+      path: '/comparar/$reviewId'
+      fullPath: '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute
+    }
   }
 }
+
+interface AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteChildren {
+  AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
+}
+
+const AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteChildren: AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteChildren =
+  {
+    AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute:
+      AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute,
+  }
+
+const AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren =
+  AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute._addFileChildren(
+    AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteChildren,
+  )
 
 interface AuthenticatedProjetosProjectIdDescricaoCargoRouteChildren {
   AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
@@ -610,6 +752,7 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdAndamentoRoute: typeof AuthenticatedProjetosProjectIdAndamentoRoute
   AuthenticatedProjetosProjectIdAreasRoute: typeof AuthenticatedProjetosProjectIdAreasRoute
   AuthenticatedProjetosProjectIdAtividadesRoute: typeof AuthenticatedProjetosProjectIdAtividadesRoute
+  AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
   AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
@@ -626,6 +769,8 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdAreasRoute,
     AuthenticatedProjetosProjectIdAtividadesRoute:
       AuthenticatedProjetosProjectIdAtividadesRoute,
+    AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute:
+      AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren,
     AuthenticatedProjetosProjectIdBaseRoute:
       AuthenticatedProjetosProjectIdBaseRoute,
     AuthenticatedProjetosProjectIdConfiguracoesRoute:
@@ -706,9 +851,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   AtividadesPreencherTokenRoute: AtividadesPreencherTokenRoute,
+  AvaliacaoDesempenhoPreencherTokenRoute:
+    AvaliacaoDesempenhoPreencherTokenRoute,
   ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,
+  ApiPublicPerformanceDraftTokenRoute: ApiPublicPerformanceDraftTokenRoute,
+  ApiPublicPerformanceFormTokenRoute: ApiPublicPerformanceFormTokenRoute,
+  ApiPublicPerformanceResponseTokenRoute:
+    ApiPublicPerformanceResponseTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

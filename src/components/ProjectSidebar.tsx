@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, BarChart3, ClipboardList, Database, FileText, GitFork, History, Network, Settings } from "lucide-react";
+import { ArrowLeft, BarChart3, ClipboardCheck, ClipboardList, Database, FileText, GitFork, History, Network, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -54,6 +54,7 @@ export function ProjectSidebar({
   const allItems = [
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Aprovações" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
+    { to: "/projetos/$projectId/avaliacao-desempenho", href: `/projetos/${projectId}/avaliacao-desempenho`, icon: ClipboardCheck, label: "Avaliacao de Desempenho" },
     { to: "/projetos/$projectId/organograma", href: `/projetos/${projectId}/organograma`, icon: GitFork, label: "Organograma" },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
     { to: "/projetos/$projectId/base", href: `/projetos/${projectId}/base`, icon: Database, label: "Base do Projeto" },
