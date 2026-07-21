@@ -6,6 +6,8 @@ import {
   Copy,
   Eye,
   History,
+  ArrowLeft,
+  Clock,
   Maximize2,
   MessageSquare,
   Plus,
@@ -14,6 +16,7 @@ import {
   Send,
   Settings,
   SplitSquareVertical,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,7 +49,22 @@ type DcRow = {
   atividades: Array<Record<string, unknown>> | null;
   [key: string]: unknown;
 };
-type ConfigRow = { id: string; questions_schema: PerformanceQuestion[]; is_active: boolean };
+type PerfEmployeeRow = {
+  id: string;
+  project_id: string;
+  position_id: string;
+  nome: string;
+  admission_date: string;
+  last_performance_review_date: string | null;
+};
+type ConfigRow = {
+  id: string;
+  project_id: string;
+  name: string | null;
+  period_days: number | null;
+  questions_schema: PerformanceQuestion[];
+  is_active: boolean;
+};
 type ParticipantRow = {
   id: string;
   review_id: string;
@@ -61,6 +79,7 @@ type ReviewRow = {
   id: string;
   project_id: string;
   config_id: string | null;
+  employee_id: string | null;
   name: string;
   employee_position_id: string;
   leader_position_id: string;
@@ -68,6 +87,9 @@ type ReviewRow = {
   employee_name: string;
   leader_name: string;
   job_title: string;
+  period_name: string | null;
+  period_days: number | null;
+  due_date: string | null;
   activities_snapshot: PerformanceQuestion[];
   questions_snapshot: PerformanceQuestion[];
   status: ReviewStatus;
@@ -211,7 +233,7 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
             </TabButton>
             {canManage && (
               <TabButton active={tab === "config"} onClick={() => setTab("config")}>
-                Configuração
+                Modelos
               </TabButton>
             )}
           </div>
@@ -223,7 +245,7 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
               Apenas GP e administradores podem criar e comparar avaliações de desempenho.
             </div>
           ) : tab === "config" ? (
-            <PerformanceConfigPanel projectId={projectId} />
+            <PerformancePeriodConfigPanel projectId={projectId} />
           ) : (
             <PerformanceReviewsPanel projectId={projectId} />
           )}
@@ -723,6 +745,443 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
   );
 }
 
+function PerformancePeriodConfigPanel({ projectId }: { projectId: string }) {
+  const { user } = useCurrentUser();
+  const [configs, setConfigs] = useState<ConfigRow[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<PerformanceQuestion[]>([]);
+  const [periodName, setPeriodName] = useState("");
+  const [periodDays, setPeriodDays] = useState(30);
+  const [isActive, setIsActive] = useState(true);
+  const [newLabel, setNewLabel] = useState("");
+  const [newPeriodName, setNewPeriodName] = useState("");
+  const [newPeriodDays, setNewPeriodDays] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const hydrate = (config: ConfigRow) => {
+    const normalized = normalizeConfigRow(config);
+    setPeriodName(normalized.name ?? periodLabel(normalized));
+    setPeriodDays(normalized.period_days ?? 30);
+    setQuestions(
+      (normalized.questions_schema ?? []).map((question) => ({
+        ...question,
+        active: question.active ?? true,
+      })),
+    );
+    setIsActive(normalized.is_active);
+  };
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("performance_review_configs")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("period_days", { ascending: true });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    setConfigs(rows);
+    const selected = rows.find((config) => config.id === selectedId) ?? null;
+    if (selected) hydrate(selected);
+    else setSelectedId(null);
+  }, [projectId, selectedId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const selectedConfig = configs.find((config) => config.id === selectedId) ?? null;
+
+  const selectConfig = (config: ConfigRow) => {
+    setSelectedId(config.id);
+    hydrate(config);
+  };
+
+  const createPeriod = async () => {
+    const days = Number(newPeriodDays);
+    if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
+    if (configs.some((config) => config.period_days === days)) {
+      return toast.error(`Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`);
+    }
+    const name = newPeriodName.trim() || `${days} dias`;
+    setCreating(true);
+    const { data, error } = await supabase
+      .from("performance_review_configs")
+      .insert({
+        project_id: projectId,
+        name,
+        period_days: days,
+        questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
+          ...question,
+          id: `${question.id}_${uid()}`,
+        })),
+        is_active: true,
+        created_by: user?.id ?? null,
+      } as any)
+      .select("*")
+      .single();
+    setCreating(false);
+    if (error || !data) {
+      const message = error?.message?.includes("performance_review_configs_project_period_unique")
+        ? `Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`
+        : error?.message ?? "Nao foi possivel criar.";
+      return toast.error(message);
+    }
+    toast.success("Modelo criado");
+    setNewPeriodName("");
+    setNewPeriodDays("");
+    const created = normalizeConfigRow(data as ConfigRow);
+    setConfigs((current) =>
+      [...current, created].sort((a, b) => (a.period_days ?? 0) - (b.period_days ?? 0)),
+    );
+    setSelectedId(created.id);
+    hydrate(created);
+  };
+
+  const save = async () => {
+    if (!selectedConfig) return toast.error("Selecione um modelo.");
+    const days = Number(periodDays);
+    if (!periodName.trim()) return toast.error("Informe o nome do periodo.");
+    if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
+    if (configs.some((config) => config.id !== selectedConfig.id && config.period_days === days)) {
+      return toast.error(`Ja existe outro modelo com ${days} dias.`);
+    }
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("performance_review_configs")
+      .update({
+        name: periodName.trim(),
+        period_days: days,
+        questions_schema: questions,
+        is_active: isActive,
+      } as any)
+      .eq("id", selectedConfig.id)
+      .eq("project_id", projectId);
+    setSaving(false);
+    if (error) {
+      const message = error.message.includes("performance_review_configs_project_period_unique")
+        ? `Ja existe outro modelo com ${days} dias.`
+        : error.message;
+      return toast.error(message);
+    }
+    toast.success("Modelo salvo");
+    await load();
+  };
+
+  const deleteSelected = async () => {
+    if (!selectedConfig) return;
+    if (!confirm(`Remover o modelo "${periodLabel(selectedConfig)}"? As avaliacoes antigas continuam salvas.`)) return;
+    const { error } = await supabase
+      .from("performance_review_configs")
+      .delete()
+      .eq("id", selectedConfig.id)
+      .eq("project_id", projectId);
+    if (error) return toast.error(error.message);
+    toast.success("Modelo removido");
+    setSelectedId(null);
+    setQuestions([]);
+    await load();
+  };
+
+  const addQuestion = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    setQuestions((current) => [
+      ...current,
+      { id: uid(), label, type: "text", required: false, active: true, source: "config" },
+    ]);
+    setNewLabel("");
+  };
+
+  return (
+    <div className="space-y-5">
+      {!selectedConfig && (
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold text-[#042558]">Modelos por periodo</h2>
+          <p className="text-sm text-[#042558]/60">
+            Cada bloco guarda as perguntas usadas em um periodo de avaliacao.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {configs.map((config) => {
+            const active = config.id === selectedId;
+            return (
+              <button
+                key={config.id}
+                type="button"
+                onClick={() => selectConfig(config)}
+                className={`rounded-xl border p-4 text-left transition ${
+                  active
+                    ? "border-[#042558] bg-[#042558] text-white shadow-lg shadow-[#042558]/20"
+                    : "border-[#042558]/10 bg-white/80 text-[#042558] hover:border-[#042558]/35 hover:shadow-md"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${active ? "text-white/60" : "text-[#042558]/45"}`}>
+                      Periodo
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold">{periodLabel(config)}</h3>
+                  </div>
+                  <Clock className={`h-5 w-5 ${active ? "text-white/70" : "text-[#042558]/35"}`} />
+                </div>
+                <p className={`mt-3 text-sm ${active ? "text-white/70" : "text-[#042558]/55"}`}>
+                  {(config.questions_schema ?? []).filter((question) => question.active ?? true).length} pergunta(s) ativa(s)
+                </p>
+                <span className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${config.is_active ? active ? "bg-white/15 text-white" : "bg-emerald-50 text-emerald-700" : active ? "bg-white/15 text-white/70" : "bg-[#042558]/5 text-[#042558]/45"}`}>
+                  {config.is_active ? "Ativo" : "Inativo"}
+                </span>
+              </button>
+            );
+          })}
+
+          <div className="rounded-xl border border-dashed border-[#042558]/20 bg-white/60 p-4">
+            <p className="text-sm font-semibold text-[#042558]">Novo modelo</p>
+            <div className="mt-3 grid gap-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Nome do modelo</span>
+                <input
+                  value={newPeriodName}
+                  onChange={(event) => setNewPeriodName(event.target.value)}
+                  placeholder="Ex: 2 meses"
+                  className={inputClass}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Quantos dias</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={newPeriodDays}
+                  onChange={(event) => setNewPeriodDays(event.target.value)}
+                  placeholder="Ex: 60"
+                  className={inputClass}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={createPeriod}
+                disabled={creating}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" /> {creating ? "Criando..." : "Adicionar periodo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+      )}
+
+      {selectedConfig ? (
+        <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5">
+          <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-[#042558]/55 transition hover:text-[#042558]"
+              >
+                <ArrowLeft className="h-4 w-4" /> Voltar para modelos
+              </button>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+                Configuracao do modelo
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-[#042558]">{periodLabel(selectedConfig)}</h2>
+              <p className="text-sm text-[#042558]/60">
+                As atividades da descricao de cargo entram automaticamente como itens de avaliacao.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className="flex items-center gap-2 rounded-lg border border-[#042558]/20 px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(event) => setIsActive(event.target.checked)}
+                />
+                Ativo
+              </label>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar"}
+              </button>
+              <button
+                type="button"
+                onClick={deleteSelected}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" /> Remover
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-5 grid gap-3 md:grid-cols-[1fr_160px]">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#042558]/70">Nome do periodo</span>
+              <input
+                value={periodName}
+                onChange={(event) => setPeriodName(event.target.value)}
+                className={inputClass}
+                placeholder="Ex: 30 dias de experiencia"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[#042558]/70">Quantos dias</span>
+              <input
+                type="number"
+                min={1}
+                value={periodDays}
+                onChange={(event) => setPeriodDays(Number(event.target.value))}
+                className={inputClass}
+              />
+            </label>
+          </div>
+
+          <div className="mb-5 flex gap-2">
+            <input
+              value={newLabel}
+              onChange={(event) => setNewLabel(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addQuestion())}
+              placeholder="Nova pergunta"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white"
+            >
+              <Plus className="h-4 w-4" /> Criar
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {questions.map((question) => (
+              <div key={question.id} className="rounded-xl border border-[#042558]/10 bg-white/70 p-4">
+                <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
+                  <input
+                    value={question.label}
+                    onChange={(event) =>
+                      setQuestions((current) =>
+                        current.map((q) =>
+                          q.id === question.id ? { ...q, label: event.target.value } : q,
+                        ),
+                      )
+                    }
+                    className={inputClass}
+                  />
+                  <select
+                    value={question.type}
+                    onChange={(event) =>
+                      setQuestions((current) =>
+                        current.map((q) =>
+                          q.id === question.id ? { ...q, type: event.target.value as FieldType } : q,
+                        ),
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="text">Texto</option>
+                    <option value="textarea">Texto longo</option>
+                    <option value="select">Selecao unica</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuestions((current) => current.filter((q) => q.id !== question.id))
+                    }
+                    className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                  >
+                    Remover
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-4 text-sm text-[#042558]/60">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={question.required}
+                      onChange={(event) =>
+                        setQuestions((current) =>
+                          current.map((q) =>
+                            q.id === question.id ? { ...q, required: event.target.checked } : q,
+                          ),
+                        )
+                      }
+                    />
+                    Obrigatorio
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={question.active ?? true}
+                      onChange={(event) =>
+                        setQuestions((current) =>
+                          current.map((q) =>
+                            q.id === question.id ? { ...q, active: event.target.checked } : q,
+                          ),
+                        )
+                      }
+                    />
+                    Ativo
+                  </label>
+                </div>
+                {question.type === "select" && (
+                  <SelectOptionsEditor
+                    options={question.options ?? []}
+                    onChange={(options) =>
+                      setQuestions((current) =>
+                        current.map((q) => (q.id === question.id ? { ...q, options } : q)),
+                      )
+                    }
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : configs.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-[#042558]/15 bg-white/60 p-8 text-center text-sm text-[#042558]/45">
+          Crie um modelo de periodo para configurar as perguntas.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function normalizeConfigRow(config: ConfigRow): ConfigRow {
+  return {
+    ...config,
+    name: config.name ?? "Padrao",
+    period_days: config.period_days ?? 30,
+    questions_schema: config.questions_schema ?? [],
+    is_active: config.is_active ?? true,
+  };
+}
+
+function periodLabel(config: ConfigRow) {
+  const normalized = normalizeConfigRow(config);
+  return normalized.name?.trim() || `${normalized.period_days} dias`;
+}
+
+function addDaysToDate(dateValue: string, days: number) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateOnly(dateValue: string) {
+  return new Date(`${dateValue}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
 function SelectOptionsEditor({
   options,
   onChange,
@@ -806,15 +1265,17 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [positions, setPositions] = useState<PositionRow[]>([]);
+  const [employees, setEmployees] = useState<PerfEmployeeRow[]>([]);
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
-  const [config, setConfig] = useState<ConfigRow | null>(null);
+  const [configs, setConfigs] = useState<ConfigRow[]>([]);
+  const [configId, setConfigId] = useState("");
   const [name, setName] = useState("");
-  const [employeePositionId, setEmployeePositionId] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
   const [leaderPositionId, setLeaderPositionId] = useState("");
   const [days, setDays] = useState(14);
 
   const load = useCallback(async () => {
-    const [{ data: revs }, { data: parts }, { data: pos }, { data: dcs }, { data: cfg }] =
+    const [{ data: revs }, { data: parts }, { data: pos }, { data: emps }, { data: dcs }, { data: cfgs }] =
       await Promise.all([
         supabase
           .from("performance_reviews")
@@ -828,24 +1289,35 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           .eq("project_id", projectId)
           .eq("status", "active")
           .order("display_order"),
+        (supabase as any)
+          .from("project_employees")
+          .select("id,project_id,position_id,nome,admission_date,last_performance_review_date")
+          .eq("project_id", projectId)
+          .order("nome"),
         supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
         supabase
           .from("performance_review_configs")
           .select("*")
           .eq("project_id", projectId)
-          .maybeSingle(),
+          .eq("is_active", true)
+          .order("period_days", { ascending: true }),
       ]);
     setReviews((revs ?? []) as ReviewRow[]);
     setParticipants((parts ?? []) as ParticipantRow[]);
     setPositions((pos ?? []) as PositionRow[]);
+    setEmployees((emps ?? []) as PerfEmployeeRow[]);
     setDescriptions((dcs ?? []) as DcRow[]);
-    setConfig((cfg as ConfigRow | null) ?? null);
+    const rows = ((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    setConfigs(rows);
+    setConfigId((current) => current || rows[0]?.id || "");
   }, [projectId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const selectedEmployee = employees.find((employee) => employee.id === employeeId) ?? null;
+  const employeePositionId = selectedEmployee?.position_id ?? "";
   const selectedDc =
     descriptions.find((dc) => dc.organization_position_id === employeePositionId) ?? null;
   const subordinatePositions = leaderPositionId
@@ -853,31 +1325,40 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         getDescendantPositionIds(positions, leaderPositionId).has(position.id),
       )
     : [];
+  const subordinatePositionIds = new Set(subordinatePositions.map((position) => position.id));
+  const subordinateEmployees = leaderPositionId
+    ? employees.filter((employee) => subordinatePositionIds.has(employee.position_id))
+    : [];
   const selectedEmployeeIsBelowLeader =
-    !!employeePositionId &&
+    !!selectedEmployee &&
     !!leaderPositionId &&
-    subordinatePositions.some((position) => position.id === employeePositionId);
+    subordinatePositionIds.has(selectedEmployee.position_id);
+  const selectedConfig = configs.find((config) => config.id === configId) ?? null;
+  const expectedReviewDate =
+    selectedEmployee && selectedConfig?.period_days
+      ? addDaysToDate(selectedEmployee.admission_date, selectedConfig.period_days)
+      : null;
 
   useEffect(() => {
-    setEmployeePositionId("");
+    setEmployeeId("");
   }, [leaderPositionId]);
 
   const createReview = async () => {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
-    if (!employeePositionId || !leaderPositionId)
+    if (!selectedEmployee || !leaderPositionId)
       return toast.error("Informe colaborador e líder.");
     if (!selectedEmployeeIsBelowLeader)
       return toast.error("Selecione um colaborador abaixo do lider no organograma.");
     if (!selectedDc)
       return toast.error("Este colaborador não possui descrição de cargo vinculada.");
-    if (!config || !config.is_active)
-      return toast.error("Salve e ative a configuração da avaliação antes de criar.");
-    const employee = positions.find((p) => p.id === employeePositionId);
+    if (!selectedConfig || !selectedConfig.is_active)
+      return toast.error("Selecione um modelo de periodo ativo antes de criar.");
+    const employeePosition = positions.find((p) => p.id === employeePositionId);
     const leader = positions.find((p) => p.id === leaderPositionId);
-    if (!employee || !leader) return toast.error("Colaborador ou líder inválido.");
+    if (!employeePosition || !leader) return toast.error("Colaborador ou líder inválido.");
 
     const activities = buildActivityQuestions(selectedDc);
-    const questions = (config.questions_schema ?? [])
+    const questions = (selectedConfig.questions_schema ?? [])
       .filter((q) => q.active ?? true)
       .map((q) => ({ ...q, source: "config" as const }));
     const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -886,14 +1367,18 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       .from("performance_reviews")
       .insert({
         project_id: projectId,
-        config_id: config.id,
+        config_id: selectedConfig.id,
+        employee_id: selectedEmployee.id,
         name: name.trim(),
         employee_position_id: employeePositionId,
         leader_position_id: leaderPositionId,
         job_description_id: selectedDc.id,
-        employee_name: employee.nome,
+        employee_name: selectedEmployee.nome,
         leader_name: leader.nome,
-        job_title: selectedDc.cargo || employee.nome,
+        job_title: selectedDc.cargo || employeePosition.nome,
+        period_name: periodLabel(selectedConfig),
+        period_days: selectedConfig.period_days,
+        due_date: expectedReviewDate,
         job_description_snapshot: selectedDc,
         activities_snapshot: activities,
         questions_snapshot: questions,
@@ -909,7 +1394,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     ]);
     if (partErr) return toast.error(partErr.message);
     setName("");
-    setEmployeePositionId("");
+    setEmployeeId("");
     setLeaderPositionId("");
     toast.success("Avaliação criada");
     await load();
@@ -952,6 +1437,23 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+              Modelo do periodo
+            </span>
+            <select
+              value={configId}
+              onChange={(e) => setConfigId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Selecione um modelo</option>
+              {configs.map((config) => (
+                <option key={config.id} value={config.id}>
+                  {periodLabel(config)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#042558]/70">
               Lider avaliador
             </span>
             <select
@@ -972,28 +1474,29 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               Colaborador avaliado
             </span>
             <select
-              value={employeePositionId}
-              onChange={(e) => setEmployeePositionId(e.target.value)}
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
               className={inputClass}
               disabled={!leaderPositionId}
             >
               <option value="">
                 {leaderPositionId ? "Selecione" : "Selecione o líder primeiro"}
               </option>
-              {subordinatePositions.map((position) => {
+              {subordinateEmployees.map((employee) => {
+                const position = positions.find((item) => item.id === employee.position_id);
                 const hasDescription = descriptions.some(
-                  (dc) => dc.organization_position_id === position.id,
+                  (dc) => dc.organization_position_id === employee.position_id,
                 );
                 return (
-                  <option key={position.id} value={position.id} disabled={!hasDescription}>
-                    {position.nome}
-                    {!hasDescription ? " - sem descrição de cargo" : ""}
+                  <option key={employee.id} value={employee.id} disabled={!hasDescription}>
+                    {employee.nome} - {position?.nome ?? "sem cargo"}
+                    {!hasDescription ? " - sem descricao de cargo" : ""}
                   </option>
                 );
               })}
-              {leaderPositionId && subordinatePositions.length === 0 && (
+              {leaderPositionId && subordinateEmployees.length === 0 && (
                 <option value="" disabled>
-                  Nenhum colaborador abaixo deste líder
+                  Nenhum funcionario cadastrado abaixo deste lider
                 </option>
               )}
             </select>
@@ -1016,6 +1519,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         {employeePositionId && !selectedDc && (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             Este colaborador não possui descrição de cargo vinculada.
+          </p>
+        )}
+        {selectedEmployee && selectedConfig && expectedReviewDate && (
+          <p className="mt-3 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
+            Data prevista: {formatDateOnly(expectedReviewDate)} ({periodLabel(selectedConfig)} apos admissao em {formatDateOnly(selectedEmployee.admission_date)}).
           </p>
         )}
         {selectedDc && (
@@ -1053,6 +1561,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     <p className="mt-1 text-sm text-[#042558]/60">
                       {review.employee_name} · {review.job_title} · Líder: {review.leader_name}
                     </p>
+                    {(review.period_name || review.due_date) && (
+                      <p className="mt-1 text-xs text-[#042558]/45">
+                        {review.period_name ?? "Periodo"} {review.due_date ? `- prevista para ${formatDateOnly(review.due_date)}` : ""}
+                      </p>
+                    )}
                     <span className="mt-2 inline-flex rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs font-medium text-[#042558]">
                       {REVIEW_STATUS_LABEL[review.status]}
                     </span>
@@ -1414,3 +1927,4 @@ export function validatePerformanceAnswers(
   );
   return missing ? `Preencha: ${missing.label}` : null;
 }
+
