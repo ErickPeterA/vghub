@@ -27,20 +27,72 @@ export type DynamicField = {
 
 const controlClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-ring";
 
-function normalizeDataSource(field: {
+function normalizeProjectAreaName(raw: string) {
+  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function resolveProjectAreaValue(value: string | number | boolean | string[] | undefined, options: ProjectArea[]) {
+  if (typeof value !== "string" || !value) return "";
+  const direct = options.find((area) => area.id === value);
+  if (direct) return direct.id;
+  const byName = options.find((area) => normalizeProjectAreaName(area.nome) === normalizeProjectAreaName(value));
+  return byName?.id ?? "";
+}
+
+export function normalizeFieldDataSource(field: {
   field_key: string;
   label: string;
   data_source?: string | null;
 }): DataSource {
-  const current = field.data_source;
-  if (current === "areas" || current === "setores") return current;
-
   const key = field.field_key.toLowerCase();
   const label = field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+  if (key === "nivelamento") return "manual";
   if (key === "unidade_negocio" || key === "area" || label === "area") return "areas";
   if (key === "departamento" || key === "setor" || label === "setor") return "setores";
   return "manual";
+}
+
+export function normalizeCoreFieldLabel(field: { field_key: string; label: string }) {
+  switch (field.field_key.toLowerCase()) {
+    case "cargo":
+      return "Nomenclatura do cargo visivel";
+    case "unidade_negocio":
+    case "area":
+      return "Area";
+    case "departamento":
+    case "setor":
+      return "Setor";
+    case "superior_imediato":
+      return "Cargo do superior imediato";
+    default:
+      return field.label;
+  }
+}
+
+function normalizeText(raw: string) {
+  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function semanticFieldKey(field: { field_key: string; label: string }) {
+  const key = field.field_key.toLowerCase();
+  const label = normalizeText(field.label);
+  if (key === "cargo" || label === "nomenclatura do cargo visivel") return "cargo";
+  if (key === "superior_imediato" || label === "cargo do superior imediato") return "superior_imediato";
+  if (key === "nivelamento") return "nivelamento";
+  if (key === "unidade_negocio" || key === "area" || label === "area") return "area";
+  if (key === "departamento" || key === "setor" || label === "setor") return "setor";
+  return key;
+}
+
+function dedupeFields<T extends { field_key: string; label: string; section: string }>(fields: T[]) {
+  const seen = new Set<string>();
+  return fields.filter((field) => {
+    const semanticKey = `${field.section ?? ""}:${semanticFieldKey(field)}`;
+    if (seen.has(semanticKey)) return false;
+    seen.add(semanticKey);
+    return true;
+  });
 }
 
 export function useProjectFields(projectId: string) {
@@ -56,9 +108,10 @@ export function useProjectFields(projectId: string) {
       .eq("is_active", true)
       .order("display_order")
       .then(({ data }) => {
-        setFields((data ?? []).map((field) => ({
+        setFields(dedupeFields(data ?? []).map((field) => ({
           ...field,
-          data_source: normalizeDataSource(field),
+          label: normalizeCoreFieldLabel(field),
+          data_source: normalizeFieldDataSource(field),
           options: (field.base_options ?? [])
             .filter((option) => option.is_active)
             .sort((a, b) => a.display_order - b.display_order)
@@ -241,17 +294,20 @@ export function DynamicFieldControl({
   // Fontes dinâmicas: Áreas / Setores
   if (field.data_source === "areas") {
     const opts = (areas ?? []).filter((a) => !a.parent_id);
+    const selectedValue = resolveProjectAreaValue(value, opts);
     return (
-      <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
+      <select {...common} value={selectedValue} onChange={(e) => onChange(e.target.value)}>
         <option value="">— Selecione —</option>
         {opts.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
       </select>
     );
   }
   if (field.data_source === "setores") {
-    const opts = (areas ?? []).filter((a) => a.parent_id && (!parentAreaId || a.parent_id === parentAreaId));
+    const allSetores = (areas ?? []).filter((a) => a.parent_id);
+    const opts = parentAreaId ? allSetores.filter((a) => a.parent_id === parentAreaId) : [];
+    const selectedValue = resolveProjectAreaValue(value, opts);
     return (
-      <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} disabled={disabled || !parentAreaId}>
+      <select {...common} value={selectedValue} onChange={(e) => onChange(e.target.value)} disabled={disabled || !parentAreaId}>
         <option value="">{parentAreaId ? "— Selecione —" : "Selecione a Área primeiro"}</option>
         {opts.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
       </select>

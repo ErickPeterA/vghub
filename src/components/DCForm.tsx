@@ -82,11 +82,101 @@ const SingleField = memo(function SingleField({
 });
 
 // resolve o uuid de Área dentro de um conjunto de valores (header ou item)
-function findAreaValue(fields: DynamicField[], getter: (key: string) => DynamicItem[string] | undefined): string | null {
+function normalizeAreaName(raw: string) {
+  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function resolveAreaId(raw: DynamicItem[string] | undefined, areas: ProjectArea[]) {
+  if (typeof raw !== "string" || !raw) return null;
+  const direct = areas.find((area) => area.id === raw);
+  if (direct) return direct.id;
+  const byName = areas.find((area) => !area.parent_id && normalizeAreaName(area.nome) === normalizeAreaName(raw));
+  return byName?.id ?? null;
+}
+
+function findAreaValue(
+  fields: DynamicField[],
+  getter: (key: string) => DynamicItem[string] | undefined,
+  areas: ProjectArea[],
+): string | null {
   const f = fields.find((x) => x.data_source === "areas");
   if (!f) return null;
-  const v = getter(f.field_key);
-  return typeof v === "string" && v ? v : null;
+  return resolveAreaId(getter(f.field_key), areas);
+}
+
+function ensureAreaFieldBeforeSetor(sectionFields: DynamicField[]) {
+  const areaIndex = sectionFields.findIndex((field) => field.data_source === "areas");
+  const setorIndex = sectionFields.findIndex((field) => field.data_source === "setores");
+  if (setorIndex < 0) return sectionFields;
+
+  if (areaIndex >= 0) {
+    const next = [...sectionFields];
+    const [areaField] = next.splice(areaIndex, 1);
+    const nextSetorIndex = next.findIndex((field) => field.data_source === "setores");
+    next.splice(nextSetorIndex, 0, areaField);
+    return next;
+  }
+
+  const setorField = sectionFields[setorIndex];
+  const areaField: DynamicField = {
+    id: `__virtual_area_field__:${setorField.section}`,
+    field_key: "unidade_negocio",
+    label: "Area",
+    section: setorField.section,
+    field_type: "single_select",
+    is_required: false,
+    allows_free_text: false,
+    data_source: "areas",
+    options: [],
+  };
+
+  const next = [...sectionFields];
+  next.splice(setorIndex, 0, areaField);
+  return next;
+}
+
+function normalizeAreaSetorOrder(sectionFields: DynamicField[]) {
+  const ensured = ensureAreaFieldBeforeSetor(sectionFields);
+  const areaField = ensured.find((field) => field.data_source === "areas");
+  const setorFields = ensured.filter((field) => field.data_source === "setores");
+  if (!areaField || setorFields.length === 0) return ensured;
+
+  const result: DynamicField[] = [];
+  let insertedAreaGroup = false;
+  for (const field of ensured) {
+    if (field.data_source === "areas" || field.data_source === "setores") {
+      if (!insertedAreaGroup) {
+        result.push(areaField, ...setorFields);
+        insertedAreaGroup = true;
+      }
+      continue;
+    }
+    result.push(field);
+  }
+  return result;
+}
+
+function withRequiredHeaderArea(sectionFields: DynamicField[]) {
+  const ordered = normalizeAreaSetorOrder(sectionFields);
+  if (!ordered.some((field) => field.data_source === "setores")) return ordered;
+  if (ordered.some((field) => field.data_source === "areas")) return ordered;
+
+  const setorIndex = ordered.findIndex((field) => field.data_source === "setores");
+  const setorField = ordered[setorIndex];
+  const areaField: DynamicField = {
+    id: `__required_header_area_field__:${setorField.section}`,
+    field_key: "unidade_negocio",
+    label: "Area",
+    section: setorField.section,
+    field_type: "single_select",
+    is_required: false,
+    allows_free_text: false,
+    data_source: "areas",
+    options: [],
+  };
+  const next = [...ordered];
+  next.splice(setorIndex, 0, areaField);
+  return next;
 }
 
 export function DCForm({
@@ -144,12 +234,12 @@ export function DCForm({
     else setDynamicHeader(key, val);
     // Se mudou a Área, limpa o Setor para não ficar inconsistente
     const changed = fields.find((f) => f.field_key === key);
-    if (changed?.data_source === "areas") {
-      const setor = fields.find((f) => f.section === changed.section && f.data_source === "setores");
-      if (setor) {
+    if (changed?.data_source === "areas" || key === "unidade_negocio" || key === "area") {
+      const setores = fields.filter((f) => f.data_source === "setores" && (!changed || f.section === changed.section));
+      setores.forEach((setor) => {
         if (isHeaderScalar(setor.field_key)) setScalar(setor.field_key, "");
         else setDynamicHeader(setor.field_key, "");
-      }
+      });
     }
   }, [setScalar, setDynamicHeader, fields]);
 
@@ -200,25 +290,30 @@ export function DCForm({
   };
 
   const renderHeader = (sectionFields: DynamicField[]) => {
-    if (sectionFields.length === 0) {
+    const visibleFields = withRequiredHeaderArea(sectionFields);
+    if (visibleFields.length === 0) {
       return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
     }
-    const parentAreaId = findAreaValue(sectionFields, headerGetter);
+    const parentAreaId = findAreaValue(visibleFields, headerGetter, areas);
     return (
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 auto-rows-min">
-        {sectionFields.map((field) => {
+        {visibleFields.map((field) => {
           const value = headerGetter(field.field_key);
-          const wideField = field.field_type === "textarea" || field.field_type === "competency_description";
+          const orgSuperiorField = field.field_key === "superior_imediato" && Boolean(dc.organization_position_id);
+          const renderedField: DynamicField = orgSuperiorField
+            ? { ...field, field_type: "text", data_source: "manual", options: [] }
+            : field;
+          const wideField = renderedField.field_type === "textarea" || renderedField.field_type === "competency_description";
           return (
             <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
               <SingleField
-                field={field}
+                field={renderedField}
                 value={value}
                 onChange={handleHeaderChange}
                 areas={areas}
-                parentAreaId={field.data_source === "setores" ? parentAreaId : undefined}
+                parentAreaId={renderedField.data_source === "setores" ? parentAreaId : undefined}
                 action={renderCommentButton(field.field_key)}
-                disabled={readOnly}
+                disabled={readOnly || orgSuperiorField}
               />
             </div>
           );
@@ -247,7 +342,7 @@ export function DCForm({
           </p>
         )}
         {items.map((item, i) => {
-          const itemParentArea = findAreaValue(sectionFields, (k) => item[k]);
+          const itemParentArea = findAreaValue(sectionFields, (k) => item[k], areas);
           const canRemove = !readOnly && items.length > 1;
           return (
             <div key={i} className="relative rounded-lg border border-border bg-background/60 p-4">

@@ -70,6 +70,7 @@ function NovaDC() {
 
   const initial = useMemo<DescricaoCargo>(() => ({
     ...emptyDC(),
+    organization_position_id: linkedPosition?.id ?? null,
     cargo: linkedPosition?.nome ?? "",
     superior_imediato: linkedParentName,
   }), [linkedParentName, linkedPosition?.nome]);

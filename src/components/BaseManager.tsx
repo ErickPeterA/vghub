@@ -20,15 +20,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeCoreFieldLabel, normalizeFieldDataSource } from "@/components/DynamicFields";
 import { DC_SECTIONS } from "@/lib/dc-sections";
 import { canAccessSection, getCurrentUserPlan, SECTION_PLAN_LABELS } from "@/lib/section-access";
 
 type FieldType = "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select" | "competency_description";
 type Option = { id: string; label: string; value: string; description: string | null; display_order: number; is_active: boolean };
+type DataSource = "manual" | "areas" | "setores";
 type Field = {
   id: string; field_key: string; label: string; section: string; field_type: FieldType;
   is_required: boolean; display_order: number; allows_multiple: boolean;
-  allows_free_text: boolean; is_active: boolean; base_options: Option[];
+  allows_free_text: boolean; is_active: boolean; data_source: DataSource; base_options: Option[];
 };
 
 const inputClass = "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
@@ -48,6 +50,17 @@ const slugify = (raw: string) =>
   raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
 const sectionDropId = (sectionKey: string) => `section:${sectionKey}`;
+
+const isProjectAreaSource = (field: Field) => field.data_source === "areas" || field.data_source === "setores";
+
+const normalizeField = (field: Field): Field => {
+  const dataSource = normalizeFieldDataSource(field);
+  return {
+    ...field,
+    label: normalizeCoreFieldLabel(field),
+    data_source: dataSource,
+  };
+};
 
 const OptionRow = memo(function OptionRow({
   option,
@@ -105,7 +118,7 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [newOptionLabel, setNewOptionLabel] = useState("");
-  const showOptions = field.field_type === "single_select" || field.field_type === "multi_select" || field.field_type === "competency_description";
+  const showOptions = !isProjectAreaSource(field) && (field.field_type === "single_select" || field.field_type === "multi_select" || field.field_type === "competency_description");
   const showDescription = field.field_type === "competency_description";
 
   const handleAddOption = () => {
@@ -148,6 +161,12 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
           <input type="checkbox" checked={field.is_active} onChange={(e) => onPatch(field.id, { is_active: e.target.checked })} className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20" /> Ativo
         </label>
       </div>
+
+      {isProjectAreaSource(field) && (
+        <div className="mt-4 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-xs font-medium text-[#042558]/60">
+          As opções deste campo vêm do cadastro de {field.data_source === "areas" ? "Áreas" : "Setores"} do projeto.
+        </div>
+      )}
 
       {showOptions && (
         <div className="mt-4 border-t border-[#042558]/10 pt-4">
@@ -237,7 +256,7 @@ export function BaseManager({
     query = projectIdRef.current ? query.eq("project_id", projectIdRef.current) : query.is("project_id", null);
     const { data, error } = await query;
     if (error) toast.error(error.message);
-    setFields((data ?? []) as Field[]);
+    setFields(((data ?? []) as Field[]).map(normalizeField));
 
     let limitsQuery = supabase.from("base_section_settings").select("id,section,max_items,is_enabled");
     limitsQuery = projectIdRef.current ? limitsQuery.eq("project_id", projectIdRef.current) : limitsQuery.is("project_id", null);
@@ -260,10 +279,16 @@ export function BaseManager({
   }, [projectId, load]);
 
   const patchLocal = useCallback((id: string, patch: Partial<Field>) =>
-    setFields((cur) => cur.map((f) => (f.id === id ? { ...f, ...patch } : f))), []);
+    setFields((cur) => cur.map((f) => {
+      if (f.id !== id) return f;
+      const next = normalizeField({ ...f, ...patch });
+      return isProjectAreaSource(next) ? { ...next, field_type: "single_select" } : next;
+    })), []);
 
   const save = useCallback(async (field: Field) => {
-    const { base_options: _options, ...payload } = field;
+    const normalized = normalizeField(field);
+    const savedField = isProjectAreaSource(normalized) ? { ...normalized, field_type: "single_select" as FieldType } : normalized;
+    const { base_options: _options, ...payload } = savedField;
     const { error } = await supabase.from("base_fields").update(payload).eq("id", field.id);
     if (error) toast.error(error.message);
     else toast.success("Campo atualizado");
@@ -274,6 +299,7 @@ export function BaseManager({
     if (!label) return;
     const sectionFields = fieldsRef.current.filter((f) => f.section === sectionKey);
     const fieldKey = `${slugify(label)}_${Date.now()}`;
+    const dataSource = normalizeFieldDataSource({ field_key: fieldKey, label });
     const { data, error } = await supabase
       .from("base_fields")
       .insert({
@@ -281,13 +307,14 @@ export function BaseManager({
         field_key: fieldKey,
         label,
         section: sectionKey,
-        field_type: "text",
+        field_type: dataSource === "manual" ? "text" : "single_select",
         display_order: sectionFields.length * 10 + 10,
+        data_source: dataSource,
       })
       .select("*,base_options(*)")
       .single();
     if (error) return toast.error(error.message);
-    setFields((cur) => [...cur, data as Field]);
+    setFields((cur) => [...cur, normalizeField(data as Field)]);
     setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
     toast.success("Campo criado");
   }, []);
