@@ -27,6 +27,7 @@ type FieldType = "text" | "textarea" | "select";
 type ParticipantType = "collaborator" | "leader";
 type ParticipantStatus = "not_sent" | "sent" | "accessed" | "in_progress" | "answered";
 type ReviewStatus = "draft" | "waiting_responses" | "ready_for_comparison" | "finalized";
+type ReviewType = "experience" | "performance";
 
 export type PerformanceQuestion = {
   id: string;
@@ -65,6 +66,7 @@ type ConfigRow = {
   project_id: string | null;
   name: string | null;
   period_days: number | null;
+  review_type?: ReviewType | null;
   questions_schema: PerformanceQuestion[];
   is_active: boolean;
 };
@@ -93,6 +95,7 @@ type ReviewRow = {
   period_name: string | null;
   period_days: number | null;
   due_date: string | null;
+  review_type?: ReviewType | null;
   activities_snapshot: PerformanceQuestion[];
   questions_snapshot: PerformanceQuestion[];
   status: ReviewStatus;
@@ -127,7 +130,10 @@ type AgendaItem = {
   dueDate: string;
   daysUntil: number;
   existingReview: ReviewRow | null;
+  reviewType: ReviewType;
 };
+
+const EXPERIENCE_LIMIT_DAYS = 90;
 
 const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   {
@@ -231,13 +237,13 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-            Avaliação de Desempenho
+            Avaliacoes
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-            Avaliação em dupla
+            Experiencia e desempenho
           </h1>
           <p className="mt-1 text-sm text-[#042558]/60">
-            Crie autoavaliações e avaliações do líder vinculadas à descrição de cargo.
+            Ate 90 dias de admissao, a avaliacao entra como experiencia; depois disso, entra como desempenho.
           </p>
         </div>
 
@@ -262,7 +268,7 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
         <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
           {!canManage ? (
             <div className="rounded-xl border border-dashed border-[#042558]/20 p-8 text-center text-sm text-[#042558]/50">
-              Apenas GP e administradores podem criar e comparar avaliações de desempenho.
+              Apenas GP e administradores podem criar e comparar avaliacoes.
             </div>
           ) : tab === "config" ? (
             <PerformancePeriodConfigPanel projectId={projectId} />
@@ -795,6 +801,7 @@ export function PerformancePeriodConfigPanel({
   const [newPeriodDays, setNewPeriodDays] = useState("");
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [configTypeTab, setConfigTypeTab] = useState<ReviewType>("experience");
 
   const hydrate = (config: ConfigRow) => {
     const normalized = normalizeConfigRow(config);
@@ -822,16 +829,20 @@ export function PerformancePeriodConfigPanel({
     }
 
     let rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
-    const requiredDays = [30, 45, 90];
+    const requiredDays = configTypeTab === "experience" ? [30, 45, 90] : [90];
     const missingDays = requiredDays.filter(
-      (days) => !rows.some((config) => config.period_days === days),
+      (days) =>
+        !rows.some(
+          (config) => config.period_days === days && (config.review_type ?? "experience") === configTypeTab,
+        ),
     );
     if (missingDays.length > 0) {
       const { error: insertError } = await supabase.from("performance_review_configs").insert(
         missingDays.map((days) => ({
           project_id: projectId,
-          name: `${days} dias`,
+          name: configTypeTab === "experience" ? `${days} dias` : "Desempenho",
           period_days: days,
+          review_type: configTypeTab,
           questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
             ...question,
             id: `${question.id}_${uid()}`,
@@ -860,19 +871,33 @@ export function PerformancePeriodConfigPanel({
     const initialSelected =
       selected ??
       (initialPeriodDays
-        ? rows.find((config) => config.period_days === initialPeriodDays) ?? null
+        ? rows.find(
+            (config) =>
+              config.period_days === initialPeriodDays &&
+              (config.review_type ?? "experience") === configTypeTab,
+          ) ?? null
         : null);
     if (initialSelected) {
       setSelectedId(initialSelected.id);
       hydrate(initialSelected);
     } else setSelectedId(null);
-  }, [initialPeriodDays, projectId, selectedId, user?.id]);
+  }, [configTypeTab, initialPeriodDays, projectId, selectedId, user?.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const selectedConfig = configs.find((config) => config.id === selectedId) ?? null;
+  const filteredConfigs = configs.filter(
+    (config) => (config.review_type ?? "experience") === configTypeTab,
+  );
+  const configCounts = configs.reduce(
+    (acc, config) => {
+      acc[config.review_type ?? "experience"] += 1;
+      return acc;
+    },
+    { experience: 0, performance: 0 } as Record<ReviewType, number>,
+  );
 
   const selectConfig = (config: ConfigRow) => {
     setSelectedId(config.id);
@@ -882,7 +907,7 @@ export function PerformancePeriodConfigPanel({
   const createPeriod = async () => {
     const days = Number(newPeriodDays);
     if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
-    if (configs.some((config) => config.period_days === days)) {
+    if (configs.some((config) => config.period_days === days && (config.review_type ?? "experience") === configTypeTab)) {
       return toast.error(`Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`);
     }
     const name = newPeriodName.trim() || `${days} dias`;
@@ -893,6 +918,7 @@ export function PerformancePeriodConfigPanel({
         project_id: projectId,
         name,
         period_days: days,
+        review_type: configTypeTab,
         questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
           ...question,
           id: `${question.id}_${uid()}`,
@@ -904,7 +930,8 @@ export function PerformancePeriodConfigPanel({
       .single();
     setCreating(false);
     if (error || !data) {
-      const message = error?.message?.includes("performance_review_configs_project_period_unique")
+      const message = error?.message?.includes("performance_review_configs_project_type_period_unique")
+        || error?.message?.includes("performance_review_configs_general_type_period_unique")
         ? `Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`
         : error?.message ?? "Nao foi possivel criar.";
       return toast.error(message);
@@ -925,7 +952,14 @@ export function PerformancePeriodConfigPanel({
     const days = Number(periodDays);
     if (!periodName.trim()) return toast.error("Informe o nome do periodo.");
     if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
-    if (configs.some((config) => config.id !== selectedConfig.id && config.period_days === days)) {
+    if (
+      configs.some(
+        (config) =>
+          config.id !== selectedConfig.id &&
+          config.period_days === days &&
+          (config.review_type ?? "experience") === (selectedConfig.review_type ?? "experience"),
+      )
+    ) {
       return toast.error(`Ja existe outro modelo com ${days} dias.`);
     }
 
@@ -935,13 +969,15 @@ export function PerformancePeriodConfigPanel({
       .update({
         name: periodName.trim(),
         period_days: days,
+        review_type: selectedConfig.review_type ?? "experience",
         questions_schema: questions,
         is_active: isActive,
       } as any)
       .eq("id", selectedConfig.id);
     setSaving(false);
     if (error) {
-      const message = error.message.includes("performance_review_configs_project_period_unique")
+      const message = error.message.includes("performance_review_configs_project_type_period_unique")
+        || error.message.includes("performance_review_configs_general_type_period_unique")
         ? `Ja existe outro modelo com ${days} dias.`
         : error.message;
       return toast.error(message);
@@ -976,17 +1012,63 @@ export function PerformancePeriodConfigPanel({
 
   return (
     <div className="space-y-5">
+      <section className="border-b border-[#042558]/10 pb-1">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+              Tipo de modelo
+            </h2>
+            <p className="mt-1 text-xs text-[#042558]/50">
+              Separe os modelos usados na experiencia dos modelos usados em desempenho.
+            </p>
+          </div>
+          <div className="flex min-w-fit gap-6">
+            {(["experience", "performance"] as ReviewType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  setConfigTypeTab(type);
+                  setSelectedId(null);
+                }}
+                className={`relative pb-3 text-sm font-semibold transition ${
+                  configTypeTab === type
+                    ? "text-[#042558]"
+                    : "text-[#042558]/40 hover:text-[#042558]/70"
+                }`}
+              >
+                {type === "experience" ? "Modelos de experiencia" : "Modelos de desempenho"}
+                <span
+                  className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    configTypeTab === type
+                      ? "bg-[#042558]/10 text-[#042558]"
+                      : "bg-[#042558]/5 text-[#042558]/45"
+                  }`}
+                >
+                  {configCounts[type]}
+                </span>
+                {configTypeTab === type && (
+                  <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[#042558]" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {!selectedConfig && (
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-[#042558]">Modelos por periodo</h2>
+          <h2 className="text-xl font-bold text-[#042558]">
+            {configTypeTab === "experience" ? "Modelos de experiencia" : "Modelos de desempenho"}
+          </h2>
           <p className="text-sm text-[#042558]/60">
             Cada bloco guarda as perguntas usadas em um periodo de avaliacao.
           </p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {configs.map((config) => {
+          {filteredConfigs.map((config) => {
             const active = config.id === selectedId;
             return (
               <button
@@ -1224,7 +1306,7 @@ export function PerformancePeriodConfigPanel({
             ))}
           </div>
         </section>
-      ) : configs.length === 0 ? (
+      ) : filteredConfigs.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-[#042558]/15 bg-white/60 p-8 text-center text-sm text-[#042558]/45">
           Crie um modelo de periodo para configurar as perguntas.
         </div>
@@ -1238,6 +1320,7 @@ function normalizeConfigRow(config: ConfigRow): ConfigRow {
     ...config,
     name: config.name ?? "Padrao",
     period_days: config.period_days ?? 30,
+    review_type: config.review_type ?? "experience",
     questions_schema: config.questions_schema ?? [],
     is_active: config.is_active ?? true,
   };
@@ -1258,6 +1341,16 @@ function daysBetween(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00`).getTime();
   const to = new Date(`${toDate}T00:00:00`).getTime();
   return Math.round((to - from) / 86_400_000);
+}
+
+function getEmployeeReviewType(employee: PerfEmployeeRow, today: string): ReviewType {
+  return daysBetween(employee.admission_date, today) > EXPERIENCE_LIMIT_DAYS
+    ? "performance"
+    : "experience";
+}
+
+function reviewTypeLabel(type: ReviewType) {
+  return type === "experience" ? "Experiencia" : "Desempenho";
 }
 
 function formatDateOnly(dateValue: string) {
@@ -1400,15 +1493,34 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         const employeePosition = positions.find((position) => position.id === employee.position_id) ?? null;
         const description =
           descriptions.find((dc) => dc.organization_position_id === employee.position_id) ?? null;
-        return configs.map((config) => {
+        const reviewType = getEmployeeReviewType(employee, today);
+        const configsForType = configs.filter((config) => (config.review_type ?? "experience") === reviewType);
+        const performanceConfig =
+          configsForType.find((config) => config.period_days === EXPERIENCE_LIMIT_DAYS) ??
+          configsForType[configsForType.length - 1] ??
+          null;
+        const employeeConfigs = reviewType === "experience"
+          ? configsForType.filter((config) => (config.period_days ?? 0) <= EXPERIENCE_LIMIT_DAYS)
+          : performanceConfig
+            ? [performanceConfig]
+            : [];
+        return employeeConfigs.map((config) => {
           const baseDate = employee.last_performance_review_date || employee.admission_date;
-          const dueDate = config.period_days ? addDaysToDate(baseDate, config.period_days) : baseDate;
+          const dueDate =
+            reviewType === "performance" && !employee.last_performance_review_date
+              ? today
+              : config.period_days
+                ? addDaysToDate(baseDate, config.period_days)
+                : baseDate;
           const existingReview =
             reviews.find(
               (review) =>
                 review.employee_id === employee.id &&
-                review.config_id === config.id &&
-                review.due_date === dueDate,
+                (review.config_id === config.id || review.review_type === reviewType) &&
+                (review.review_type ?? reviewType) === reviewType &&
+                (reviewType === "performance" && review.status !== "finalized"
+                  ? true
+                  : review.due_date === dueDate),
             ) ?? null;
           return {
             id: `${employee.id}:${config.id}:${dueDate}`,
@@ -1421,6 +1533,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             dueDate,
             daysUntil: daysBetween(today, dueDate),
             existingReview,
+            reviewType,
           };
         });
       })
@@ -1437,6 +1550,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             item.employeePosition?.nome,
             item.leader?.nome,
             periodLabel(item.config),
+            reviewTypeLabel(item.reviewType),
           ]
             .filter(Boolean)
             .join(" ")
@@ -1471,7 +1585,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         project_id: projectId,
         config_id: item.config.id,
         employee_id: item.employee.id,
-        name: `${periodLabel(item.config)} - ${item.employee.nome}`,
+        name: `${reviewTypeLabel(item.reviewType)} - ${item.employee.nome}`,
         employee_position_id: item.employee.position_id,
         leader_position_id: item.leader.position_id,
         job_description_id: item.description.id,
@@ -1481,6 +1595,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         period_name: periodLabel(item.config),
         period_days: item.config.period_days,
         due_date: item.dueDate,
+        review_type: item.reviewType,
         job_description_snapshot: item.description,
         activities_snapshot: activities,
         questions_snapshot: questions,
@@ -1506,7 +1621,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             Agenda de avaliacoes
           </h2>
           <p className="mt-1 text-xs text-[#042558]/50">
-            Organizada por pessoa. Datas calculadas pela ultima avaliacao ou admissao.
+            Organizada por pessoa. Ate 90 dias entra como experiencia; depois disso entra como desempenho.
           </p>
         </div>
         <span className="w-fit rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
@@ -1545,7 +1660,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                   <div>
                     <h3 className="font-semibold text-[#042558]">{employee.nome}</h3>
                     <p className="text-xs text-[#042558]/50">
-                      {position?.nome ?? "sem cargo"} · base:{" "}
+                      {position?.nome ?? "sem cargo"} · {reviewTypeLabel(items[0].reviewType)} · base:{" "}
                       {formatDateOnly(employee.last_performance_review_date || employee.admission_date)}
                       {employee.last_performance_review_date ? " (ultima avaliacao)" : " (admissao)"}
                     </p>
@@ -1569,7 +1684,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium text-[#042558]">
-                              {periodLabel(item.config)}
+                              {reviewTypeLabel(item.reviewType)} · {periodLabel(item.config)}
                             </span>
                             {item.existingReview ? (
                               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
@@ -1632,6 +1747,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [employeeId, setEmployeeId] = useState("");
   const [leaderEmployeeId, setLeaderEmployeeId] = useState("");
   const [days, setDays] = useState(14);
+  const [reviewTypeTab, setReviewTypeTab] = useState<ReviewType>("experience");
 
   const load = useCallback(async () => {
     const [{ data: revs }, { data: parts }, { data: pos }, { data: emps }, { data: dcs }, { data: cfgs }] =
@@ -1693,15 +1809,34 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     !!selectedEmployee &&
     !!leaderEmployeeId &&
     selectedEmployee.superior_imediato_id === leaderEmployeeId;
-  const selectedConfig = configs.find((config) => config.id === configId) ?? null;
+  const today = new Date().toISOString().slice(0, 10);
+  const selectedReviewType = selectedEmployee ? getEmployeeReviewType(selectedEmployee, today) : null;
+  const formReviewType = selectedReviewType ?? reviewTypeTab;
+  const availableConfigs = useMemo(
+    () => configs.filter((config) => (config.review_type ?? "experience") === formReviewType),
+    [configs, formReviewType],
+  );
+  const selectedConfig = availableConfigs.find((config) => config.id === configId) ?? null;
   const getEmployeeBaseDate = useCallback(
     (employee: PerfEmployeeRow) => employee.last_performance_review_date || employee.admission_date,
     [],
   );
   const expectedReviewDate =
     selectedEmployee && selectedConfig?.period_days
-      ? addDaysToDate(getEmployeeBaseDate(selectedEmployee), selectedConfig.period_days)
+      ? selectedReviewType === "performance" && !selectedEmployee.last_performance_review_date
+        ? today
+        : addDaysToDate(getEmployeeBaseDate(selectedEmployee), selectedConfig.period_days)
       : null;
+  const reviewCounts = reviews.reduce(
+    (acc, review) => {
+      acc[review.review_type ?? "experience"] += 1;
+      return acc;
+    },
+    { experience: 0, performance: 0 } as Record<ReviewType, number>,
+  );
+  const filteredReviews = reviews.filter(
+    (review) => (review.review_type ?? "experience") === reviewTypeTab,
+  );
   const agendaItems: AgendaItem[] = [];
 
   useEffect(() => {
@@ -1711,6 +1846,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       return employee?.superior_imediato_id === leaderEmployeeId ? current : "";
     });
   }, [employees, leaderEmployeeId]);
+
+  useEffect(() => {
+    if (availableConfigs.some((config) => config.id === configId)) return;
+    setConfigId(availableConfigs[0]?.id ?? "");
+  }, [availableConfigs, configId]);
 
   const createReview = async () => {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
@@ -1748,6 +1888,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         period_name: periodLabel(selectedConfig),
         period_days: selectedConfig.period_days,
         due_date: expectedReviewDate,
+        review_type: formReviewType,
         job_description_snapshot: selectedDc,
         activities_snapshot: activities,
         questions_snapshot: questions,
@@ -1877,20 +2018,61 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         )}
       </section>
 
+      <section className="border-b border-[#042558]/10 pb-1">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+              Tipo de avaliacao
+            </h2>
+            <p className="mt-1 text-xs text-[#042558]/50">
+              A separacao e feita automaticamente pela data de admissao do funcionario.
+            </p>
+          </div>
+          <div className="flex min-w-fit gap-6">
+            {(["experience", "performance"] as ReviewType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setReviewTypeTab(type)}
+                className={`relative pb-3 text-sm font-semibold transition ${
+                  reviewTypeTab === type
+                    ? "text-[#042558]"
+                    : "text-[#042558]/40 hover:text-[#042558]/70"
+                }`}
+              >
+                {type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho"}
+                <span
+                  className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    reviewTypeTab === type
+                      ? "bg-[#042558]/10 text-[#042558]"
+                      : "bg-[#042558]/5 text-[#042558]/45"
+                  }`}
+                >
+                  {reviewCounts[type]}
+                </span>
+                {reviewTypeTab === type && (
+                  <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[#042558]" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#042558]">
-          Nova avaliação de desempenho
+          Nova avaliacao
         </h2>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Nome da avaliação
+              Nome da avaliacao
             </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputClass}
-              placeholder="Ex: Avaliação semestral"
+              placeholder="Ex: Avaliacao semestral"
             />
           </label>
           <label className="block">
@@ -1903,7 +2085,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               className={inputClass}
             >
               <option value="">Selecione um modelo</option>
-              {configs.map((config) => (
+              {availableConfigs.map((config) => (
                 <option key={config.id} value={config.id}>
                   {periodLabel(config)}
                 </option>
@@ -1985,6 +2167,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         )}
         {selectedEmployee && selectedConfig && expectedReviewDate && (
           <p className="mt-3 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
+            {selectedReviewType ? `${reviewTypeLabel(selectedReviewType)} · ` : ""}
             Data prevista: {formatDateOnly(expectedReviewDate)} ({periodLabel(selectedConfig)} apos a data base de {formatDateOnly(getEmployeeBaseDate(selectedEmployee))}).
           </p>
         )}
@@ -1998,17 +2181,17 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           onClick={createReview}
           className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white"
         >
-          <Plus className="h-4 w-4" /> Nova avaliação de desempenho
+          <Plus className="h-4 w-4" /> Criar avaliacao
         </button>
       </section>
 
       <section className="space-y-3">
-        {reviews.length === 0 ? (
+        {filteredReviews.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-8 text-center text-sm text-[#042558]/40">
             Nenhuma avaliação criada.
           </div>
         ) : (
-          reviews.map((review) => {
+          filteredReviews.map((review) => {
             const ps = participants.filter((p) => p.review_id === review.id);
             const collaborator = ps.find((p) => p.participant_type === "collaborator");
             const leader = ps.find((p) => p.participant_type === "leader");
@@ -2025,6 +2208,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     </p>
                     {(review.period_name || review.due_date) && (
                       <p className="mt-1 text-xs text-[#042558]/45">
+                        {review.review_type ? `${reviewTypeLabel(review.review_type)} - ` : ""}
                         {review.period_name ?? "Periodo"} {review.due_date ? `- prevista para ${formatDateOnly(review.due_date)}` : ""}
                       </p>
                     )}

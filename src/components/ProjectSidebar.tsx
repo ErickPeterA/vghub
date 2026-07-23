@@ -47,14 +47,14 @@ export function ProjectSidebar({
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => setProjectRole(data?.role ?? null));
-  }, [projectId, user?.id]);
+  }, [projectId, user]);
 
   const isLider = !isAdmin && projectRole !== null && LIDER_ROLES.has(projectRole);
 
   const allItems = [
     { to: "/projetos/$projectId/descricao-cargo", href: `/projetos/${projectId}/descricao-cargo`, icon: FileText, label: "Aprovações" },
     { to: "/projetos/$projectId/atividades", href: `/projetos/${projectId}/atividades`, icon: ClipboardList, label: "Atividades", badge: unreviewed },
-    { to: "/projetos/$projectId/avaliacao-desempenho", href: `/projetos/${projectId}/avaliacao-desempenho`, icon: ClipboardCheck, label: "Avaliacao de Desempenho" },
+    { to: "/projetos/$projectId/avaliacao-desempenho", href: `/projetos/${projectId}/avaliacao-desempenho`, icon: ClipboardCheck, label: "Avaliacoes" },
     { to: "/projetos/$projectId/organograma", href: `/projetos/${projectId}/organograma`, icon: GitFork, label: "Organograma" },
     { to: "/projetos/$projectId/funcionarios", href: `/projetos/${projectId}/funcionarios`, icon: Users, label: "Funcionarios" },
     { to: "/projetos/$projectId/areas", href: `/projetos/${projectId}/areas`, icon: Network, label: "Áreas" },
