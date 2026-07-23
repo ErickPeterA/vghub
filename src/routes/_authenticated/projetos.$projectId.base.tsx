@@ -7,5 +7,11 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/base")
 
 function ProjectBasePage() {
   const { projectId } = Route.useParams();
-  return <BaseManager projectId={projectId} title="Base do Projeto" description="Edite, desative, remova ou acrescente campos e opções sem alterar a Base Geral nem outros projetos." />;
+  return (
+    <BaseManager
+      projectId={projectId}
+      title="Base do Projeto"
+      description="Edite, desative, remova ou acrescente campos e opcoes sem alterar a Base Geral nem outros projetos."
+    />
+  );
 }

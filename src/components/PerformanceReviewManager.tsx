@@ -62,7 +62,7 @@ type PerfEmployeeRow = {
 };
 type ConfigRow = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   name: string | null;
   period_days: number | null;
   questions_schema: PerformanceQuestion[];
@@ -115,6 +115,18 @@ type HistoryRow = {
   new_answer: string | null;
   changed_by: string | null;
   changed_at: string;
+};
+type AgendaItem = {
+  id: string;
+  employee: PerfEmployeeRow;
+  leader: PerfEmployeeRow | null;
+  employeePosition: PositionRow | null;
+  description: DcRow | null;
+  config: ConfigRow;
+  baseDate: string;
+  dueDate: string;
+  daysUntil: number;
+  existingReview: ReviewRow | null;
 };
 
 const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
@@ -187,7 +199,7 @@ const inputClass =
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
   const { user, isAdmin } = useCurrentUser();
-  const [tab, setTab] = useState<"reviews" | "config">("reviews");
+  const [tab, setTab] = useState<"reviews" | "schedule" | "config">("reviews");
   const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
@@ -235,6 +247,11 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
               Avaliações
             </TabButton>
             {canManage && (
+              <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")}>
+                Agenda
+              </TabButton>
+            )}
+            {canManage && (
               <TabButton active={tab === "config"} onClick={() => setTab("config")}>
                 Modelos
               </TabButton>
@@ -249,6 +266,8 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
             </div>
           ) : tab === "config" ? (
             <PerformancePeriodConfigPanel projectId={projectId} />
+          ) : tab === "schedule" ? (
+            <PerformanceAgendaPanel projectId={projectId} />
           ) : (
             <PerformanceReviewsPanel projectId={projectId} />
           )}
@@ -413,6 +432,15 @@ export function PerformanceComparisonPage({
       })
       .eq("id", review.id);
     if (error) return toast.error(error.message);
+    if (review.employee_id) {
+      await (supabase as any)
+        .from("project_employees")
+        .update({
+          last_performance_review_date: review.due_date ?? new Date().toISOString().slice(0, 10),
+        })
+        .eq("id", review.employee_id)
+        .eq("project_id", projectId);
+    }
     toast.success("Avaliação finalizada");
     await load();
   };
@@ -748,7 +776,13 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
   );
 }
 
-function PerformancePeriodConfigPanel({ projectId }: { projectId: string }) {
+export function PerformancePeriodConfigPanel({
+  projectId,
+  initialPeriodDays = null,
+}: {
+  projectId: string | null;
+  initialPeriodDays?: number | null;
+}) {
   const { user } = useCurrentUser();
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -776,22 +810,63 @@ function PerformancePeriodConfigPanel({ projectId }: { projectId: string }) {
   };
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("performance_review_configs")
       .select("*")
-      .eq("project_id", projectId)
       .order("period_days", { ascending: true });
+    query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
+    const { data, error } = await query;
     if (error) {
       toast.error(error.message);
       return;
     }
 
-    const rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    let rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    const requiredDays = [30, 45, 90];
+    const missingDays = requiredDays.filter(
+      (days) => !rows.some((config) => config.period_days === days),
+    );
+    if (missingDays.length > 0) {
+      const { error: insertError } = await supabase.from("performance_review_configs").insert(
+        missingDays.map((days) => ({
+          project_id: projectId,
+          name: `${days} dias`,
+          period_days: days,
+          questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
+            ...question,
+            id: `${question.id}_${uid()}`,
+          })),
+          is_active: true,
+          created_by: user?.id ?? null,
+        })) as never,
+      );
+      if (insertError) {
+        toast.error(insertError.message);
+      } else {
+        let refreshedQuery = supabase
+          .from("performance_review_configs")
+          .select("*")
+          .order("period_days", { ascending: true });
+        refreshedQuery = projectId
+          ? refreshedQuery.eq("project_id", projectId)
+          : refreshedQuery.is("project_id", null);
+        const { data: refreshed } = await refreshedQuery;
+        rows = ((refreshed ?? []) as ConfigRow[]).map(normalizeConfigRow);
+      }
+    }
+
     setConfigs(rows);
     const selected = rows.find((config) => config.id === selectedId) ?? null;
-    if (selected) hydrate(selected);
-    else setSelectedId(null);
-  }, [projectId, selectedId]);
+    const initialSelected =
+      selected ??
+      (initialPeriodDays
+        ? rows.find((config) => config.period_days === initialPeriodDays) ?? null
+        : null);
+    if (initialSelected) {
+      setSelectedId(initialSelected.id);
+      hydrate(initialSelected);
+    } else setSelectedId(null);
+  }, [initialPeriodDays, projectId, selectedId, user?.id]);
 
   useEffect(() => {
     void load();
@@ -863,8 +938,7 @@ function PerformancePeriodConfigPanel({ projectId }: { projectId: string }) {
         questions_schema: questions,
         is_active: isActive,
       } as any)
-      .eq("id", selectedConfig.id)
-      .eq("project_id", projectId);
+      .eq("id", selectedConfig.id);
     setSaving(false);
     if (error) {
       const message = error.message.includes("performance_review_configs_project_period_unique")
@@ -882,8 +956,7 @@ function PerformancePeriodConfigPanel({ projectId }: { projectId: string }) {
     const { error } = await supabase
       .from("performance_review_configs")
       .delete()
-      .eq("id", selectedConfig.id)
-      .eq("project_id", projectId);
+      .eq("id", selectedConfig.id);
     if (error) return toast.error(error.message);
     toast.success("Modelo removido");
     setSelectedId(null);
@@ -1181,6 +1254,12 @@ function addDaysToDate(dateValue: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function daysBetween(fromDate: string, toDate: string) {
+  const from = new Date(`${fromDate}T00:00:00`).getTime();
+  const to = new Date(`${toDate}T00:00:00`).getTime();
+  return Math.round((to - from) / 86_400_000);
+}
+
 function formatDateOnly(dateValue: string) {
   return new Date(`${dateValue}T00:00:00`).toLocaleDateString("pt-BR");
 }
@@ -1263,6 +1342,283 @@ function SelectOptionsEditor({
   );
 }
 
+function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
+  const { user } = useCurrentUser();
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [positions, setPositions] = useState<PositionRow[]>([]);
+  const [employees, setEmployees] = useState<PerfEmployeeRow[]>([]);
+  const [descriptions, setDescriptions] = useState<DcRow[]>([]);
+  const [configs, setConfigs] = useState<ConfigRow[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [{ data: revs }, { data: pos }, { data: emps }, { data: dcs }, { data: cfgs }] =
+      await Promise.all([
+        supabase
+          .from("performance_reviews")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("due_date", { ascending: true }),
+        supabase
+          .from("project_positions")
+          .select("id,nome,parent_id")
+          .eq("project_id", projectId)
+          .eq("status", "active")
+          .order("display_order"),
+        (supabase as any)
+          .from("project_employees")
+          .select("id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date")
+          .eq("project_id", projectId)
+          .order("nome"),
+        supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
+        supabase
+          .from("performance_review_configs")
+          .select("*")
+          .eq("project_id", projectId)
+          .eq("is_active", true)
+          .order("period_days", { ascending: true }),
+      ]);
+    setReviews((revs ?? []) as ReviewRow[]);
+    setPositions((pos ?? []) as PositionRow[]);
+    setEmployees((emps ?? []) as PerfEmployeeRow[]);
+    setDescriptions((dcs ?? []) as DcRow[]);
+    setConfigs(((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow));
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const agendaItems = useMemo<AgendaItem[]>(() => {
+    return employees
+      .flatMap((employee) => {
+        const leader = employees.find((item) => item.id === employee.superior_imediato_id) ?? null;
+        const employeePosition = positions.find((position) => position.id === employee.position_id) ?? null;
+        const description =
+          descriptions.find((dc) => dc.organization_position_id === employee.position_id) ?? null;
+        return configs.map((config) => {
+          const baseDate = employee.last_performance_review_date || employee.admission_date;
+          const dueDate = config.period_days ? addDaysToDate(baseDate, config.period_days) : baseDate;
+          const existingReview =
+            reviews.find(
+              (review) =>
+                review.employee_id === employee.id &&
+                review.config_id === config.id &&
+                review.due_date === dueDate,
+            ) ?? null;
+          return {
+            id: `${employee.id}:${config.id}:${dueDate}`,
+            employee,
+            leader,
+            employeePosition,
+            description,
+            config,
+            baseDate,
+            dueDate,
+            daysUntil: daysBetween(today, dueDate),
+            existingReview,
+          };
+        });
+      })
+      .filter((item) => !item.existingReview || item.existingReview.status !== "finalized")
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.employee.nome.localeCompare(b.employee.nome, "pt-BR"));
+  }, [configs, descriptions, employees, positions, reviews, today]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const groupedAgenda = useMemo(() => {
+    const filtered = normalizedQuery
+      ? agendaItems.filter((item) => {
+          const text = [
+            item.employee.nome,
+            item.employeePosition?.nome,
+            item.leader?.nome,
+            periodLabel(item.config),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return text.includes(normalizedQuery);
+        })
+      : agendaItems;
+    const byEmployee = new Map<string, AgendaItem[]>();
+    filtered.forEach((item) => {
+      byEmployee.set(item.employee.id, [...(byEmployee.get(item.employee.id) ?? []), item]);
+    });
+    return Array.from(byEmployee.values()).sort((a, b) =>
+      a[0].employee.nome.localeCompare(b[0].employee.nome, "pt-BR"),
+    );
+  }, [agendaItems, normalizedQuery]);
+
+  const createAgendaReview = async (item: AgendaItem) => {
+    if (item.existingReview) return;
+    if (!item.leader) return toast.error("Cadastre o lider imediato deste funcionario primeiro.");
+    if (!item.description) return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
+    const leaderPosition = positions.find((position) => position.id === item.leader?.position_id) ?? null;
+    if (!item.employeePosition || !leaderPosition) return toast.error("Colaborador ou lider invalido.");
+    const activities = buildActivityQuestions(item.description);
+    const questions = (item.config.questions_schema ?? [])
+      .filter((question) => question.active ?? true)
+      .map((question) => ({ ...question, source: "config" as const }));
+    const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: review, error } = await supabase
+      .from("performance_reviews")
+      .insert({
+        project_id: projectId,
+        config_id: item.config.id,
+        employee_id: item.employee.id,
+        name: `${periodLabel(item.config)} - ${item.employee.nome}`,
+        employee_position_id: item.employee.position_id,
+        leader_position_id: item.leader.position_id,
+        job_description_id: item.description.id,
+        employee_name: item.employee.nome,
+        leader_name: item.leader.nome,
+        job_title: item.description.cargo || item.employeePosition.nome,
+        period_name: periodLabel(item.config),
+        period_days: item.config.period_days,
+        due_date: item.dueDate,
+        job_description_snapshot: item.description,
+        activities_snapshot: activities,
+        questions_snapshot: questions,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (error || !review) return toast.error(error?.message ?? "Nao foi possivel criar.");
+    const { error: partErr } = await supabase.from("performance_review_participants").insert([
+      { review_id: review.id, project_id: projectId, participant_type: "collaborator", expires_at },
+      { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
+    ]);
+    if (partErr) return toast.error(partErr.message);
+    toast.success("Avaliacao criada na agenda");
+    await load();
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+            Agenda de avaliacoes
+          </h2>
+          <p className="mt-1 text-xs text-[#042558]/50">
+            Organizada por pessoa. Datas calculadas pela ultima avaliacao ou admissao.
+          </p>
+        </div>
+        <span className="w-fit rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
+          {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length} notificacao(oes)
+        </span>
+      </div>
+
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        className={inputClass}
+        placeholder="Pesquisar pessoa, cargo, lider ou modelo"
+      />
+
+      {loading ? (
+        <div className="rounded-xl border border-[#042558]/10 bg-white/60 p-8 text-center text-sm text-[#042558]/45">
+          Carregando agenda...
+        </div>
+      ) : configs.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-8 text-center text-sm text-[#042558]/45">
+          Nenhum modelo ativo. Ative os modelos que devem entrar na agenda.
+        </div>
+      ) : groupedAgenda.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-8 text-center text-sm text-[#042558]/45">
+          Nenhuma pessoa encontrada na agenda.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {groupedAgenda.map((items) => {
+            const employee = items[0].employee;
+            const position = items[0].employeePosition;
+            const dueCount = items.filter((item) => item.daysUntil <= 0 && !item.existingReview).length;
+            return (
+              <article key={employee.id} className="rounded-xl border border-[#042558]/10 bg-white p-4">
+                <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-[#042558]">{employee.nome}</h3>
+                    <p className="text-xs text-[#042558]/50">
+                      {position?.nome ?? "sem cargo"} · base:{" "}
+                      {formatDateOnly(employee.last_performance_review_date || employee.admission_date)}
+                      {employee.last_performance_review_date ? " (ultima avaliacao)" : " (admissao)"}
+                    </p>
+                  </div>
+                  {dueCount > 0 && (
+                    <span className="w-fit rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      {dueCount} pendente(s)
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {items.map((item) => {
+                    const isDue = item.daysUntil <= 0 && !item.existingReview;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex flex-col gap-3 rounded-lg border px-3 py-2 md:flex-row md:items-center md:justify-between ${
+                          isDue ? "border-amber-300 bg-amber-50" : "border-[#042558]/10 bg-[#042558]/[0.02]"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium text-[#042558]">
+                              {periodLabel(item.config)}
+                            </span>
+                            {item.existingReview ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                                Avaliacao criada
+                              </span>
+                            ) : isDue ? (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                {item.daysUntil === 0 ? "Vence hoje" : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-[#042558]/5 px-2 py-0.5 text-xs text-[#042558]/55">
+                                Em {item.daysUntil} dia(s)
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-[#042558]/50">
+                            Prevista para {formatDateOnly(item.dueDate)} · Lider:{" "}
+                            {item.leader?.nome ?? "sem lider cadastrado"}
+                          </p>
+                        </div>
+                        {item.existingReview ? (
+                          <a
+                            href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${item.existingReview.id}`}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+                          >
+                            <SplitSquareVertical className="h-4 w-4" /> Abrir
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => createAgendaReview(item)}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
+                          >
+                            <Plus className="h-4 w-4" /> Gerar
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const { user } = useCurrentUser();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
@@ -1338,14 +1694,23 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     !!leaderEmployeeId &&
     selectedEmployee.superior_imediato_id === leaderEmployeeId;
   const selectedConfig = configs.find((config) => config.id === configId) ?? null;
+  const getEmployeeBaseDate = useCallback(
+    (employee: PerfEmployeeRow) => employee.last_performance_review_date || employee.admission_date,
+    [],
+  );
   const expectedReviewDate =
     selectedEmployee && selectedConfig?.period_days
-      ? addDaysToDate(selectedEmployee.admission_date, selectedConfig.period_days)
+      ? addDaysToDate(getEmployeeBaseDate(selectedEmployee), selectedConfig.period_days)
       : null;
+  const agendaItems: AgendaItem[] = [];
 
   useEffect(() => {
-    setEmployeeId("");
-  }, [leaderEmployeeId]);
+    setEmployeeId((current) => {
+      if (!current) return "";
+      const employee = employees.find((item) => item.id === current);
+      return employee?.superior_imediato_id === leaderEmployeeId ? current : "";
+    });
+  }, [employees, leaderEmployeeId]);
 
   const createReview = async () => {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
@@ -1404,6 +1769,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     await load();
   };
 
+  const prepareAgendaReview = (_item: AgendaItem) => undefined;
+
   const markSentAndCopy = async (participant: ParticipantRow) => {
     const url = `${window.location.origin}/avaliacao-desempenho/preencher/${participant.token}`;
     try {
@@ -1423,6 +1790,93 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-5">
+      <section className="hidden">
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+              Agenda de avaliações
+            </h2>
+            <p className="mt-1 text-xs text-[#042558]/50">
+              Datas calculadas pela última avaliação do funcionário ou, se não houver, pela admissão.
+            </p>
+          </div>
+          <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
+            {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length} notificação(ões)
+          </span>
+        </div>
+
+        {configs.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/45">
+            Nenhum modelo ativo. Ative os modelos que devem entrar na agenda.
+          </div>
+        ) : agendaItems.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/45">
+            Nenhuma avaliação prevista para os modelos ativos.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {agendaItems.slice(0, 12).map((item) => {
+              const isDue = item.daysUntil <= 0 && !item.existingReview;
+              const isToday = item.daysUntil === 0;
+              return (
+                <div
+                  key={item.id}
+                  className={`flex flex-col gap-3 rounded-xl border p-3 md:flex-row md:items-center md:justify-between ${
+                    isDue ? "border-amber-300 bg-amber-50" : "border-[#042558]/10 bg-white"
+                  }`}
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-[#042558]">{item.employee.nome}</p>
+                      <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs text-[#042558]">
+                        {periodLabel(item.config)}
+                      </span>
+                      {item.existingReview ? (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                          Avaliação criada
+                        </span>
+                      ) : isDue ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          {isToday ? "Vence hoje" : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-[#042558]/5 px-2 py-0.5 text-xs text-[#042558]/55">
+                          Em {item.daysUntil} dia(s)
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-[#042558]/50">
+                      Prevista para {formatDateOnly(item.dueDate)} · base: {formatDateOnly(item.baseDate)}
+                      {item.employee.last_performance_review_date ? " (ultima avaliação)" : " (admissão)"}
+                    </p>
+                    <p className="mt-1 text-xs text-[#042558]/45">
+                      Lider: {item.leader?.nome ?? "sem lider cadastrado"} · Cargo:{" "}
+                      {item.employeePosition?.nome ?? "sem cargo"}
+                    </p>
+                  </div>
+                  {item.existingReview ? (
+                    <a
+                      href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${item.existingReview.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+                    >
+                      <SplitSquareVertical className="h-4 w-4" /> Abrir
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => prepareAgendaReview(item)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
+                    >
+                      <Plus className="h-4 w-4" /> Preparar
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#042558]">
           Nova avaliação de desempenho
@@ -1531,7 +1985,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         )}
         {selectedEmployee && selectedConfig && expectedReviewDate && (
           <p className="mt-3 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
-            Data prevista: {formatDateOnly(expectedReviewDate)} ({periodLabel(selectedConfig)} apos admissao em {formatDateOnly(selectedEmployee.admission_date)}).
+            Data prevista: {formatDateOnly(expectedReviewDate)} ({periodLabel(selectedConfig)} apos a data base de {formatDateOnly(getEmployeeBaseDate(selectedEmployee))}).
           </p>
         )}
         {selectedDc && (

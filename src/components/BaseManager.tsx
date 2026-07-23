@@ -223,10 +223,12 @@ export function BaseManager({
   projectId = null,
   title,
   description,
+  embedded = false,
 }: {
   projectId?: string | null;
   title: string;
   description: string;
+  embedded?: boolean;
 }) {
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
@@ -543,8 +545,8 @@ export function BaseManager({
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
-      <div className="mx-auto max-w-6xl">
+    <main className={embedded ? "" : "min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8"}>
+      <div className={embedded ? "" : "mx-auto max-w-6xl"}>
         {/* Header */}
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-start gap-4">
