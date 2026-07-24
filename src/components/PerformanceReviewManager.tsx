@@ -597,13 +597,6 @@ const DEFAULT_EXPERIENCE_90_QUESTIONS: PerformanceQuestion[] = [
   },
 ];
 
-const ACTIVITY_SCALE = [
-  "Não realiza",
-  "Em desenvolvimento",
-  "Realiza com apoio",
-  "Realiza com autonomia",
-  "Referência para o time",
-];
 const STATUS_LABEL: Record<ParticipantStatus, string> = {
   not_sent: "Não enviado",
   sent: "Enviado",
@@ -985,9 +978,7 @@ export function PerformanceComparisonPage({
                 <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      {question.source === "activity"
-                        ? "Atividade da descrição de cargo"
-                        : "Pergunta"}
+                      Pergunta
                     </p>
                     <h2 className="text-base font-semibold">{question.label}</h2>
                     {question.leaderLabel?.trim() && question.leaderLabel !== question.label && (
@@ -1106,7 +1097,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
         <div>
           <h2 className="text-xl font-bold text-[#042558]">Perguntas da avaliação</h2>
           <p className="text-sm text-[#042558]/60">
-            As atividades da descrição de cargo entram automaticamente como itens de avaliação.
+            Somente as perguntas configuradas no modelo entram na avaliação.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1626,7 +1617,7 @@ export function PerformancePeriodConfigPanel({
               </p>
               <h2 className="mt-1 text-xl font-bold text-[#042558]">{periodLabel(selectedConfig)}</h2>
               <p className="text-sm text-[#042558]/60">
-                As atividades da descricao de cargo entram automaticamente como itens de avaliacao.
+                Somente as perguntas configuradas no modelo entram na avaliacao.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2080,7 +2071,6 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
     if (!item.description) return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
     const leaderPosition = positions.find((position) => position.id === item.leader?.position_id) ?? null;
     if (!item.employeePosition || !leaderPosition) return toast.error("Colaborador ou lider invalido.");
-    const activities = buildActivityQuestions(item.description);
     const questions = (item.config.questions_schema ?? [])
       .filter((question) => question.active ?? true)
       .map((question) => ({ ...question, source: "config" as const }));
@@ -2104,7 +2094,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         due_date: item.dueDate,
         review_type: item.reviewType,
         job_description_snapshot: item.description,
-        activities_snapshot: activities,
+        activities_snapshot: [],
         questions_snapshot: questions,
         created_by: user?.id ?? null,
       })
@@ -2373,7 +2363,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
     if (!employeePosition || !leaderPosition) return toast.error("Colaborador ou líder inválido.");
 
-    const activities = buildActivityQuestions(selectedDc);
     const questions = (selectedConfig.questions_schema ?? [])
       .filter((q) => q.active ?? true)
       .map((q) => ({ ...q, source: "config" as const }));
@@ -2397,7 +2386,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         due_date: expectedReviewDate,
         review_type: formReviewType,
         job_description_snapshot: selectedDc,
-        activities_snapshot: activities,
+        activities_snapshot: [],
         questions_snapshot: questions,
         created_by: user?.id ?? null,
       })
@@ -2680,8 +2669,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         )}
         {selectedDc && (
           <p className="mt-3 text-sm text-[#042558]/60">
-            Descrição vinculada: {selectedDc.cargo || "sem cargo"} ·{" "}
-            {buildActivityQuestions(selectedDc).length} atividade(s) serão usadas como itens.
+            Descrição vinculada: {selectedDc.cargo || "sem cargo"}.
           </p>
         )}
         <button
@@ -3011,34 +2999,8 @@ function getDescendantPositionIds(positions: PositionRow[], leaderId: string) {
 
 export function allReviewQuestions(review: ReviewRow) {
   return [
-    ...((review.activities_snapshot ?? []) as PerformanceQuestion[]),
     ...((review.questions_snapshot ?? []) as PerformanceQuestion[]),
   ].filter((q) => q.active ?? true);
-}
-
-function buildActivityQuestions(dc: DcRow): PerformanceQuestion[] {
-  const activities = Array.isArray(dc.atividades) ? dc.atividades : [];
-  return activities
-    .map((activity, index) => {
-      const label = extractActivityLabel(activity, index);
-      return {
-        id: `activity_${index + 1}`,
-        label,
-        type: "select" as const,
-        required: true,
-        active: true,
-        options: ACTIVITY_SCALE,
-        source: "activity" as const,
-      };
-    })
-    .filter((question) => question.label.trim().length > 0);
-}
-
-function extractActivityLabel(activity: Record<string, unknown>, index: number) {
-  const strings = Object.values(activity).filter(
-    (value): value is string => typeof value === "string" && value.trim().length > 0,
-  );
-  return strings[0]?.trim() ?? `Atividade ${index + 1}`;
 }
 
 export function PublicPerformanceFormFields({

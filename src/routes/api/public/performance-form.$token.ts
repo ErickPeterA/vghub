@@ -72,7 +72,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         const { data: review } = await supabaseAdmin
           .from("performance_reviews")
           .select(
-            "id,project_id,name,status,employee_id,employee_position_id,leader_position_id,employee_name,leader_name,job_title,job_description_snapshot,activities_snapshot,questions_snapshot,created_at",
+            "id,project_id,name,status,employee_id,employee_position_id,leader_position_id,employee_name,leader_name,job_title,job_description_snapshot,questions_snapshot,created_at",
           )
           .eq("id", participant.review_id)
           .maybeSingle();
@@ -96,7 +96,6 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         }
 
         const questions = [
-          ...((review.activities_snapshot as PerformanceQuestion[] | null) ?? []),
           ...((review.questions_snapshot as PerformanceQuestion[] | null) ?? []),
         ].filter((question) => question.active ?? true);
         const participantRow = participant as typeof participant & {
