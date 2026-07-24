@@ -14,6 +14,17 @@ type FormData = {
   employeeName: string;
   leaderName: string;
   jobTitle: string;
+  header?: {
+    sentAt?: string | null;
+    expiresAt?: string | null;
+    positionName?: string | null;
+    careerType?: string | null;
+    areaSector?: string | null;
+    leaderPositionName?: string | null;
+    employeeName?: string | null;
+    leaderName?: string | null;
+    admissionDate?: string | null;
+  };
   draftAnswers?: Record<string, string>;
   draftSavedAt?: string | null;
   questions: PerformanceQuestion[];
@@ -91,7 +102,7 @@ function PublicPerformanceForm() {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form) return;
-    const validation = validatePerformanceAnswers(form.questions, answers);
+    const validation = validatePerformanceAnswers(form.questions, answers, form.participantType);
     if (validation) {
       setErrorMsg(validation);
       return;
@@ -133,6 +144,8 @@ function PublicPerformanceForm() {
           )}
         </div>
         <div className="p-8">
+          {form && <EvaluationHeader header={form.header} />}
+
           {(state === "ready" || state === "submitting") && (
             <div className="mb-6 rounded-lg bg-gray-50 px-4 py-2 text-xs text-gray-500">
               {draftState === "saving" && <span>Salvando rascunho...</span>}
@@ -177,6 +190,7 @@ function PublicPerformanceForm() {
             <form onSubmit={submit} className="space-y-6">
               <PublicPerformanceFormFields
                 questions={form.questions}
+                participantType={form.participantType}
                 answers={answers}
                 onChange={setAnswers}
               />
@@ -198,4 +212,53 @@ function PublicPerformanceForm() {
       </div>
     </div>
   );
+}
+
+function EvaluationHeader({ header }: { header?: FormData["header"] }) {
+  if (!header) return null;
+  const fields = [
+    ["Nomenclatura do Cargo", header.positionName],
+    ["Tipo de Carreira do Cargo", header.careerType],
+    ["Área/Setor do Cargo", header.areaSector],
+    ["Cargo do Superior Imediato", header.leaderPositionName],
+    ["Nome do colaborador", header.employeeName],
+    ["Nome do superior imediato", header.leaderName],
+    ["Data de Admissão", formatHeaderDate(header.admissionDate)],
+  ];
+
+  return (
+    <section className="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="grid gap-px bg-gray-200 md:grid-cols-2">
+        <HeaderItem label="Data de Envio da Avaliação" value={formatHeaderDateTime(header.sentAt)} />
+        <HeaderItem label="Data Máxima de preenchimento" value={formatHeaderDateTime(header.expiresAt)} />
+      </div>
+      <div className="grid gap-px bg-gray-200 md:grid-cols-2">
+        {fields.map(([label, value]) => (
+          <HeaderItem key={label} label={label ?? ""} value={value} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HeaderItem({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="min-h-16 bg-gray-50 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-1 text-sm font-medium text-gray-800">{value || "-"}</p>
+    </div>
+  );
+}
+
+function formatHeaderDate(value?: string | null) {
+  if (!value) return null;
+  return new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function formatHeaderDateTime(value?: string | null) {
+  if (!value) return null;
+  return new Date(value).toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }

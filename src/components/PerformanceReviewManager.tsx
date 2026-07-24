@@ -32,10 +32,12 @@ type ReviewType = "experience" | "performance";
 export type PerformanceQuestion = {
   id: string;
   label: string;
+  leaderLabel?: string;
   type: FieldType;
   required: boolean;
   active?: boolean;
   options?: string[];
+  leaderOptions?: string[];
   helpText?: string;
   source?: "activity" | "config";
 };
@@ -77,6 +79,7 @@ type ParticipantRow = {
   token: string;
   status: ParticipantStatus;
   expires_at: string;
+  sent_at?: string | null;
   response_answers: Record<string, string>;
   submitted_at: string | null;
 };
@@ -176,6 +179,424 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   },
 ];
 
+const YES_NO_OPTIONS = ["Sim", "Não"];
+const RATING_OPTIONS = [
+  "Ótimo",
+  "Bom",
+  "Regular - Justificar o porquê e exemplificar nas observações",
+  "Ruim - Justificar o porquê e exemplificar nas observações",
+];
+
+const DEFAULT_EXPERIENCE_30_QUESTIONS: PerformanceQuestion[] = [
+  {
+    id: "normas_recebeu_informacoes",
+    label: "Ao ingressar na empresa você recebeu informações com relação às normas internas e regras da empresa?",
+    leaderLabel:
+      "Ao ingressar na empresa o(a) colaborador(a) recebeu informações com relação às normas internas e regras da empresa?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Normas e regras da empresa",
+  },
+  {
+    id: "normas_informacoes_foram",
+    label: "Essas informações foram:",
+    type: "select",
+    required: true,
+    active: true,
+    options: ["Suficientes", "Insuficientes"],
+    helpText: "Normas e regras da empresa",
+  },
+  {
+    id: "normas_faltaram_tipo",
+    label: "Se insuficientes, faltaram informações:",
+    type: "select",
+    required: false,
+    active: true,
+    options: ["Administrativas", "Técnicas"],
+    helpText: "Normas e regras da empresa",
+  },
+  {
+    id: "normas_faltaram_descricao",
+    label: "Quais informações faltaram? Descreva:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Normas e regras da empresa",
+  },
+  {
+    id: "treinamento_recebeu",
+    label: "Você recebeu ou recebe algum treinamento e/ou orientação para executar seu trabalho?",
+    leaderLabel:
+      "O(a) colaborador(a) recebeu ou recebe algum treinamento e/ou orientação para executar seu trabalho?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "treinamento_quais",
+    label: "Quais? Descreva:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "adaptacao_dificuldades",
+    label: "Você apresentou dificuldades para adaptar-se ao ambiente de trabalho?",
+    leaderLabel:
+      "O(a) colaborador(a) apresentou dificuldades para adaptar-se ao ambiente de trabalho?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "adaptacao_dificuldades_descricao",
+    label: "Se apresentou dificuldades, quais foram? Descreva:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "adaptacao_como",
+    label: "Como está sua adaptação?",
+    type: "select",
+    required: true,
+    active: true,
+    options: ["Lenta", "Normal", "Rápida"],
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "adaptacao_mais",
+    label: "Em que você mais se adaptou? Descreva:",
+    leaderLabel: "Em que o(a) colaborador(a) mais se adaptou? Descreva:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "aprendizado_atividades",
+    label: "Você está aprendendo o que é ensinado das suas atividades?",
+    leaderLabel: "O(a) colaborador(a) está aprendendo o que é ensinado das suas atividades?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "aprendizado_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações, adaptação e aprendizado",
+  },
+  {
+    id: "relacionamento_colegas",
+    label: "Como é o seu relacionamento com os colegas?",
+    leaderLabel: "Como é o relacionamento do(a) colaborador(a) com os colegas?",
+    type: "select",
+    required: true,
+    active: true,
+    options: RATING_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_colegas_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_superior",
+    label: "Como é o seu relacionamento com seu superior imediato?",
+    leaderLabel: "Como é o relacionamento do(a) colaborador(a) com você?",
+    type: "select",
+    required: true,
+    active: true,
+    options: RATING_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_superior_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "dialogo_trabalho",
+    label:
+      "Seu superior imediato mantém diálogo a respeito de seu trabalho, permitindo-lhe expor suas ideias, dificuldades, etc.?",
+    leaderLabel:
+      "Você mantém diálogo a respeito do trabalho do(a) colaborador(a), permitindo que exponha suas ideias, dificuldades, etc.?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "dialogo_trabalho_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "satisfacao_trabalho",
+    label: "Você está satisfeito com o trabalho que executa?",
+    leaderLabel: "Você está satisfeito com o trabalho que o(a) colaborador(a) executa?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Satisfação",
+  },
+  {
+    id: "satisfacao_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Satisfação",
+  },
+  {
+    id: "observacoes_adicionais",
+    label: "Observações e comentários adicionais:",
+    type: "textarea",
+    required: false,
+    active: true,
+  },
+];
+
+const DEFAULT_EXPERIENCE_90_QUESTIONS: PerformanceQuestion[] = [
+  {
+    id: "treinamento_recebendo",
+    label: "Você está recebendo algum treinamento e/ou orientação para executar seu trabalho?",
+    leaderLabel:
+      "O(a) colaborador(a) está recebendo algum treinamento e/ou orientação para executar seu trabalho?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Treinamentos, orientações e aprendizado",
+  },
+  {
+    id: "treinamento_quais",
+    label: "Quais? Descreva:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações e aprendizado",
+  },
+  {
+    id: "aprendizado_atividades",
+    label: "Você está aprendendo o que é ensinado das suas atividades?",
+    leaderLabel: "O(a) colaborador(a) está aprendendo o que é ensinado das suas atividades?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Treinamentos, orientações e aprendizado",
+  },
+  {
+    id: "aprendizado_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Treinamentos, orientações e aprendizado",
+  },
+  {
+    id: "relacionamento_colegas",
+    label: "Como é o seu relacionamento com os colegas?",
+    leaderLabel: "Como é o relacionamento do(a) colaborador(a) com os colegas?",
+    type: "select",
+    required: true,
+    active: true,
+    options: RATING_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_colegas_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_superior",
+    label: "Como é o seu relacionamento com seu superior imediato?",
+    leaderLabel: "Como é o relacionamento do(a) colaborador(a) com você?",
+    type: "select",
+    required: true,
+    active: true,
+    options: RATING_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "relacionamento_superior_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "dialogo_trabalho",
+    label:
+      "Seu superior imediato mantém diálogo a respeito de seu trabalho, permitindo-lhe expor suas ideias, dificuldades, etc.?",
+    leaderLabel:
+      "Você mantém diálogo a respeito do trabalho do(a) colaborador(a), permitindo que exponha suas ideias, dificuldades, etc.?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "dialogo_trabalho_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Relacionamento",
+  },
+  {
+    id: "desempenho_atividades",
+    label: "Como você avalia o seu desempenho nas atividades?",
+    leaderLabel: "Como você avalia o desempenho do(a) colaborador(a) nas atividades?",
+    type: "select",
+    required: true,
+    active: true,
+    options: RATING_OPTIONS,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "desempenho_atividades_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "duvidas_dificuldades_atitude",
+    label: "Quando você tem alguma dúvida ou dificuldades no trabalho, qual é sua atitude?",
+    leaderLabel:
+      "Quando o(a) colaborador(a) tem alguma dúvida ou dificuldades no trabalho, qual é a atitude?",
+    type: "select",
+    required: true,
+    active: true,
+    options: [
+      "Resolvo sozinho",
+      "Solicito ajuda ao colega",
+      "Dirijo-me ao meu supervisor",
+      "Nunca peço ajuda",
+    ],
+    leaderOptions: [
+      "Resolve sozinho(a)",
+      "Solicita ajuda ao colega",
+      "Dirige-se a mim, supervisor",
+      "Nunca pede ajuda",
+    ],
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "duvidas_dificuldades_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "metodo_empresa",
+    label:
+      "Você está desempenhando seu trabalho conforme o método utilizado pela empresa ou alterou algo?",
+    leaderLabel:
+      "O(a) colaborador(a) está desempenhando o trabalho conforme o método utilizado pela empresa ou alterou algo?",
+    type: "select",
+    required: true,
+    active: true,
+    options: [
+      "Sigo os padrões da empresa",
+      "Sigo os padrões, mas alterei algumas coisas",
+      "Trabalho no meu método",
+    ],
+    leaderOptions: [
+      "Segue os padrões da empresa",
+      "Segue os padrões, mas alterou algumas coisas",
+      "Trabalha no seu método",
+    ],
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "metodo_empresa_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "metodo_rendimento",
+    label: "No caso de utilizar em parte, ou completamente seu método, houve maior rendimento?",
+    type: "select",
+    required: false,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "metodo_rendimento_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Autoavaliação do dia a dia de trabalho",
+  },
+  {
+    id: "satisfacao_trabalho",
+    label: "Você está satisfeito com o trabalho que executa?",
+    leaderLabel: "Você está satisfeito com o trabalho que o(a) colaborador(a) executa?",
+    type: "select",
+    required: true,
+    active: true,
+    options: YES_NO_OPTIONS,
+    helpText: "Satisfação",
+  },
+  {
+    id: "satisfacao_comente",
+    label: "Comente:",
+    type: "textarea",
+    required: false,
+    active: true,
+    helpText: "Satisfação",
+  },
+  {
+    id: "observacoes_adicionais",
+    label: "Observações e comentários adicionais:",
+    type: "textarea",
+    required: false,
+    active: true,
+  },
+];
+
 const ACTIVITY_SCALE = [
   "Não realiza",
   "Em desenvolvimento",
@@ -202,6 +623,28 @@ const uid = () =>
     : Math.random().toString(36).slice(2);
 const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/70 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
+
+function defaultQuestionsForConfig(reviewType: ReviewType, periodDays?: number | null) {
+  const source =
+    reviewType === "experience"
+      ? periodDays === 90
+        ? DEFAULT_EXPERIENCE_90_QUESTIONS
+        : DEFAULT_EXPERIENCE_30_QUESTIONS
+      : DEFAULT_PERFORMANCE_QUESTIONS;
+  return source.map((question) => ({ ...question, id: `${question.id}_${uid()}` }));
+}
+
+function displayQuestionLabel(question: PerformanceQuestion, participantType?: ParticipantType) {
+  return participantType === "leader" && question.leaderLabel?.trim()
+    ? question.leaderLabel
+    : question.label;
+}
+
+function questionOptions(question: PerformanceQuestion, participantType?: ParticipantType) {
+  return participantType === "leader" && question.leaderOptions?.length
+    ? question.leaderOptions
+    : (question.options ?? []);
+}
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
   const { user, isAdmin } = useCurrentUser();
@@ -547,6 +990,11 @@ export function PerformanceComparisonPage({
                         : "Pergunta"}
                     </p>
                     <h2 className="text-base font-semibold">{question.label}</h2>
+                    {question.leaderLabel?.trim() && question.leaderLabel !== question.label && (
+                      <p className="mt-1 text-sm text-[#042558]/55">
+                        Líder: {question.leaderLabel}
+                      </p>
+                    )}
                   </div>
                   <CommentBox
                     questionKey={question.id}
@@ -615,7 +1063,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
       setIsActive(cfg.is_active);
     } else {
       setConfigId(null);
-      setQuestions(DEFAULT_PERFORMANCE_QUESTIONS.map((q) => ({ ...q, id: `${q.id}_${uid()}` })));
+      setQuestions(defaultQuestionsForConfig("experience", 30));
       setIsActive(true);
     }
   }, [projectId]);
@@ -700,17 +1148,34 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
         {questions.map((question) => (
           <div key={question.id} className="rounded-xl border border-[#042558]/10 bg-white/70 p-4">
             <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
-              <input
-                value={question.label}
-                onChange={(e) =>
-                  setQuestions((current) =>
-                    current.map((q) =>
-                      q.id === question.id ? { ...q, label: e.target.value } : q,
-                    ),
-                  )
-                }
-                className={inputClass}
-              />
+              <div className="grid gap-2">
+                <input
+                  value={question.label}
+                  onChange={(e) =>
+                    setQuestions((current) =>
+                      current.map((q) =>
+                        q.id === question.id ? { ...q, label: e.target.value } : q,
+                      ),
+                    )
+                  }
+                  placeholder="Texto para colaborador"
+                  className={inputClass}
+                />
+                <input
+                  value={question.leaderLabel ?? ""}
+                  onChange={(e) =>
+                    setQuestions((current) =>
+                      current.map((q) =>
+                        q.id === question.id
+                          ? { ...q, leaderLabel: e.target.value || undefined }
+                          : q,
+                      ),
+                    )
+                  }
+                  placeholder="Texto para líder (opcional)"
+                  className={inputClass}
+                />
+              </div>
               <select
                 value={question.type}
                 onChange={(e) =>
@@ -766,14 +1231,28 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
               </label>
             </div>
             {question.type === "select" && (
-              <SelectOptionsEditor
-                options={question.options ?? []}
-                onChange={(options) =>
-                  setQuestions((current) =>
-                    current.map((q) => (q.id === question.id ? { ...q, options } : q)),
-                  )
-                }
-              />
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectOptionsEditor
+                  title="Opções do colaborador"
+                  options={question.options ?? []}
+                  onChange={(options) =>
+                    setQuestions((current) =>
+                      current.map((q) => (q.id === question.id ? { ...q, options } : q)),
+                    )
+                  }
+                />
+                <SelectOptionsEditor
+                  title="Opções do líder"
+                  options={question.leaderOptions ?? []}
+                  onChange={(leaderOptions) =>
+                    setQuestions((current) =>
+                      current.map((q) =>
+                        q.id === question.id ? { ...q, leaderOptions } : q,
+                      ),
+                    )
+                  }
+                />
+              </div>
             )}
           </div>
         ))}
@@ -843,10 +1322,7 @@ export function PerformancePeriodConfigPanel({
           name: configTypeTab === "experience" ? `${days} dias` : "Desempenho",
           period_days: days,
           review_type: configTypeTab,
-          questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
-            ...question,
-            id: `${question.id}_${uid()}`,
-          })),
+          questions_schema: defaultQuestionsForConfig(configTypeTab, days),
           is_active: true,
           created_by: user?.id ?? null,
         })) as never,
@@ -919,10 +1395,7 @@ export function PerformancePeriodConfigPanel({
         name,
         period_days: days,
         review_type: configTypeTab,
-        questions_schema: DEFAULT_PERFORMANCE_QUESTIONS.map((question) => ({
-          ...question,
-          id: `${question.id}_${uid()}`,
-        })),
+        questions_schema: defaultQuestionsForConfig(configTypeTab, days),
         is_active: true,
         created_by: user?.id ?? null,
       } as any)
@@ -1226,17 +1699,34 @@ export function PerformancePeriodConfigPanel({
             {questions.map((question) => (
               <div key={question.id} className="rounded-xl border border-[#042558]/10 bg-white/70 p-4">
                 <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
-                  <input
-                    value={question.label}
-                    onChange={(event) =>
-                      setQuestions((current) =>
-                        current.map((q) =>
-                          q.id === question.id ? { ...q, label: event.target.value } : q,
-                        ),
-                      )
-                    }
-                    className={inputClass}
-                  />
+                  <div className="grid gap-2">
+                    <input
+                      value={question.label}
+                      onChange={(event) =>
+                        setQuestions((current) =>
+                          current.map((q) =>
+                            q.id === question.id ? { ...q, label: event.target.value } : q,
+                          ),
+                        )
+                      }
+                      placeholder="Texto para colaborador"
+                      className={inputClass}
+                    />
+                    <input
+                      value={question.leaderLabel ?? ""}
+                      onChange={(event) =>
+                        setQuestions((current) =>
+                          current.map((q) =>
+                            q.id === question.id
+                              ? { ...q, leaderLabel: event.target.value || undefined }
+                              : q,
+                          ),
+                        )
+                      }
+                      placeholder="Texto para líder (opcional)"
+                      className={inputClass}
+                    />
+                  </div>
                   <select
                     value={question.type}
                     onChange={(event) =>
@@ -1293,14 +1783,28 @@ export function PerformancePeriodConfigPanel({
                   </label>
                 </div>
                 {question.type === "select" && (
-                  <SelectOptionsEditor
-                    options={question.options ?? []}
-                    onChange={(options) =>
-                      setQuestions((current) =>
-                        current.map((q) => (q.id === question.id ? { ...q, options } : q)),
-                      )
-                    }
-                  />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <SelectOptionsEditor
+                      title="Opções do colaborador"
+                      options={question.options ?? []}
+                      onChange={(options) =>
+                        setQuestions((current) =>
+                          current.map((q) => (q.id === question.id ? { ...q, options } : q)),
+                        )
+                      }
+                    />
+                    <SelectOptionsEditor
+                      title="Opções do líder"
+                      options={question.leaderOptions ?? []}
+                      onChange={(leaderOptions) =>
+                        setQuestions((current) =>
+                          current.map((q) =>
+                            q.id === question.id ? { ...q, leaderOptions } : q,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
                 )}
               </div>
             ))}
@@ -1358,9 +1862,11 @@ function formatDateOnly(dateValue: string) {
 }
 
 function SelectOptionsEditor({
+  title = "Opções",
   options,
   onChange,
 }: {
+  title?: string;
   options: string[];
   onChange: (options: string[]) => void;
 }) {
@@ -1386,10 +1892,11 @@ function SelectOptionsEditor({
     <div className="mt-4 border-t border-[#042558]/10 pt-4">
       <button
         type="button"
+        title={title}
         onClick={() => setOptionsOpen((value) => !value)}
         className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#042558]/50 transition-colors hover:text-[#042558]"
       >
-        Opções ({options.length})
+        {title} ({options.length})
         {optionsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
 
@@ -1919,7 +2426,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       if (participant.status === "not_sent") {
         await supabase
           .from("performance_review_participants")
-          .update({ status: "sent" })
+          .update({ status: "sent", sent_at: new Date().toISOString() } as any)
           .eq("id", participant.id);
       }
       toast.success("Link copiado");
@@ -2313,6 +2820,7 @@ function AnswerCell({
       ) : canEdit ? (
         <QuestionInput
           question={question}
+          participantType={participant.participant_type}
           value={value}
           onChange={(next) => onChange(participant, question.id, next)}
         />
@@ -2327,18 +2835,21 @@ function AnswerCell({
 
 function QuestionInput({
   question,
+  participantType,
   value,
   onChange,
 }: {
   question: PerformanceQuestion;
+  participantType?: ParticipantType;
   value: string;
   onChange: (value: string) => void;
 }) {
   if (question.type === "select") {
+    const options = questionOptions(question, participantType);
     return (
       <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
         <option value="">Selecione</option>
-        {(question.options ?? []).map((option) => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -2532,10 +3043,12 @@ function extractActivityLabel(activity: Record<string, unknown>, index: number) 
 
 export function PublicPerformanceFormFields({
   questions,
+  participantType,
   answers,
   onChange,
 }: {
   questions: PerformanceQuestion[];
+  participantType: ParticipantType;
   answers: Record<string, string>;
   onChange: (answers: Record<string, string>) => void;
 }) {
@@ -2548,13 +3061,15 @@ export function PublicPerformanceFormFields({
           className="block rounded-xl border border-gray-200 bg-gray-50/60 p-4"
         >
           <span className="mb-1 block text-sm font-semibold text-gray-700">
-            {question.label} {question.required && <span className="text-red-500">*</span>}
+            {displayQuestionLabel(question, participantType)}{" "}
+            {question.required && <span className="text-red-500">*</span>}
           </span>
           {question.helpText && (
             <span className="mb-2 block text-xs text-gray-400">{question.helpText}</span>
           )}
           <QuestionInput
             question={question}
+            participantType={participantType}
             value={answers[question.id] ?? ""}
             onChange={(value) => onChange({ ...answers, [question.id]: value })}
           />
@@ -2567,11 +3082,12 @@ export function PublicPerformanceFormFields({
 export function validatePerformanceAnswers(
   questions: PerformanceQuestion[],
   answers: Record<string, string>,
+  participantType: ParticipantType = "collaborator",
 ) {
   const missing = questions.find(
     (question) => (question.active ?? true) && question.required && !answers[question.id]?.trim(),
   );
-  return missing ? `Preencha: ${missing.label}` : null;
+  return missing ? `Preencha: ${displayQuestionLabel(missing, participantType)}` : null;
 }
 
 
