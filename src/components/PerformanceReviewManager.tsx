@@ -6,8 +6,6 @@ import {
   Copy,
   Eye,
   History,
-  ArrowLeft,
-  Clock,
   Maximize2,
   MessageSquare,
   Plus,
@@ -16,7 +14,6 @@ import {
   Send,
   Settings,
   SplitSquareVertical,
-  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -129,6 +126,7 @@ type AgendaItem = {
   employeePosition: PositionRow | null;
   description: DcRow | null;
   config: ConfigRow;
+  periodDays: number;
   baseDate: string;
   dueDate: string;
   daysUntil: number;
@@ -190,7 +188,8 @@ const RATING_OPTIONS = [
 const DEFAULT_EXPERIENCE_30_QUESTIONS: PerformanceQuestion[] = [
   {
     id: "normas_recebeu_informacoes",
-    label: "Ao ingressar na empresa você recebeu informações com relação às normas internas e regras da empresa?",
+    label:
+      "Ao ingressar na empresa você recebeu informações com relação às normas internas e regras da empresa?",
     leaderLabel:
       "Ao ingressar na empresa o(a) colaborador(a) recebeu informações com relação às normas internas e regras da empresa?",
     type: "select",
@@ -616,14 +615,26 @@ const uid = () =>
     : Math.random().toString(36).slice(2);
 const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/70 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
+const EXPERIENCE_REVIEW_PERIOD_OPTIONS = [
+  { days: 30, label: "30 dias" },
+  { days: 45, label: "45 dias" },
+  { days: 90, label: "90 dias" },
+];
+const PERFORMANCE_REVIEW_PERIOD_OPTIONS = [
+  { days: 90, label: "3 meses" },
+  { days: 180, label: "6 meses" },
+  { days: 365, label: "1 ano" },
+];
 
-function defaultQuestionsForConfig(reviewType: ReviewType, periodDays?: number | null) {
+function reviewPeriodOptionsForType(type: ReviewType) {
+  return type === "experience"
+    ? EXPERIENCE_REVIEW_PERIOD_OPTIONS
+    : PERFORMANCE_REVIEW_PERIOD_OPTIONS;
+}
+
+function defaultQuestionsForConfig(reviewType: ReviewType) {
   const source =
-    reviewType === "experience"
-      ? periodDays === 90
-        ? DEFAULT_EXPERIENCE_90_QUESTIONS
-        : DEFAULT_EXPERIENCE_30_QUESTIONS
-      : DEFAULT_PERFORMANCE_QUESTIONS;
+    reviewType === "experience" ? DEFAULT_EXPERIENCE_30_QUESTIONS : DEFAULT_PERFORMANCE_QUESTIONS;
   return source.map((question) => ({ ...question, id: `${question.id}_${uid()}` }));
 }
 
@@ -679,7 +690,8 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
             Experiencia e desempenho
           </h1>
           <p className="mt-1 text-sm text-[#042558]/60">
-            Ate 90 dias de admissao, a avaliacao entra como experiencia; depois disso, entra como desempenho.
+            Ate 90 dias de admissao, a avaliacao entra como experiencia; depois disso, entra como
+            desempenho.
           </p>
         </div>
 
@@ -1054,7 +1066,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
       setIsActive(cfg.is_active);
     } else {
       setConfigId(null);
-      setQuestions(defaultQuestionsForConfig("experience", 30));
+      setQuestions(defaultQuestionsForConfig("experience"));
       setIsActive(true);
     }
   }, [projectId]);
@@ -1237,9 +1249,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
                   options={question.leaderOptions ?? []}
                   onChange={(leaderOptions) =>
                     setQuestions((current) =>
-                      current.map((q) =>
-                        q.id === question.id ? { ...q, leaderOptions } : q,
-                      ),
+                      current.map((q) => (q.id === question.id ? { ...q, leaderOptions } : q)),
                     )
                   }
                 />
@@ -1254,29 +1264,26 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
 
 export function PerformancePeriodConfigPanel({
   projectId,
-  initialPeriodDays = null,
+  initialReviewType = "experience",
+  hideReviewTypeTabs = false,
 }: {
   projectId: string | null;
-  initialPeriodDays?: number | null;
+  initialReviewType?: ReviewType | null;
+  hideReviewTypeTabs?: boolean;
 }) {
   const { user } = useCurrentUser();
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PerformanceQuestion[]>([]);
-  const [periodName, setPeriodName] = useState("");
-  const [periodDays, setPeriodDays] = useState(30);
+  const [modelName, setModelName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [newLabel, setNewLabel] = useState("");
-  const [newPeriodName, setNewPeriodName] = useState("");
-  const [newPeriodDays, setNewPeriodDays] = useState("");
   const [saving, setSaving] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [configTypeTab, setConfigTypeTab] = useState<ReviewType>("experience");
+  const [configTypeTab, setConfigTypeTab] = useState<ReviewType>(initialReviewType ?? "experience");
 
   const hydrate = (config: ConfigRow) => {
     const normalized = normalizeConfigRow(config);
-    setPeriodName(normalized.name ?? periodLabel(normalized));
-    setPeriodDays(normalized.period_days ?? 30);
+    setModelName(normalized.name ?? periodLabel(normalized));
     setQuestions(
       (normalized.questions_schema ?? []).map((question) => ({
         ...question,
@@ -1299,21 +1306,17 @@ export function PerformancePeriodConfigPanel({
     }
 
     let rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
-    const requiredDays = configTypeTab === "experience" ? [30, 45, 90] : [90];
-    const missingDays = requiredDays.filter(
-      (days) =>
-        !rows.some(
-          (config) => config.period_days === days && (config.review_type ?? "experience") === configTypeTab,
-        ),
+    const missingTypes = (["experience", "performance"] as ReviewType[]).filter(
+      (type) => !rows.some((config) => (config.review_type ?? "experience") === type),
     );
-    if (missingDays.length > 0) {
+    if (missingTypes.length > 0) {
       const { error: insertError } = await supabase.from("performance_review_configs").insert(
-        missingDays.map((days) => ({
+        missingTypes.map((type) => ({
           project_id: projectId,
-          name: configTypeTab === "experience" ? `${days} dias` : "Desempenho",
-          period_days: days,
-          review_type: configTypeTab,
-          questions_schema: defaultQuestionsForConfig(configTypeTab, days),
+          name: type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho",
+          period_days: EXPERIENCE_LIMIT_DAYS,
+          review_type: type,
+          questions_schema: defaultQuestionsForConfig(type),
           is_active: true,
           created_by: user?.id ?? null,
         })) as never,
@@ -1336,131 +1339,50 @@ export function PerformancePeriodConfigPanel({
     setConfigs(rows);
     const selected = rows.find((config) => config.id === selectedId) ?? null;
     const initialSelected =
-      selected ??
-      (initialPeriodDays
-        ? rows.find(
-            (config) =>
-              config.period_days === initialPeriodDays &&
-              (config.review_type ?? "experience") === configTypeTab,
-          ) ?? null
-        : null);
+      selected && (selected.review_type ?? "experience") === configTypeTab
+        ? selected
+        : (rows.find(
+            (config) => (config.review_type ?? "experience") === configTypeTab && config.is_active,
+          ) ??
+          rows.find((config) => (config.review_type ?? "experience") === configTypeTab) ??
+          null);
     if (initialSelected) {
       setSelectedId(initialSelected.id);
       hydrate(initialSelected);
     } else setSelectedId(null);
-  }, [configTypeTab, initialPeriodDays, projectId, selectedId, user?.id]);
+  }, [configTypeTab, projectId, selectedId, user?.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const selectedConfig = configs.find((config) => config.id === selectedId) ?? null;
-  const filteredConfigs = configs.filter(
-    (config) => (config.review_type ?? "experience") === configTypeTab,
-  );
   const configCounts = configs.reduce(
     (acc, config) => {
-      acc[config.review_type ?? "experience"] += 1;
+      if (config.is_active) acc[config.review_type ?? "experience"] += 1;
       return acc;
     },
     { experience: 0, performance: 0 } as Record<ReviewType, number>,
   );
 
-  const selectConfig = (config: ConfigRow) => {
-    setSelectedId(config.id);
-    hydrate(config);
-  };
-
-  const createPeriod = async () => {
-    const days = Number(newPeriodDays);
-    if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
-    if (configs.some((config) => config.period_days === days && (config.review_type ?? "experience") === configTypeTab)) {
-      return toast.error(`Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`);
-    }
-    const name = newPeriodName.trim() || `${days} dias`;
-    setCreating(true);
-    const { data, error } = await supabase
-      .from("performance_review_configs")
-      .insert({
-        project_id: projectId,
-        name,
-        period_days: days,
-        review_type: configTypeTab,
-        questions_schema: defaultQuestionsForConfig(configTypeTab, days),
-        is_active: true,
-        created_by: user?.id ?? null,
-      } as any)
-      .select("*")
-      .single();
-    setCreating(false);
-    if (error || !data) {
-      const message = error?.message?.includes("performance_review_configs_project_type_period_unique")
-        || error?.message?.includes("performance_review_configs_general_type_period_unique")
-        ? `Ja existe um modelo com ${days} dias. Remova ou edite o modelo existente.`
-        : error?.message ?? "Nao foi possivel criar.";
-      return toast.error(message);
-    }
-    toast.success("Modelo criado");
-    setNewPeriodName("");
-    setNewPeriodDays("");
-    const created = normalizeConfigRow(data as ConfigRow);
-    setConfigs((current) =>
-      [...current, created].sort((a, b) => (a.period_days ?? 0) - (b.period_days ?? 0)),
-    );
-    setSelectedId(created.id);
-    hydrate(created);
-  };
-
   const save = async () => {
     if (!selectedConfig) return toast.error("Selecione um modelo.");
-    const days = Number(periodDays);
-    if (!periodName.trim()) return toast.error("Informe o nome do periodo.");
-    if (!Number.isFinite(days) || days <= 0) return toast.error("Informe um periodo valido.");
-    if (
-      configs.some(
-        (config) =>
-          config.id !== selectedConfig.id &&
-          config.period_days === days &&
-          (config.review_type ?? "experience") === (selectedConfig.review_type ?? "experience"),
-      )
-    ) {
-      return toast.error(`Ja existe outro modelo com ${days} dias.`);
-    }
+    if (!modelName.trim()) return toast.error("Informe o nome do modelo.");
 
     setSaving(true);
     const { error } = await supabase
       .from("performance_review_configs")
       .update({
-        name: periodName.trim(),
-        period_days: days,
+        name: modelName.trim(),
+        period_days: selectedConfig.period_days ?? EXPERIENCE_LIMIT_DAYS,
         review_type: selectedConfig.review_type ?? "experience",
         questions_schema: questions,
         is_active: isActive,
       } as any)
       .eq("id", selectedConfig.id);
     setSaving(false);
-    if (error) {
-      const message = error.message.includes("performance_review_configs_project_type_period_unique")
-        || error.message.includes("performance_review_configs_general_type_period_unique")
-        ? `Ja existe outro modelo com ${days} dias.`
-        : error.message;
-      return toast.error(message);
-    }
-    toast.success("Modelo salvo");
-    await load();
-  };
-
-  const deleteSelected = async () => {
-    if (!selectedConfig) return;
-    if (!confirm(`Remover o modelo "${periodLabel(selectedConfig)}"? As avaliacoes antigas continuam salvas.`)) return;
-    const { error } = await supabase
-      .from("performance_review_configs")
-      .delete()
-      .eq("id", selectedConfig.id);
     if (error) return toast.error(error.message);
-    toast.success("Modelo removido");
-    setSelectedId(null);
-    setQuestions([]);
+    toast.success("Modelo salvo");
     await load();
   };
 
@@ -1476,148 +1398,65 @@ export function PerformancePeriodConfigPanel({
 
   return (
     <div className="space-y-5">
-      <section className="border-b border-[#042558]/10 pb-1">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Tipo de modelo
-            </h2>
-            <p className="mt-1 text-xs text-[#042558]/50">
-              Separe os modelos usados na experiencia dos modelos usados em desempenho.
-            </p>
-          </div>
-          <div className="flex min-w-fit gap-6">
-            {(["experience", "performance"] as ReviewType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => {
-                  setConfigTypeTab(type);
-                  setSelectedId(null);
-                }}
-                className={`relative pb-3 text-sm font-semibold transition ${
-                  configTypeTab === type
-                    ? "text-[#042558]"
-                    : "text-[#042558]/40 hover:text-[#042558]/70"
-                }`}
-              >
-                {type === "experience" ? "Modelos de experiencia" : "Modelos de desempenho"}
-                <span
-                  className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+      {!hideReviewTypeTabs && (
+        <section className="border-b border-[#042558]/10 pb-1">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+                Tipo de modelo
+              </h2>
+              <p className="mt-1 text-xs text-[#042558]/50">
+                Configure um modelo de perguntas para experiencia e outro para desempenho.
+              </p>
+            </div>
+            <div className="flex min-w-fit gap-6">
+              {(["experience", "performance"] as ReviewType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setConfigTypeTab(type);
+                    setSelectedId(null);
+                  }}
+                  className={`relative pb-3 text-sm font-semibold transition ${
                     configTypeTab === type
-                      ? "bg-[#042558]/10 text-[#042558]"
-                      : "bg-[#042558]/5 text-[#042558]/45"
+                      ? "text-[#042558]"
+                      : "text-[#042558]/40 hover:text-[#042558]/70"
                   }`}
                 >
-                  {configCounts[type]}
-                </span>
-                {configTypeTab === type && (
-                  <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[#042558]" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {!selectedConfig && (
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-bold text-[#042558]">
-            {configTypeTab === "experience" ? "Modelos de experiencia" : "Modelos de desempenho"}
-          </h2>
-          <p className="text-sm text-[#042558]/60">
-            Cada bloco guarda as perguntas usadas em um periodo de avaliacao.
-          </p>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {filteredConfigs.map((config) => {
-            const active = config.id === selectedId;
-            return (
-              <button
-                key={config.id}
-                type="button"
-                onClick={() => selectConfig(config)}
-                className={`rounded-xl border p-4 text-left transition ${
-                  active
-                    ? "border-[#042558] bg-[#042558] text-white shadow-lg shadow-[#042558]/20"
-                    : "border-[#042558]/10 bg-white/80 text-[#042558] hover:border-[#042558]/35 hover:shadow-md"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${active ? "text-white/60" : "text-[#042558]/45"}`}>
-                      Periodo
-                    </p>
-                    <h3 className="mt-1 text-lg font-semibold">{periodLabel(config)}</h3>
-                  </div>
-                  <Clock className={`h-5 w-5 ${active ? "text-white/70" : "text-[#042558]/35"}`} />
-                </div>
-                <p className={`mt-3 text-sm ${active ? "text-white/70" : "text-[#042558]/55"}`}>
-                  {(config.questions_schema ?? []).filter((question) => question.active ?? true).length} pergunta(s) ativa(s)
-                </p>
-                <span className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${config.is_active ? active ? "bg-white/15 text-white" : "bg-emerald-50 text-emerald-700" : active ? "bg-white/15 text-white/70" : "bg-[#042558]/5 text-[#042558]/45"}`}>
-                  {config.is_active ? "Ativo" : "Inativo"}
-                </span>
-              </button>
-            );
-          })}
-
-          <div className="rounded-xl border border-dashed border-[#042558]/20 bg-white/60 p-4">
-            <p className="text-sm font-semibold text-[#042558]">Novo modelo</p>
-            <div className="mt-3 grid gap-2">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Nome do modelo</span>
-                <input
-                  value={newPeriodName}
-                  onChange={(event) => setNewPeriodName(event.target.value)}
-                  placeholder="Ex: 2 meses"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Quantos dias</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={newPeriodDays}
-                  onChange={(event) => setNewPeriodDays(event.target.value)}
-                  placeholder="Ex: 60"
-                  className={inputClass}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={createPeriod}
-                disabled={creating}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" /> {creating ? "Criando..." : "Adicionar periodo"}
-              </button>
+                  {type === "experience" ? "Modelo de experiencia" : "Modelo de desempenho"}
+                  <span
+                    className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      configTypeTab === type
+                        ? "bg-[#042558]/10 text-[#042558]"
+                        : "bg-[#042558]/5 text-[#042558]/45"
+                    }`}
+                  >
+                    {configCounts[type]}
+                  </span>
+                  {configTypeTab === type && (
+                    <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[#042558]" />
+                  )}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
       )}
 
       {selectedConfig ? (
         <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5">
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-[#042558]/55 transition hover:text-[#042558]"
-              >
-                <ArrowLeft className="h-4 w-4" /> Voltar para modelos
-              </button>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
                 Configuracao do modelo
               </p>
-              <h2 className="mt-1 text-xl font-bold text-[#042558]">{periodLabel(selectedConfig)}</h2>
+              <h2 className="mt-1 text-xl font-bold text-[#042558]">
+                {periodLabel(selectedConfig)}
+              </h2>
               <p className="text-sm text-[#042558]/60">
-                Somente as perguntas configuradas no modelo entram na avaliacao.
+                As perguntas deste modelo serao usadas em qualquer dia escolhido na criacao da
+                avaliacao.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1637,43 +1476,33 @@ export function PerformancePeriodConfigPanel({
               >
                 <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar"}
               </button>
-              <button
-                type="button"
-                onClick={deleteSelected}
-                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" /> Remover
-              </button>
             </div>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-[1fr_160px]">
+          <div className="mb-5 grid gap-3 md:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[#042558]/70">Nome do periodo</span>
+              <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+                Nome do modelo
+              </span>
               <input
-                value={periodName}
-                onChange={(event) => setPeriodName(event.target.value)}
+                value={modelName}
+                onChange={(event) => setModelName(event.target.value)}
                 className={inputClass}
-                placeholder="Ex: 30 dias de experiencia"
+                placeholder="Ex: Avaliacao de experiencia"
               />
             </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[#042558]/70">Quantos dias</span>
-              <input
-                type="number"
-                min={1}
-                value={periodDays}
-                onChange={(event) => setPeriodDays(Number(event.target.value))}
-                className={inputClass}
-              />
-            </label>
+            <div className="rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/65">
+              O ciclo da avaliacao sera escolhido ao criar/enviar o formulario.
+            </div>
           </div>
 
           <div className="mb-5 flex gap-2">
             <input
               value={newLabel}
               onChange={(event) => setNewLabel(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addQuestion())}
+              onKeyDown={(event) =>
+                event.key === "Enter" && (event.preventDefault(), addQuestion())
+              }
               placeholder="Nova pergunta"
               className={inputClass}
             />
@@ -1688,7 +1517,10 @@ export function PerformancePeriodConfigPanel({
 
           <div className="space-y-3">
             {questions.map((question) => (
-              <div key={question.id} className="rounded-xl border border-[#042558]/10 bg-white/70 p-4">
+              <div
+                key={question.id}
+                className="rounded-xl border border-[#042558]/10 bg-white/70 p-4"
+              >
                 <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
                   <div className="grid gap-2">
                     <input
@@ -1723,7 +1555,9 @@ export function PerformancePeriodConfigPanel({
                     onChange={(event) =>
                       setQuestions((current) =>
                         current.map((q) =>
-                          q.id === question.id ? { ...q, type: event.target.value as FieldType } : q,
+                          q.id === question.id
+                            ? { ...q, type: event.target.value as FieldType }
+                            : q,
                         ),
                       )
                     }
@@ -1789,9 +1623,7 @@ export function PerformancePeriodConfigPanel({
                       options={question.leaderOptions ?? []}
                       onChange={(leaderOptions) =>
                         setQuestions((current) =>
-                          current.map((q) =>
-                            q.id === question.id ? { ...q, leaderOptions } : q,
-                          ),
+                          current.map((q) => (q.id === question.id ? { ...q, leaderOptions } : q)),
                         )
                       }
                     />
@@ -1801,11 +1633,11 @@ export function PerformancePeriodConfigPanel({
             ))}
           </div>
         </section>
-      ) : filteredConfigs.length === 0 ? (
+      ) : (
         <div className="rounded-xl border-2 border-dashed border-[#042558]/15 bg-white/60 p-8 text-center text-sm text-[#042558]/45">
-          Crie um modelo de periodo para configurar as perguntas.
+          Carregando modelo...
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -1823,7 +1655,15 @@ function normalizeConfigRow(config: ConfigRow): ConfigRow {
 
 function periodLabel(config: ConfigRow) {
   const normalized = normalizeConfigRow(config);
-  return normalized.name?.trim() || `${normalized.period_days} dias`;
+  return normalized.name?.trim() || reviewTypeLabel(normalized.review_type ?? "experience");
+}
+
+function reviewPeriodLabel(days: number | null | undefined, type?: ReviewType | null) {
+  const options = type
+    ? reviewPeriodOptionsForType(type)
+    : [...EXPERIENCE_REVIEW_PERIOD_OPTIONS, ...PERFORMANCE_REVIEW_PERIOD_OPTIONS];
+  const option = options.find((item) => item.days === days);
+  return option?.label ?? (days ? `${days} dias` : "Periodo");
 }
 
 function addDaysToDate(dateValue: string, days: number) {
@@ -1960,7 +1800,9 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           .order("display_order"),
         (supabase as any)
           .from("project_employees")
-          .select("id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date")
+          .select(
+            "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
+          )
           .eq("project_id", projectId)
           .order("nome"),
         supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
@@ -1988,45 +1830,34 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
     return employees
       .flatMap((employee) => {
         const leader = employees.find((item) => item.id === employee.superior_imediato_id) ?? null;
-        const employeePosition = positions.find((position) => position.id === employee.position_id) ?? null;
+        const employeePosition =
+          positions.find((position) => position.id === employee.position_id) ?? null;
         const description =
           descriptions.find((dc) => dc.organization_position_id === employee.position_id) ?? null;
         const reviewType = getEmployeeReviewType(employee, today);
-        const configsForType = configs.filter((config) => (config.review_type ?? "experience") === reviewType);
-        const performanceConfig =
-          configsForType.find((config) => config.period_days === EXPERIENCE_LIMIT_DAYS) ??
-          configsForType[configsForType.length - 1] ??
-          null;
-        const employeeConfigs = reviewType === "experience"
-          ? configsForType.filter((config) => (config.period_days ?? 0) <= EXPERIENCE_LIMIT_DAYS)
-          : performanceConfig
-            ? [performanceConfig]
-            : [];
-        return employeeConfigs.map((config) => {
+        const config =
+          configs.find((item) => (item.review_type ?? "experience") === reviewType) ?? null;
+        const reviewPeriods = reviewPeriodOptionsForType(reviewType);
+        if (!config) return [];
+        return reviewPeriods.map(({ days: periodDays }) => {
           const baseDate = employee.last_performance_review_date || employee.admission_date;
-          const dueDate =
-            reviewType === "performance" && !employee.last_performance_review_date
-              ? today
-              : config.period_days
-                ? addDaysToDate(baseDate, config.period_days)
-                : baseDate;
+          const dueDate = addDaysToDate(baseDate, periodDays);
           const existingReview =
             reviews.find(
               (review) =>
                 review.employee_id === employee.id &&
                 (review.config_id === config.id || review.review_type === reviewType) &&
                 (review.review_type ?? reviewType) === reviewType &&
-                (reviewType === "performance" && review.status !== "finalized"
-                  ? true
-                  : review.due_date === dueDate),
+                review.due_date === dueDate,
             ) ?? null;
           return {
-            id: `${employee.id}:${config.id}:${dueDate}`,
+            id: `${employee.id}:${config.id}:${periodDays}:${dueDate}`,
             employee,
             leader,
             employeePosition,
             description,
             config,
+            periodDays,
             baseDate,
             dueDate,
             daysUntil: daysBetween(today, dueDate),
@@ -2036,7 +1867,11 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         });
       })
       .filter((item) => !item.existingReview || item.existingReview.status !== "finalized")
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.employee.nome.localeCompare(b.employee.nome, "pt-BR"));
+      .sort(
+        (a, b) =>
+          a.dueDate.localeCompare(b.dueDate) ||
+          a.employee.nome.localeCompare(b.employee.nome, "pt-BR"),
+      );
   }, [configs, descriptions, employees, positions, reviews, today]);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -2047,7 +1882,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             item.employee.nome,
             item.employeePosition?.nome,
             item.leader?.nome,
-            periodLabel(item.config),
+            reviewPeriodLabel(item.periodDays, item.reviewType),
             reviewTypeLabel(item.reviewType),
           ]
             .filter(Boolean)
@@ -2068,9 +1903,12 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   const createAgendaReview = async (item: AgendaItem) => {
     if (item.existingReview) return;
     if (!item.leader) return toast.error("Cadastre o lider imediato deste funcionario primeiro.");
-    if (!item.description) return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
-    const leaderPosition = positions.find((position) => position.id === item.leader?.position_id) ?? null;
-    if (!item.employeePosition || !leaderPosition) return toast.error("Colaborador ou lider invalido.");
+    if (!item.description)
+      return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
+    const leaderPosition =
+      positions.find((position) => position.id === item.leader?.position_id) ?? null;
+    if (!item.employeePosition || !leaderPosition)
+      return toast.error("Colaborador ou lider invalido.");
     const questions = (item.config.questions_schema ?? [])
       .filter((question) => question.active ?? true)
       .map((question) => ({ ...question, source: "config" as const }));
@@ -2089,8 +1927,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         employee_name: item.employee.nome,
         leader_name: item.leader.nome,
         job_title: item.description.cargo || item.employeePosition.nome,
-        period_name: periodLabel(item.config),
-        period_days: item.config.period_days,
+        period_name: reviewPeriodLabel(item.periodDays, item.reviewType),
+        period_days: item.periodDays,
         due_date: item.dueDate,
         review_type: item.reviewType,
         job_description_snapshot: item.description,
@@ -2118,11 +1956,13 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             Agenda de avaliacoes
           </h2>
           <p className="mt-1 text-xs text-[#042558]/50">
-            Organizada por pessoa. Ate 90 dias entra como experiencia; depois disso entra como desempenho.
+            Organizada por pessoa. Ate 90 dias entra como experiencia; depois disso entra como
+            desempenho.
           </p>
         </div>
         <span className="w-fit rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-          {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length} notificacao(oes)
+          {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length}{" "}
+          notificacao(oes)
         </span>
       </div>
 
@@ -2150,16 +1990,26 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           {groupedAgenda.map((items) => {
             const employee = items[0].employee;
             const position = items[0].employeePosition;
-            const dueCount = items.filter((item) => item.daysUntil <= 0 && !item.existingReview).length;
+            const dueCount = items.filter(
+              (item) => item.daysUntil <= 0 && !item.existingReview,
+            ).length;
             return (
-              <article key={employee.id} className="rounded-xl border border-[#042558]/10 bg-white p-4">
+              <article
+                key={employee.id}
+                className="rounded-xl border border-[#042558]/10 bg-white p-4"
+              >
                 <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h3 className="font-semibold text-[#042558]">{employee.nome}</h3>
                     <p className="text-xs text-[#042558]/50">
-                      {position?.nome ?? "sem cargo"} · {reviewTypeLabel(items[0].reviewType)} · base:{" "}
-                      {formatDateOnly(employee.last_performance_review_date || employee.admission_date)}
-                      {employee.last_performance_review_date ? " (ultima avaliacao)" : " (admissao)"}
+                      {position?.nome ?? "sem cargo"} · {reviewTypeLabel(items[0].reviewType)} ·
+                      base:{" "}
+                      {formatDateOnly(
+                        employee.last_performance_review_date || employee.admission_date,
+                      )}
+                      {employee.last_performance_review_date
+                        ? " (ultima avaliacao)"
+                        : " (admissao)"}
                     </p>
                   </div>
                   {dueCount > 0 && (
@@ -2175,13 +2025,16 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                       <div
                         key={item.id}
                         className={`flex flex-col gap-3 rounded-lg border px-3 py-2 md:flex-row md:items-center md:justify-between ${
-                          isDue ? "border-amber-300 bg-amber-50" : "border-[#042558]/10 bg-[#042558]/[0.02]"
+                          isDue
+                            ? "border-amber-300 bg-amber-50"
+                            : "border-[#042558]/10 bg-[#042558]/[0.02]"
                         }`}
                       >
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium text-[#042558]">
-                              {reviewTypeLabel(item.reviewType)} · {periodLabel(item.config)}
+                              {reviewTypeLabel(item.reviewType)} ·{" "}
+                              {reviewPeriodLabel(item.periodDays, item.reviewType)}
                             </span>
                             {item.existingReview ? (
                               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
@@ -2189,7 +2042,9 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                               </span>
                             ) : isDue ? (
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                {item.daysUntil === 0 ? "Vence hoje" : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
+                                {item.daysUntil === 0
+                                  ? "Vence hoje"
+                                  : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
                               </span>
                             ) : (
                               <span className="rounded-full bg-[#042558]/5 px-2 py-0.5 text-xs text-[#042558]/55">
@@ -2244,36 +2099,47 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [employeeId, setEmployeeId] = useState("");
   const [leaderEmployeeId, setLeaderEmployeeId] = useState("");
   const [days, setDays] = useState(14);
+  const [reviewPeriodDays, setReviewPeriodDays] = useState(
+    EXPERIENCE_REVIEW_PERIOD_OPTIONS[0].days,
+  );
   const [reviewTypeTab, setReviewTypeTab] = useState<ReviewType>("experience");
 
   const load = useCallback(async () => {
-    const [{ data: revs }, { data: parts }, { data: pos }, { data: emps }, { data: dcs }, { data: cfgs }] =
-      await Promise.all([
-        supabase
-          .from("performance_reviews")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false }),
-        supabase.from("performance_review_participants").select("*").eq("project_id", projectId),
-        supabase
-          .from("project_positions")
-          .select("id,nome,parent_id")
-          .eq("project_id", projectId)
-          .eq("status", "active")
-          .order("display_order"),
-        (supabase as any)
-          .from("project_employees")
-          .select("id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date")
-          .eq("project_id", projectId)
-          .order("nome"),
-        supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
-        supabase
-          .from("performance_review_configs")
-          .select("*")
-          .eq("project_id", projectId)
-          .eq("is_active", true)
-          .order("period_days", { ascending: true }),
-      ]);
+    const [
+      { data: revs },
+      { data: parts },
+      { data: pos },
+      { data: emps },
+      { data: dcs },
+      { data: cfgs },
+    ] = await Promise.all([
+      supabase
+        .from("performance_reviews")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      supabase.from("performance_review_participants").select("*").eq("project_id", projectId),
+      supabase
+        .from("project_positions")
+        .select("id,nome,parent_id")
+        .eq("project_id", projectId)
+        .eq("status", "active")
+        .order("display_order"),
+      (supabase as any)
+        .from("project_employees")
+        .select(
+          "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
+        )
+        .eq("project_id", projectId)
+        .order("nome"),
+      supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
+      supabase
+        .from("performance_review_configs")
+        .select("*")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("period_days", { ascending: true }),
+    ]);
     setReviews((revs ?? []) as ReviewRow[]);
     setParticipants((parts ?? []) as ParticipantRow[]);
     setPositions((pos ?? []) as PositionRow[]);
@@ -2298,7 +2164,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     acc.set(employee.superior_imediato_id, (acc.get(employee.superior_imediato_id) ?? 0) + 1);
     return acc;
   }, new Map<string, number>());
-  const leaderEmployees = employees.filter((employee) => (subordinateCountByLeader.get(employee.id) ?? 0) > 0);
+  const leaderEmployees = employees.filter(
+    (employee) => (subordinateCountByLeader.get(employee.id) ?? 0) > 0,
+  );
   const subordinateEmployees = leaderEmployeeId
     ? employees.filter((employee) => employee.superior_imediato_id === leaderEmployeeId)
     : [];
@@ -2307,22 +2175,23 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     !!leaderEmployeeId &&
     selectedEmployee.superior_imediato_id === leaderEmployeeId;
   const today = new Date().toISOString().slice(0, 10);
-  const selectedReviewType = selectedEmployee ? getEmployeeReviewType(selectedEmployee, today) : null;
+  const selectedReviewType = selectedEmployee
+    ? getEmployeeReviewType(selectedEmployee, today)
+    : null;
   const formReviewType = selectedReviewType ?? reviewTypeTab;
   const availableConfigs = useMemo(
     () => configs.filter((config) => (config.review_type ?? "experience") === formReviewType),
     [configs, formReviewType],
   );
+  const availableReviewPeriodOptions = reviewPeriodOptionsForType(formReviewType);
   const selectedConfig = availableConfigs.find((config) => config.id === configId) ?? null;
   const getEmployeeBaseDate = useCallback(
     (employee: PerfEmployeeRow) => employee.last_performance_review_date || employee.admission_date,
     [],
   );
   const expectedReviewDate =
-    selectedEmployee && selectedConfig?.period_days
-      ? selectedReviewType === "performance" && !selectedEmployee.last_performance_review_date
-        ? today
-        : addDaysToDate(getEmployeeBaseDate(selectedEmployee), selectedConfig.period_days)
+    selectedEmployee && reviewPeriodDays
+      ? addDaysToDate(getEmployeeBaseDate(selectedEmployee), reviewPeriodDays)
       : null;
   const reviewCounts = reviews.reduce(
     (acc, review) => {
@@ -2349,16 +2218,24 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     setConfigId(availableConfigs[0]?.id ?? "");
   }, [availableConfigs, configId]);
 
+  useEffect(() => {
+    setConfigId(availableConfigs[0]?.id ?? "");
+  }, [formReviewType, availableConfigs]);
+
+  useEffect(() => {
+    if (availableReviewPeriodOptions.some((option) => option.days === reviewPeriodDays)) return;
+    setReviewPeriodDays(availableReviewPeriodOptions[0].days);
+  }, [availableReviewPeriodOptions, reviewPeriodDays]);
+
   const createReview = async () => {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
-    if (!selectedEmployee || !selectedLeader)
-      return toast.error("Informe colaborador e líder.");
+    if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
     if (!selectedEmployeeIsBelowLeader)
       return toast.error("Selecione um colaborador que responda diretamente para este lider.");
     if (!selectedDc)
       return toast.error("Este colaborador não possui descrição de cargo vinculada.");
     if (!selectedConfig || !selectedConfig.is_active)
-      return toast.error("Selecione um modelo de periodo ativo antes de criar.");
+      return toast.error("Selecione um modelo ativo antes de criar.");
     const employeePosition = positions.find((p) => p.id === employeePositionId);
     const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
     if (!employeePosition || !leaderPosition) return toast.error("Colaborador ou líder inválido.");
@@ -2381,8 +2258,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         employee_name: selectedEmployee.nome,
         leader_name: selectedLeader.nome,
         job_title: selectedDc.cargo || employeePosition.nome,
-        period_name: periodLabel(selectedConfig),
-        period_days: selectedConfig.period_days,
+        period_name: reviewPeriodLabel(reviewPeriodDays, formReviewType),
+        period_days: reviewPeriodDays,
         due_date: expectedReviewDate,
         review_type: formReviewType,
         job_description_snapshot: selectedDc,
@@ -2434,11 +2311,13 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               Agenda de avaliações
             </h2>
             <p className="mt-1 text-xs text-[#042558]/50">
-              Datas calculadas pela última avaliação do funcionário ou, se não houver, pela admissão.
+              Datas calculadas pela última avaliação do funcionário ou, se não houver, pela
+              admissão.
             </p>
           </div>
           <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-            {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length} notificação(ões)
+            {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length}{" "}
+            notificação(ões)
           </span>
         </div>
 
@@ -2466,7 +2345,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-[#042558]">{item.employee.nome}</p>
                       <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs text-[#042558]">
-                        {periodLabel(item.config)}
+                        {reviewPeriodLabel(item.periodDays, item.reviewType)}
                       </span>
                       {item.existingReview ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
@@ -2483,8 +2362,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-[#042558]/50">
-                      Prevista para {formatDateOnly(item.dueDate)} · base: {formatDateOnly(item.baseDate)}
-                      {item.employee.last_performance_review_date ? " (ultima avaliação)" : " (admissão)"}
+                      Prevista para {formatDateOnly(item.dueDate)} · base:{" "}
+                      {formatDateOnly(item.baseDate)}
+                      {item.employee.last_performance_review_date
+                        ? " (ultima avaliação)"
+                        : " (admissão)"}
                     </p>
                     <p className="mt-1 text-xs text-[#042558]/45">
                       Lider: {item.leader?.nome ?? "sem lider cadastrado"} · Cargo:{" "}
@@ -2573,23 +2455,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Modelo do periodo
-            </span>
-            <select
-              value={configId}
-              onChange={(e) => setConfigId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Selecione um modelo</option>
-              {availableConfigs.map((config) => (
-                <option key={config.id} value={config.id}>
-                  {periodLabel(config)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-[#042558]/70">
               Lider avaliador
             </span>
             <select
@@ -2643,6 +2508,22 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+              Dia da avaliacao
+            </span>
+            <select
+              value={reviewPeriodDays}
+              onChange={(e) => setReviewPeriodDays(Number(e.target.value))}
+              className={inputClass}
+            >
+              {availableReviewPeriodOptions.map((option) => (
+                <option key={option.days} value={option.days}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[#042558]/70">
               Validade dos links
             </span>
             <select
@@ -2664,7 +2545,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         {selectedEmployee && selectedConfig && expectedReviewDate && (
           <p className="mt-3 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
             {selectedReviewType ? `${reviewTypeLabel(selectedReviewType)} · ` : ""}
-            Data prevista: {formatDateOnly(expectedReviewDate)} ({periodLabel(selectedConfig)} apos a data base de {formatDateOnly(getEmployeeBaseDate(selectedEmployee))}).
+            Data prevista: {formatDateOnly(expectedReviewDate)} (
+            {reviewPeriodLabel(reviewPeriodDays, formReviewType)} apos a data base de{" "}
+            {formatDateOnly(getEmployeeBaseDate(selectedEmployee))}).
           </p>
         )}
         {selectedDc && (
@@ -2704,7 +2587,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     {(review.period_name || review.due_date) && (
                       <p className="mt-1 text-xs text-[#042558]/45">
                         {review.review_type ? `${reviewTypeLabel(review.review_type)} - ` : ""}
-                        {review.period_name ?? "Periodo"} {review.due_date ? `- prevista para ${formatDateOnly(review.due_date)}` : ""}
+                        {review.period_name ?? "Periodo"}{" "}
+                        {review.due_date
+                          ? `- prevista para ${formatDateOnly(review.due_date)}`
+                          : ""}
                       </p>
                     )}
                     <span className="mt-2 inline-flex rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs font-medium text-[#042558]">
@@ -2998,9 +2884,9 @@ function getDescendantPositionIds(positions: PositionRow[], leaderId: string) {
 }
 
 export function allReviewQuestions(review: ReviewRow) {
-  return [
-    ...((review.questions_snapshot ?? []) as PerformanceQuestion[]),
-  ].filter((q) => q.active ?? true);
+  return [...((review.questions_snapshot ?? []) as PerformanceQuestion[])].filter(
+    (q) => q.active ?? true,
+  );
 }
 
 export function PublicPerformanceFormFields({
@@ -3051,6 +2937,3 @@ export function validatePerformanceAnswers(
   );
   return missing ? `Preencha: ${displayQuestionLabel(missing, participantType)}` : null;
 }
-
-
-

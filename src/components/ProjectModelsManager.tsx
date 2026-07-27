@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { ClipboardCheck, FileText, Layers, Plus } from "lucide-react";
+import { ClipboardCheck, FileText, Layers } from "lucide-react";
 import { BaseManager } from "@/components/BaseManager";
 import { PerformancePeriodConfigPanel } from "@/components/PerformanceReviewManager";
 
 type ModelBlock =
   | { key: "job_description"; label: string; description: string; icon: typeof FileText }
-  | { key: "30"; label: string; description: string; icon: typeof ClipboardCheck; days: number }
-  | { key: "45"; label: string; description: string; icon: typeof ClipboardCheck; days: number }
-  | { key: "90"; label: string; description: string; icon: typeof ClipboardCheck; days: number }
-  | { key: "custom"; label: string; description: string; icon: typeof Plus };
+  | {
+      key: "experience";
+      label: string;
+      description: string;
+      icon: typeof ClipboardCheck;
+      reviewType: "experience";
+    }
+  | {
+      key: "performance";
+      label: string;
+      description: string;
+      icon: typeof ClipboardCheck;
+      reviewType: "performance";
+    };
 
 const blocks: ModelBlock[] = [
   {
@@ -18,38 +28,25 @@ const blocks: ModelBlock[] = [
     icon: FileText,
   },
   {
-    key: "30",
-    label: "Modelo de 30 dias",
-    description: "Perguntas do primeiro ciclo de avaliacao.",
+    key: "experience",
+    label: "Modelo de experiencia",
+    description: "Perguntas usadas nas avaliacoes de 30, 45 e 90 dias.",
     icon: ClipboardCheck,
-    days: 30,
+    reviewType: "experience",
   },
   {
-    key: "45",
-    label: "Modelo de 45 dias",
-    description: "Perguntas do acompanhamento intermediario.",
+    key: "performance",
+    label: "Modelo de desempenho",
+    description: "Perguntas usadas nas avaliacoes de 3 meses, 6 meses e 1 ano.",
     icon: ClipboardCheck,
-    days: 45,
-  },
-  {
-    key: "90",
-    label: "Modelo de 90 dias",
-    description: "Perguntas do fechamento do periodo de experiencia.",
-    icon: ClipboardCheck,
-    days: 90,
-  },
-  {
-    key: "custom",
-    label: "Criar modelo",
-    description: "Cadastre outros periodos para usar como base nas avaliacoes.",
-    icon: Plus,
+    reviewType: "performance",
   },
 ];
 
 export function ProjectModelsManager({ projectId = null }: { projectId?: string | null }) {
   const [selected, setSelected] = useState<ModelBlock>(blocks[0]);
 
-  const selectedDays = "days" in selected ? selected.days : null;
+  const selectedReviewType = "reviewType" in selected ? selected.reviewType : null;
   const isGlobal = projectId === null;
 
   return (
@@ -73,7 +70,7 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             <Layers className="h-4 w-4" />
             Blocos de modelos
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 md:grid-cols-3">
             {blocks.map((block) => {
               const active = selected.key === block.key;
               const Icon = block.icon;
@@ -121,7 +118,8 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             <PerformancePeriodConfigPanel
               key={selected.key}
               projectId={projectId}
-              initialPeriodDays={selectedDays}
+              initialReviewType={selectedReviewType}
+              hideReviewTypeTabs
             />
           </div>
         )}
