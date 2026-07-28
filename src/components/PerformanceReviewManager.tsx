@@ -877,6 +877,29 @@ function isInternalOptionValue(value: string) {
   );
 }
 
+function isNonTitleValue(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    !normalized ||
+    /^atividade\s+\d+$/.test(normalized) ||
+    /^item\s+\d+$/.test(normalized) ||
+    ["sim", "nao", "não"].includes(normalized) ||
+    [
+      "diariamente",
+      "semanalmente",
+      "quinzenalmente",
+      "mensalmente",
+      "bimensalmente",
+      "trimestralmente",
+      "semestralmente",
+      "anualmente",
+      "sempre que necessario",
+      "sempre que necessário",
+    ].includes(normalized) ||
+    isInternalOptionValue(value)
+  );
+}
+
 function fieldsForDynamicSource(fields: BaseFieldRow[], source: PerformanceQuestion["dynamicSource"]) {
   const sectionNames: Record<NonNullable<PerformanceQuestion["dynamicSource"]>, string[]> = {
     activities: ["atividades"],
@@ -922,6 +945,26 @@ function pickItemValueFromFields(
   return optionLabelForValue(field, value);
 }
 
+function pickItemValueFromExactLabel(
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[],
+  labels: string[],
+) {
+  const expected = labels.map(normalizeLookup);
+  const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
+  if (!field) return "";
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value || isNonTitleValue(value)) return "";
+  return optionLabelForValue(field, value);
+}
+
+function pickItemValueFromExactKey(item: Record<string, unknown>, names: string[]) {
+  const expected = names.map(normalizeLookup);
+  const entry = Object.entries(item).find(([key]) => expected.includes(normalizeLookup(key)));
+  const value = entry ? stringFromUnknown(entry[1]) : "";
+  return value && !isNonTitleValue(value) ? value : "";
+}
+
 function dynamicItemsForQuestion(dc: DcRow, question: PerformanceQuestion) {
   if (question.dynamicSource === "activities") return dc.atividades ?? [];
   if (question.dynamicSource === "indicators") return dc.indicadores ?? [];
@@ -939,19 +982,47 @@ function dynamicItemTitle(
   const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
   if (question.dynamicSource === "activities") {
     return (
+      pickItemValueFromExactLabel(item, fields, ["Atividade"]) ||
+      pickItemValueFromExactKey(item, ["atividade"]) ||
       pickItemValueFromFields(item, sourceFields, ["atividade"], ["principal"]) ||
       pickItemValue(item, ["atividade", "descricao", "descrição", "texto", "nome"])
     );
   }
   if (question.dynamicSource === "indicators") {
     const indicator =
+      pickItemValueFromExactLabel(item, sourceFields, [
+        "Indicador",
+        "Indicador relacionado",
+        "Nomenclatura do indicador",
+        "Nome do indicador",
+      ]) ||
+      pickItemValueFromExactKey(item, ["indicador", "indicador_relacionado", "nomenclatura"]) ||
       pickItemValueFromFields(item, sourceFields, ["indicador", "nomenclatura", "nome"]) ||
       pickItemValue(item, ["indicador", "nomenclatura", "nome"]);
     const goal =
+      pickItemValueFromExactLabel(item, sourceFields, ["Meta", "Resultado esperado"]) ||
+      pickItemValueFromExactKey(item, ["meta", "resultado_esperado"]) ||
       pickItemValueFromFields(item, sourceFields, ["meta", "resultado esperado"]) ||
       pickItemValue(item, ["meta", "resultado esperado"]);
     return [indicator, goal ? `Meta: ${goal}` : ""].filter(Boolean).join(" | ");
   }
+  const titleLabels: Record<string, string[]> = {
+    culture_skills: ["Habilidade cultural", "Habilidade", "Competência", "Competencia"],
+    role_skills: [
+      "Habilidade do cargo",
+      "Habilidade específica do cargo",
+      "Habilidade especifica do cargo",
+      "Habilidade",
+      "Competência",
+      "Competencia",
+    ],
+    behavior: ["Postura e comportamento", "Postura", "Comportamento"],
+  };
+  const titleKeys: Record<string, string[]> = {
+    culture_skills: ["habilidade_cultural", "habilidade", "competencia"],
+    role_skills: ["habilidade_cargo", "habilidade_do_cargo", "habilidade", "competencia"],
+    behavior: ["postura_comportamento", "postura", "comportamento"],
+  };
   const titleFromFields = pickItemValueFromFields(item, sourceFields, [
     "habilidade",
     "postura",
@@ -963,6 +1034,8 @@ function dynamicItemTitle(
     "descrição",
   ]);
   return (
+    pickItemValueFromExactLabel(item, sourceFields, titleLabels[question.dynamicSource ?? ""] ?? []) ||
+    pickItemValueFromExactKey(item, titleKeys[question.dynamicSource ?? ""] ?? []) ||
     titleFromFields ||
     pickItemValue(item, [
       "habilidade",
@@ -2291,54 +2364,58 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   }, [agendaItems, normalizedQuery]);
 
   const createAgendaReview = async (item: AgendaItem) => {
-    if (item.existingReview) return;
-    if (!item.leader) return toast.error("Cadastre o lider imediato deste funcionario primeiro.");
-    if (!item.description)
-      return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
-    const leaderPosition =
-      positions.find((position) => position.id === item.leader?.position_id) ?? null;
-    if (!item.employeePosition || !leaderPosition)
-      return toast.error("Colaborador ou lider invalido.");
-    const questions = buildReviewQuestions(
-      item.config.questions_schema ?? [],
-      item.description,
-      item.reviewType,
-      baseFields,
-    );
-    const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      if (item.existingReview) return;
+      if (!item.leader) return toast.error("Cadastre o lider imediato deste funcionario primeiro.");
+      if (!item.description)
+        return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
+      const leaderPosition =
+        positions.find((position) => position.id === item.leader?.position_id) ?? null;
+      if (!item.employeePosition || !leaderPosition)
+        return toast.error("Colaborador ou lider invalido.");
+      const questions = buildReviewQuestions(
+        item.config.questions_schema ?? [],
+        item.description,
+        item.reviewType,
+        baseFields,
+      );
+      const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: review, error } = await supabase
-      .from("performance_reviews")
-      .insert({
-        project_id: projectId,
-        config_id: item.config.id,
-        employee_id: item.employee.id,
-        name: `${reviewTypeLabel(item.reviewType)} - ${item.employee.nome}`,
-        employee_position_id: item.employee.position_id,
-        leader_position_id: item.leader.position_id,
-        job_description_id: item.description.id,
-        employee_name: item.employee.nome,
-        leader_name: item.leader.nome,
-        job_title: item.description.cargo || item.employeePosition.nome,
-        period_name: reviewPeriodLabel(item.periodDays, item.reviewType),
-        period_days: item.periodDays,
-        due_date: item.dueDate,
-        review_type: item.reviewType,
-        job_description_snapshot: item.description,
-        activities_snapshot: [],
-        questions_snapshot: questions,
-        created_by: user?.id ?? null,
-      })
-      .select("id")
-      .single();
-    if (error || !review) return toast.error(error?.message ?? "Nao foi possivel criar.");
-    const { error: partErr } = await supabase.from("performance_review_participants").insert([
-      { review_id: review.id, project_id: projectId, participant_type: "collaborator", expires_at },
-      { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
-    ]);
-    if (partErr) return toast.error(partErr.message);
-    toast.success("Avaliacao criada na agenda");
-    await load();
+      const { data: review, error } = await supabase
+        .from("performance_reviews")
+        .insert({
+          project_id: projectId,
+          config_id: item.config.id,
+          employee_id: item.employee.id,
+          name: `${reviewTypeLabel(item.reviewType)} - ${item.employee.nome}`,
+          employee_position_id: item.employee.position_id,
+          leader_position_id: item.leader.position_id,
+          job_description_id: item.description.id,
+          employee_name: item.employee.nome,
+          leader_name: item.leader.nome,
+          job_title: item.description.cargo || item.employeePosition.nome,
+          period_name: reviewPeriodLabel(item.periodDays, item.reviewType),
+          period_days: item.periodDays,
+          due_date: item.dueDate,
+          review_type: item.reviewType,
+          job_description_snapshot: item.description,
+          activities_snapshot: [],
+          questions_snapshot: questions,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (error || !review) return toast.error(error?.message ?? "Nao foi possivel criar.");
+      const { error: partErr } = await supabase.from("performance_review_participants").insert([
+        { review_id: review.id, project_id: projectId, participant_type: "collaborator", expires_at },
+        { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
+      ]);
+      if (partErr) return toast.error(partErr.message);
+      toast.success("Avaliacao criada na agenda");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar.");
+    }
   };
 
   return (
@@ -2487,6 +2564,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [employees, setEmployees] = useState<PerfEmployeeRow[]>([]);
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
+  const [baseFields, setBaseFields] = useState<BaseFieldRow[]>([]);
   const [configId, setConfigId] = useState("");
   const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
@@ -2628,6 +2706,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   }, [availableReviewPeriodOptions, reviewPeriodDays]);
 
   const createReview = async () => {
+    try {
     if (!name.trim()) return toast.error("Informe o nome da avaliação.");
     if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
     if (!selectedEmployeeIsBelowLeader)
@@ -2684,9 +2763,12 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     setLeaderEmployeeId("");
     toast.success("Avaliação criada");
     await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar.");
+    }
   };
 
-  const prepareAgendaReview = (_item: AgendaItem) => undefined;
+  const prepareAgendaReview = async (_item: AgendaItem) => undefined;
 
   const markSentAndCopy = async (participant: ParticipantRow) => {
     const url = `${window.location.origin}/avaliacao-desempenho/preencher/${participant.token}`;

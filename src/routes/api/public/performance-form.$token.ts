@@ -50,6 +50,7 @@ function isInternalOptionValue(value: string) {
   const normalized = normalizeLookup(value);
   return (
     /^(sim|nao|não)_\d+$/.test(normalized) ||
+    /^[a-z0-9_-]+_\d{8,}$/.test(normalized) ||
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
   );
 }
@@ -60,8 +61,31 @@ function stringFromUnknown(value: unknown) {
   return "";
 }
 
+function isNonTitleValue(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    !normalized ||
+    /^atividade\s+\d+$/.test(normalized) ||
+    /^item\s+\d+$/.test(normalized) ||
+    ["sim", "nao", "não"].includes(normalized) ||
+    [
+      "diariamente",
+      "semanalmente",
+      "quinzenalmente",
+      "mensalmente",
+      "bimensalmente",
+      "trimestralmente",
+      "semestralmente",
+      "anualmente",
+      "sempre que necessario",
+      "sempre que necessário",
+    ].includes(normalized) ||
+    isInternalOptionValue(value)
+  );
+}
+
 function arrayFromSnapshot(snapshot: JsonRecord, key: string) {
-  const value = snapshot[key];
+  const value = snapshot[key] ?? asRecord(snapshot.dynamic_values)[key];
   return Array.isArray(value) ? (value as JsonRecord[]) : [];
 }
 
@@ -107,13 +131,42 @@ function pickItemValueFromFields(
   return optionLabelForValue(field, value);
 }
 
+function pickItemValueFromExactField(item: JsonRecord, fields: BaseFieldRow[], names: string[]) {
+  const expected = names.map(normalizeLookup);
+  const field = fields.find((candidate) => {
+    const label = normalizeLookup(candidate.label);
+    const key = normalizeLookup(candidate.field_key);
+    return expected.includes(label) || expected.includes(key);
+  });
+  if (!field) return "";
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value || isInternalOptionValue(value)) return "";
+  return optionLabelForValue(field, value);
+}
+
+function pickItemValueFromExactLabel(item: JsonRecord, fields: BaseFieldRow[], labels: string[]) {
+  const expected = labels.map(normalizeLookup);
+  const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
+  if (!field) return "";
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value || isNonTitleValue(value)) return "";
+  return optionLabelForValue(field, value);
+}
+
+function pickItemValueFromExactKey(item: JsonRecord, names: string[]) {
+  const expected = names.map(normalizeLookup);
+  const entry = Object.entries(item).find(([key]) => expected.includes(normalizeLookup(key)));
+  const value = entry ? stringFromUnknown(entry[1]) : "";
+  return value && !isNonTitleValue(value) ? value : "";
+}
+
 function pickLongestText(item: JsonRecord, preferredKeys: string[]) {
   const entries = Object.entries(item);
   for (const key of preferredKeys) {
     const normalizedKey = normalizeLookup(key);
     const match = entries.find(([entryKey]) => normalizeLookup(entryKey).includes(normalizedKey));
     const value = match ? stringFromUnknown(match[1]) : "";
-    if (value && !isInternalOptionValue(value)) return value;
+    if (value && !isNonTitleValue(value)) return value;
   }
   return entries
     .map(([, value]) => stringFromUnknown(value))
@@ -138,21 +191,55 @@ function titleForQuestion(snapshot: JsonRecord, fields: BaseFieldRow[], question
   const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
   if (question.dynamicSource === "activities") {
     return (
+      pickItemValueFromExactLabel(item, fields, ["Atividade"]) ||
+      pickItemValueFromExactKey(item, ["atividade"]) ||
+      pickItemValueFromExactField(item, sourceFields, ["atividade"]) ||
       pickItemValueFromFields(item, sourceFields, ["atividade"], ["principal"]) ||
       pickLongestText(item, ["atividade", "descricao", "descrição", "texto", "nome"]) ||
-      question.groupTitle
+      (question.groupTitle && !isNonTitleValue(question.groupTitle) ? question.groupTitle : null)
     );
   }
   if (question.dynamicSource === "indicators") {
     const indicator =
+      pickItemValueFromExactLabel(item, sourceFields, [
+        "Indicador",
+        "Indicador relacionado",
+        "Nomenclatura do indicador",
+        "Nome do indicador",
+      ]) ||
+      pickItemValueFromExactKey(item, ["indicador", "indicador_relacionado", "nomenclatura"]) ||
       pickItemValueFromFields(item, sourceFields, ["indicador", "nomenclatura", "nome"]) ||
       pickLongestText(item, ["indicador", "nomenclatura", "nome"]);
     const goal =
+      pickItemValueFromExactLabel(item, sourceFields, ["Meta", "Resultado esperado"]) ||
+      pickItemValueFromExactKey(item, ["meta", "resultado_esperado"]) ||
       pickItemValueFromFields(item, sourceFields, ["meta", "resultado esperado"]) ||
       pickLongestText(item, ["meta", "resultado esperado"]);
-    return [indicator, goal ? `Meta: ${goal}` : ""].filter(Boolean).join(" | ") || question.groupTitle;
+    return (
+      [indicator, goal ? `Meta: ${goal}` : ""].filter(Boolean).join(" | ") ||
+      (question.groupTitle && !isNonTitleValue(question.groupTitle) ? question.groupTitle : null)
+    );
   }
+  const titleLabels: Record<string, string[]> = {
+    culture_skills: ["Habilidade cultural", "Habilidade", "Competência", "Competencia"],
+    role_skills: [
+      "Habilidade do cargo",
+      "Habilidade específica do cargo",
+      "Habilidade especifica do cargo",
+      "Habilidade",
+      "Competência",
+      "Competencia",
+    ],
+    behavior: ["Postura e comportamento", "Postura", "Comportamento"],
+  };
+  const titleKeys: Record<string, string[]> = {
+    culture_skills: ["habilidade_cultural", "habilidade", "competencia"],
+    role_skills: ["habilidade_cargo", "habilidade_do_cargo", "habilidade", "competencia"],
+    behavior: ["postura_comportamento", "postura", "comportamento"],
+  };
   return (
+    pickItemValueFromExactLabel(item, sourceFields, titleLabels[question.dynamicSource] ?? []) ||
+    pickItemValueFromExactKey(item, titleKeys[question.dynamicSource] ?? []) ||
     pickItemValueFromFields(item, sourceFields, [
       "habilidade",
       "postura",
@@ -173,7 +260,7 @@ function titleForQuestion(snapshot: JsonRecord, fields: BaseFieldRow[], question
       "descricao",
       "descrição",
     ]) ||
-    question.groupTitle
+    (question.groupTitle && !isNonTitleValue(question.groupTitle) ? question.groupTitle : null)
   );
 }
 
