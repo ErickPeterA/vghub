@@ -1429,7 +1429,7 @@ export function PerformanceComparisonPage({
             return (
               <section
                 key={question.id}
-                className={`rounded-xl border p-4 ${different ? "border-amber-300 bg-amber-50/70" : "border-[#042558]/10 bg-white"}`}
+                className={`rounded-xl border p-4 ${different ? "border-red-300 bg-red-50/80" : "border-[#042558]/10 bg-white"}`}
               >
                 <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -3058,10 +3058,17 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
             const ps = participants.filter((p) => p.review_id === review.id);
             const collaborator = ps.find((p) => p.participant_type === "collaborator");
             const leader = ps.find((p) => p.participant_type === "leader");
+            const collaboratorAnswered = collaborator?.status === "answered";
+            const leaderAnswered = leader?.status === "answered";
+            const bothAnswered = collaboratorAnswered && leaderAnswered;
             return (
               <article
                 key={review.id}
-                className="rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm"
+                className={`rounded-xl border p-4 shadow-sm transition-colors ${
+                  bothAnswered
+                    ? "border-emerald-200 bg-emerald-50/80 shadow-emerald-100/60"
+                    : "border-[#042558]/10 bg-white"
+                }`}
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -3115,21 +3122,34 @@ function ParticipantCard({
   participant?: ParticipantRow;
   onCopy: (participant: ParticipantRow) => void;
 }) {
+  const answered = participant?.status === "answered";
   return (
-    <div className="rounded-lg border border-[#042558]/10 bg-[#042558]/5 p-3">
+    <div
+      className={`rounded-lg border p-3 transition-colors ${
+        answered ? "border-emerald-200 bg-emerald-50" : "border-[#042558]/10 bg-[#042558]/5"
+      }`}
+    >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+          <p
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              answered ? "text-emerald-700/70" : "text-[#042558]/50"
+            }`}
+          >
             {title}
           </p>
-          <p className="text-sm font-medium text-[#042558]">
+          <p className={`text-sm font-medium ${answered ? "text-emerald-900" : "text-[#042558]"}`}>
             {participant ? STATUS_LABEL[participant.status] : "Link não gerado"}
           </p>
         </div>
         {participant ? (
           <button
             onClick={() => onCopy(participant)}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-3 py-2 text-xs font-medium text-[#042558] hover:bg-[#042558]/5"
+            className={`inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${
+              answered
+                ? "border-emerald-200 text-emerald-800 hover:bg-emerald-100"
+                : "border-[#042558]/20 text-[#042558] hover:bg-[#042558]/5"
+            }`}
           >
             <Copy className="h-3.5 w-3.5" /> Enviar link
           </button>
@@ -3140,12 +3160,16 @@ function ParticipantCard({
         )}
       </div>
       {participant?.submitted_at && (
-        <p className="mt-2 text-xs text-[#042558]/50">
+        <p className={`mt-2 text-xs ${answered ? "text-emerald-700/70" : "text-[#042558]/50"}`}>
           Respondido {new Date(participant.submitted_at).toLocaleString("pt-BR")}
         </p>
       )}
       {participant && (
-        <p className="mt-2 break-all text-[11px] text-[#042558]/45">
+        <p
+          className={`mt-2 break-all text-[11px] ${
+            answered ? "text-emerald-800/55" : "text-[#042558]/45"
+          }`}
+        >
           /avaliacao-desempenho/preencher/{participant.token}
         </p>
       )}

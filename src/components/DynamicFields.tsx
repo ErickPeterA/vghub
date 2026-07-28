@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DC_SECTIONS } from "@/lib/dc-sections";
 
 export type DataSource = "manual" | "areas" | "setores";
 
@@ -126,6 +127,8 @@ export function useProjectFields(projectId: string) {
 
 // Limite de itens por bloco (repeater), configurado na Base do projeto.
 // Se um bloco não tiver linha configurada, não há limite (retorna undefined).
+const DEFAULT_REPEATER_LIMIT = 3;
+
 export function useSectionLimits(projectId: string) {
   const [limits, setLimits] = useState<Record<string, number>>({});
   const [enabledSections, setEnabledSections] = useState<Record<string, boolean>>({});
@@ -140,6 +143,9 @@ export function useSectionLimits(projectId: string) {
       .then(({ data }) => {
         const map: Record<string, number> = {};
         const enabledMap: Record<string, boolean> = {};
+        DC_SECTIONS.filter((section) => section.repeater).forEach((section) => {
+          map[section.key] = DEFAULT_REPEATER_LIMIT;
+        });
         (data ?? []).forEach((row) => {
           map[row.section] = row.max_items;
           enabledMap[row.section] = row.is_enabled ?? true;

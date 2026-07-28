@@ -58,12 +58,14 @@ const ACTIVITY_STAGES: Array<{
   { key: "answered", label: "Respondido", empty: "Nenhuma resposta recebida", icon: CheckCircle2, iconClass: "text-emerald-500" },
 ];
 
+const ACTIVITY_LINK_DAYS = 7;
+const ACTIVITY_REOPEN_DAYS = 3;
+
 export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectId: string; onUnreviewedChange?: (n: number) => void }) {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
   const [headerAnswers, setHeaderAnswers] = useState<Record<string, string>>({});
-  const [days, setDays] = useState<number>(3);
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(true);
   const [openResp, setOpenResp] = useState<{ link: LinkRow; response: ResponseRow | null } | null>(null);
@@ -115,7 +117,7 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     const missing = gpHeaderFields.find((field) => field.required && !headerAnswers[field.id]?.trim());
     if (missing) return toast.error(`Preencha no cabeçalho: ${missing.label}`);
 
-    const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const expires_at = new Date(Date.now() + ACTIVITY_LINK_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const { data: userData } = await supabase.auth.getUser();
     const { error } = await supabase.from("activity_links").insert({
       project_id: projectId,
@@ -150,13 +152,13 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   };
 
   const reativar = async (l: LinkRow) => {
-    const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const expires_at = new Date(Date.now() + ACTIVITY_REOPEN_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const { error } = await supabase
       .from("activity_links")
       .update({ status: "pending", expires_at })
       .eq("id", l.id);
     if (error) return toast.error(error.message);
-    toast.success("Link reativado");
+    toast.success("Link reaberto por 3 dias");
     void load();
   };
 
@@ -196,14 +198,11 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
           </div>
         )}
 
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto]">
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <input placeholder="Rótulo (ex: João - RH)" value={label} onChange={(e) => setLabel(e.target.value)} className="rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm outline-none focus:border-[#042558]" />
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm">
-            <option value={1}>Expira em 1 dia</option>
-            <option value={3}>Expira em 3 dias</option>
-            <option value={7}>Expira em 7 dias</option>
-            <option value={14}>Expira em 14 dias</option>
-          </select>
+          <span className="inline-flex items-center justify-center rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]/70">
+            Validade: 7 dias
+          </span>
           <button onClick={gerar} disabled={!configId} className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white hover:bg-[#042558]/90 disabled:opacity-40">
             <Plus className="h-4 w-4" /> Gerar link
           </button>
@@ -250,7 +249,6 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
                         <ActivityLinkCard
                           key={l.id}
                           link={l}
-                          days={days}
                           onCopy={copiar}
                           onOpenResponse={abrirResposta}
                           onCancel={cancelar}
@@ -455,14 +453,12 @@ function CompilationPreview({
 
 function ActivityLinkCard({
   link,
-  days,
   onCopy,
   onOpenResponse,
   onCancel,
   onReactivate,
 }: {
   link: LinkRow;
-  days: number;
   onCopy: (token: string) => void;
   onOpenResponse: (link: LinkRow) => void;
   onCancel: (link: LinkRow) => void;
@@ -507,9 +503,9 @@ function ActivityLinkCard({
             <Trash2 className="h-4 w-4" />
           </button>
         )}
-        {(link.status === "expired" || link.status === "cancelled") && (
-          <button onClick={() => onReactivate(link)} className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20" title={`Reativar por ${days} dia${days > 1 ? "s" : ""}`}>
-            <RotateCcw className="h-3.5 w-3.5" /> Reativar link
+        {link.status === "expired" && (
+          <button onClick={() => onReactivate(link)} className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20" title="Reabrir por 3 dias">
+            <RotateCcw className="h-3.5 w-3.5" /> Reabrir por 3 dias
           </button>
         )}
       </div>
