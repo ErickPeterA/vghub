@@ -17,6 +17,12 @@ type LinkedPosition = {
   parent_id: string | null;
 };
 
+function validDateOrNull(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : null;
+}
+
 function NovaDC() {
   const { projectId } = Route.useParams();
   const { user } = useCurrentUser();
@@ -85,8 +91,8 @@ function NovaDC() {
         ...payload,
         project_id: projectId,
         created_by: user.id,
-        data_versao: payload.data_versao || null,
-        data_revisao: payload.data_revisao || null,
+        data_versao: validDateOrNull(payload.data_versao),
+        data_revisao: validDateOrNull(payload.data_revisao),
         organization_position_id: linkedPosition?.id ?? null,
       })
       .select("id")

@@ -10,10 +10,21 @@ type PerformanceQuestion = {
   options?: string[];
   leaderOptions?: string[];
   helpText?: string;
-  source?: "activity" | "config";
+  source?: "activity" | "config" | "job_description";
+  sectionTitle?: string;
+  groupId?: string;
+  groupTitle?: string;
+  dynamicSource?: "activities" | "indicators" | "culture_skills" | "role_skills" | "behavior";
+  dynamicRole?: "efficiency" | "efficacy" | "result" | "reach" | "fit" | "rating";
 };
 
 type JsonRecord = Record<string, unknown>;
+type BaseFieldRow = {
+  field_key: string;
+  label: string;
+  section: string;
+  base_options?: Array<{ label: string; value: string; is_active?: boolean | null }>;
+};
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
@@ -25,6 +36,145 @@ function stringValue(value: unknown) {
 
 function snapshotValue(snapshot: JsonRecord, key: string) {
   return stringValue(snapshot[key]) ?? stringValue(asRecord(snapshot.dynamic_values)[key]);
+}
+
+function normalizeLookup(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isInternalOptionValue(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    /^(sim|nao|não)_\d+$/.test(normalized) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
+  );
+}
+
+function stringFromUnknown(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function arrayFromSnapshot(snapshot: JsonRecord, key: string) {
+  const value = snapshot[key];
+  return Array.isArray(value) ? (value as JsonRecord[]) : [];
+}
+
+function fieldsForDynamicSource(fields: BaseFieldRow[], source?: PerformanceQuestion["dynamicSource"]) {
+  const sectionNames: Record<string, string[]> = {
+    activities: ["atividades"],
+    indicators: ["indicadores"],
+    culture_skills: ["habilidades culturais"],
+    role_skills: ["habilidades do cargo"],
+    behavior: ["postura", "comportamento"],
+  };
+  const expected = source ? sectionNames[source] ?? [] : [];
+  return fields.filter((field) =>
+    expected.some((name) => normalizeLookup(field.section).includes(name)),
+  );
+}
+
+function optionLabelForValue(field: BaseFieldRow, value: string) {
+  return (
+    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+      ?.label ?? value
+  );
+}
+
+function pickItemValueFromFields(
+  item: JsonRecord,
+  fields: BaseFieldRow[],
+  includes: string[],
+  excludes: string[] = [],
+) {
+  const includeTerms = includes.map(normalizeLookup);
+  const excludeTerms = excludes.map(normalizeLookup);
+  const field = fields.find((candidate) => {
+    const searchable = `${normalizeLookup(candidate.label)} ${normalizeLookup(candidate.field_key)}`;
+    return (
+      includeTerms.some((term) => searchable.includes(term)) &&
+      !excludeTerms.some((term) => searchable.includes(term))
+    );
+  });
+  if (!field) return "";
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value || isInternalOptionValue(value)) return "";
+  return optionLabelForValue(field, value);
+}
+
+function pickLongestText(item: JsonRecord, preferredKeys: string[]) {
+  const entries = Object.entries(item);
+  for (const key of preferredKeys) {
+    const normalizedKey = normalizeLookup(key);
+    const match = entries.find(([entryKey]) => normalizeLookup(entryKey).includes(normalizedKey));
+    const value = match ? stringFromUnknown(match[1]) : "";
+    if (value && !isInternalOptionValue(value)) return value;
+  }
+  return entries
+    .map(([, value]) => stringFromUnknown(value))
+    .filter((value) => value && !["sim", "nao", "não"].includes(normalizeLookup(value)) && !isInternalOptionValue(value))
+    .sort((a, b) => b.length - a.length)[0] ?? "";
+}
+
+function itemsForQuestion(snapshot: JsonRecord, question: PerformanceQuestion) {
+  if (question.dynamicSource === "activities") return arrayFromSnapshot(snapshot, "atividades");
+  if (question.dynamicSource === "indicators") return arrayFromSnapshot(snapshot, "indicadores");
+  if (question.dynamicSource === "culture_skills") return arrayFromSnapshot(snapshot, "habilidades_culturais");
+  if (question.dynamicSource === "role_skills") return arrayFromSnapshot(snapshot, "habilidades_cargo");
+  if (question.dynamicSource === "behavior") return arrayFromSnapshot(snapshot, "postura");
+  return [];
+}
+
+function titleForQuestion(snapshot: JsonRecord, fields: BaseFieldRow[], question: PerformanceQuestion) {
+  if (!question.dynamicSource || !question.groupId) return question.groupTitle;
+  const index = Number(question.groupId.match(/_(\d+)$/)?.[1] ?? "0") - 1;
+  const item = itemsForQuestion(snapshot, question)[index];
+  if (!item) return question.groupTitle;
+  const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
+  if (question.dynamicSource === "activities") {
+    return (
+      pickItemValueFromFields(item, sourceFields, ["atividade"], ["principal"]) ||
+      pickLongestText(item, ["atividade", "descricao", "descrição", "texto", "nome"]) ||
+      question.groupTitle
+    );
+  }
+  if (question.dynamicSource === "indicators") {
+    const indicator =
+      pickItemValueFromFields(item, sourceFields, ["indicador", "nomenclatura", "nome"]) ||
+      pickLongestText(item, ["indicador", "nomenclatura", "nome"]);
+    const goal =
+      pickItemValueFromFields(item, sourceFields, ["meta", "resultado esperado"]) ||
+      pickLongestText(item, ["meta", "resultado esperado"]);
+    return [indicator, goal ? `Meta: ${goal}` : ""].filter(Boolean).join(" | ") || question.groupTitle;
+  }
+  return (
+    pickItemValueFromFields(item, sourceFields, [
+      "habilidade",
+      "postura",
+      "comportamento",
+      "competencia",
+      "competência",
+      "nome",
+      "descricao",
+      "descrição",
+    ]) ||
+    pickLongestText(item, [
+      "habilidade",
+      "postura",
+      "comportamento",
+      "competencia",
+      "competência",
+      "nome",
+      "descricao",
+      "descrição",
+    ]) ||
+    question.groupTitle
+  );
 }
 
 export const Route = createFileRoute("/api/public/performance-form/$token")({
@@ -95,9 +245,6 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
             .eq("id", participant.id);
         }
 
-        const questions = [
-          ...((review.questions_snapshot as PerformanceQuestion[] | null) ?? []),
-        ].filter((question) => question.active ?? true);
         const participantRow = participant as typeof participant & {
           sent_at?: string | null;
           expires_at: string;
@@ -109,6 +256,23 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           job_description_snapshot?: unknown;
         };
         const snapshot = asRecord(reviewRow.job_description_snapshot);
+        const { data: baseFields } = await supabaseAdmin
+          .from("base_fields")
+          .select("field_key,label,section,base_options(label,value,is_active)")
+          .eq("project_id", review.project_id)
+          .eq("is_active", true);
+        const questions = [
+          ...((review.questions_snapshot as PerformanceQuestion[] | null) ?? []),
+        ]
+          .filter((question) => question.active ?? true)
+          .map((question) => ({
+            ...question,
+            groupTitle: titleForQuestion(
+              snapshot,
+              ((baseFields ?? []) as unknown) as BaseFieldRow[],
+              question,
+            ),
+          }));
 
         const [{ data: employee }, { data: employeePosition }, { data: leaderPosition }] =
           await Promise.all([

@@ -19,6 +19,12 @@ type OrgPositionRow = { id: string; nome: string; parent_id: string | null };
 
 const LIDER_ROLES = new Set(["lider_estrategico", "lider_tatico", "lider_operacional", "lider_superior", "lider_setor"]);
 
+function validDateOrNull(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : null;
+}
+
 function fromSnapshot(snapshot: unknown): DescricaoCargo {
   const base = emptyDC();
   const data = (snapshot ?? {}) as Partial<DescricaoCargo>;
@@ -120,7 +126,11 @@ function EditDC() {
     }
     const { error } = await supabase
       .from("descricoes_cargo")
-      .update({ ...payload, data_versao: payload.data_versao || null, data_revisao: payload.data_revisao || null })
+      .update({
+        ...payload,
+        data_versao: validDateOrNull(payload.data_versao),
+        data_revisao: validDateOrNull(payload.data_revisao),
+      })
       .eq("id", dcId);
     if (error) { toast.error(error.message); return; }
     await logAction({ projectId, acao: "dc_atualizada", entidade: "descricao_cargo", entidadeId: dcId, detalhes: { cargo: dc.cargo } });

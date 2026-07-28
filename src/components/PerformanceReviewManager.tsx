@@ -36,7 +36,12 @@ export type PerformanceQuestion = {
   options?: string[];
   leaderOptions?: string[];
   helpText?: string;
-  source?: "activity" | "config";
+  source?: "activity" | "config" | "job_description";
+  sectionTitle?: string;
+  groupId?: string;
+  groupTitle?: string;
+  dynamicSource?: "activities" | "indicators" | "culture_skills" | "role_skills" | "behavior";
+  dynamicRole?: "efficiency" | "efficacy" | "result" | "reach" | "fit" | "rating";
 };
 
 type PositionRow = { id: string; nome: string; parent_id: string | null };
@@ -47,7 +52,17 @@ type DcRow = {
   cargo: string | null;
   superior_imediato: string | null;
   atividades: Array<Record<string, unknown>> | null;
+  indicadores?: Array<Record<string, unknown>> | null;
+  habilidades_cargo?: Array<Record<string, unknown>> | null;
+  habilidades_culturais?: Array<Record<string, unknown>> | null;
+  postura?: Array<Record<string, unknown>> | null;
   [key: string]: unknown;
+};
+type BaseFieldRow = {
+  field_key: string;
+  label: string;
+  section: string;
+  base_options?: Array<{ label: string; value: string; is_active?: boolean | null }>;
 };
 type PerfEmployeeRow = {
   id: string;
@@ -136,6 +151,67 @@ type AgendaItem = {
 
 const EXPERIENCE_LIMIT_DAYS = 90;
 
+const EDUCATION_LEVEL_OPTIONS = [
+  "Ensino Fundamental Incompleto",
+  "Ensino Fundamental Completo",
+  "Ensino Medio Incompleto",
+  "Ensino Medio Completo",
+  "Ensino Tecnico",
+  "Ensino Superior Incompleto",
+  "Ensino Superior Completo",
+  "Pos-graduacao",
+];
+const EXPERIENCE_YEARS_OPTIONS = [
+  "Menos de 1 ano",
+  "1 ano",
+  "2 anos",
+  "3 anos",
+  "4 anos",
+  "5 anos",
+  "6 a 9 anos",
+  "10 ou mais",
+];
+const ACTIVITY_EFFICIENCY_OPTIONS = [
+  "Domina o processo/metodo desta atividade a ponto de tambem ensinar alguem a executa-la",
+  "Executa o processo/metodo desta atividade sem necessitar de auxilio.",
+  "Algumas vezes executa o processo/metodo desta atividade necessitando de auxilio.",
+  "Muitas vezes executa o processo/metodo desta atividade necessitando de auxilio.",
+  "Sempre executa o processo/metodo desta atividade necessitando de auxilio.",
+  "Nao se aplica.",
+];
+const ACTIVITY_EFFICACY_OPTIONS = [
+  "Supero os resultados propostos.",
+  "Atinjo os resultados propostos.",
+  "Na maioria das vezes, atinjo os resultados propostos.",
+  "Na maioria das vezes, NAO atinjo os resultados propostos.",
+  "Nao atinjo os resultados propostos.",
+  "Nao se aplica.",
+];
+const INDICATOR_OPTIONS = [
+  "Supero as metas propostas",
+  "Atinjo as metas propostas",
+  "Atinjo mais que 80% das metas propostas",
+  "Atinjo menos que 80% das metas propostas",
+  "Nao atinjo",
+  "Nao se aplica.",
+];
+const SKILL_OPTIONS = [
+  "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
+  "Utilizo na pratica esta habilidade para garantir bons resultados nas minhas atividades",
+  "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
+  "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
+  "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
+  "Nao se aplica.",
+];
+const BEHAVIOR_OPTIONS = [
+  "Demonstro este comportamento no dia a dia, a ponto de me DESTACAR perante os demais colaboradores.",
+  "Demonstro este comportamento no dia a dia.",
+  "Preciso MELHORAR neste comportamento em POUCAS situacoes.",
+  "Preciso MELHORAR neste comportamento em MUITAS situacoes.",
+  "Preciso MELHORAR URGENTEMENTE neste comportamento.",
+  "Nao se aplica.",
+];
+
 const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   {
     id: "qualidade_entrega",
@@ -174,6 +250,113 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
     type: "textarea",
     required: false,
     active: true,
+  },
+];
+
+const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
+  {
+    id: "avdp_instrucao",
+    label: "Responda aqui a maior instrucao que o avaliado possui:",
+    type: "select",
+    required: true,
+    active: true,
+    options: EDUCATION_LEVEL_OPTIONS,
+    sectionTitle: "Instrucao",
+  },
+  {
+    id: "avdp_experiencia",
+    label: "Responda aqui a experiencia que o avaliado possui, em anos:",
+    type: "select",
+    required: true,
+    active: true,
+    options: EXPERIENCE_YEARS_OPTIONS,
+    sectionTitle: "Experiencia",
+  },
+  {
+    id: "avdp_atividade_eficiencia",
+    label: "EFICIENCIA - FAZER DA FORMA CORRETA",
+    type: "select",
+    required: true,
+    active: true,
+    options: ACTIVITY_EFFICIENCY_OPTIONS,
+    sectionTitle: "Avaliacao das atividades",
+    dynamicSource: "activities",
+    dynamicRole: "efficiency",
+  },
+  {
+    id: "avdp_atividade_eficacia",
+    label: "EFICACIA - RESULTADO E QUALIDADE",
+    type: "select",
+    required: true,
+    active: true,
+    options: ACTIVITY_EFFICACY_OPTIONS,
+    sectionTitle: "Avaliacao das atividades",
+    dynamicSource: "activities",
+    dynamicRole: "efficacy",
+  },
+  {
+    id: "avdp_indicador_resultado",
+    label: "Resultado",
+    type: "text",
+    required: false,
+    active: true,
+    sectionTitle: "Indicadores",
+    dynamicSource: "indicators",
+    dynamicRole: "result",
+  },
+  {
+    id: "avdp_indicador_alcance",
+    label: "% de Alcance",
+    type: "text",
+    required: false,
+    active: true,
+    sectionTitle: "Indicadores",
+    dynamicSource: "indicators",
+    dynamicRole: "reach",
+  },
+  {
+    id: "avdp_indicador_enquadramento",
+    label: "Enquadramento",
+    type: "select",
+    required: false,
+    active: true,
+    options: INDICATOR_OPTIONS,
+    sectionTitle: "Indicadores",
+    dynamicSource: "indicators",
+    dynamicRole: "fit",
+  },
+  {
+    id: "avdp_habilidade_cultura",
+    label: "Avaliacao da habilidade",
+    type: "select",
+    required: true,
+    active: true,
+    options: SKILL_OPTIONS,
+    sectionTitle: "Habilidades da cultura organizacional",
+    dynamicSource: "culture_skills",
+    dynamicRole: "rating",
+  },
+  {
+    id: "avdp_habilidade_cargo",
+    label: "Avaliacao da habilidade",
+    type: "select",
+    required: true,
+    active: true,
+    options: SKILL_OPTIONS,
+    sectionTitle: "Habilidades especificas do cargo",
+    dynamicSource: "role_skills",
+    dynamicRole: "rating",
+  },
+  {
+    id: "avdp_postura",
+    label: "Avaliacao do comportamento",
+    type: "select",
+    required: true,
+    active: true,
+    options: BEHAVIOR_OPTIONS,
+    sectionTitle: "Postura e comportamento",
+    dynamicSource: "behavior",
+    dynamicRole: "rating",
   },
 ];
 
@@ -634,7 +817,11 @@ function reviewPeriodOptionsForType(type: ReviewType) {
 
 function defaultQuestionsForConfig(reviewType: ReviewType) {
   const source =
-    reviewType === "experience" ? DEFAULT_EXPERIENCE_30_QUESTIONS : DEFAULT_PERFORMANCE_QUESTIONS;
+    reviewType === "experience"
+      ? DEFAULT_EXPERIENCE_30_QUESTIONS
+      : DEFAULT_AVDP_QUESTIONS.length
+        ? DEFAULT_AVDP_QUESTIONS
+        : DEFAULT_PERFORMANCE_QUESTIONS;
   return source.map((question) => ({ ...question, id: `${question.id}_${uid()}` }));
 }
 
@@ -648,6 +835,190 @@ function questionOptions(question: PerformanceQuestion, participantType?: Partic
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
     : (question.options ?? []);
+}
+
+function normalizeLookup(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function stringFromUnknown(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function pickItemValue(item: Record<string, unknown>, preferredKeys: string[]) {
+  const entries = Object.entries(item);
+  for (const key of preferredKeys) {
+    const normalizedKey = normalizeLookup(key);
+    const match = entries.find(([entryKey]) => normalizeLookup(entryKey).includes(normalizedKey));
+    const value = match ? stringFromUnknown(match[1]) : "";
+    if (value && !isInternalOptionValue(value)) return value;
+  }
+  const values = entries
+    .filter(([key]) => !["id", "created_at", "updated_at"].includes(normalizeLookup(key)))
+    .map(([, value]) => stringFromUnknown(value))
+    .filter(
+      (value) =>
+        value && !["sim", "nao", "não"].includes(normalizeLookup(value)) && !isInternalOptionValue(value),
+    );
+  return values.sort((a, b) => b.length - a.length)[0] ?? "";
+}
+
+function isInternalOptionValue(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    /^(sim|nao|não)_\d+$/.test(normalized) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
+  );
+}
+
+function fieldsForDynamicSource(fields: BaseFieldRow[], source: PerformanceQuestion["dynamicSource"]) {
+  const sectionNames: Record<NonNullable<PerformanceQuestion["dynamicSource"]>, string[]> = {
+    activities: ["atividades"],
+    indicators: ["indicadores"],
+    culture_skills: ["habilidades culturais"],
+    role_skills: ["habilidades do cargo"],
+    behavior: ["postura", "comportamento"],
+  };
+  const expected = source ? sectionNames[source] : [];
+  return fields.filter((field) => {
+    const section = normalizeLookup(field.section);
+    return expected.some((name) => section.includes(name));
+  });
+}
+
+function optionLabelForValue(field: BaseFieldRow, value: string) {
+  return (
+    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+      ?.label ?? value
+  );
+}
+
+function pickItemValueFromFields(
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[],
+  includes: string[],
+  excludes: string[] = [],
+) {
+  const includeTerms = includes.map(normalizeLookup);
+  const excludeTerms = excludes.map(normalizeLookup);
+  const field = fields.find((candidate) => {
+    const label = normalizeLookup(candidate.label);
+    const key = normalizeLookup(candidate.field_key);
+    const searchable = `${label} ${key}`;
+    return (
+      includeTerms.some((term) => searchable.includes(term)) &&
+      !excludeTerms.some((term) => searchable.includes(term))
+    );
+  });
+  if (!field) return "";
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value || isInternalOptionValue(value)) return "";
+  return optionLabelForValue(field, value);
+}
+
+function dynamicItemsForQuestion(dc: DcRow, question: PerformanceQuestion) {
+  if (question.dynamicSource === "activities") return dc.atividades ?? [];
+  if (question.dynamicSource === "indicators") return dc.indicadores ?? [];
+  if (question.dynamicSource === "culture_skills") return dc.habilidades_culturais ?? [];
+  if (question.dynamicSource === "role_skills") return dc.habilidades_cargo ?? [];
+  if (question.dynamicSource === "behavior") return dc.postura ?? [];
+  return [];
+}
+
+function dynamicItemTitle(
+  question: PerformanceQuestion,
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[] = [],
+) {
+  const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
+  if (question.dynamicSource === "activities") {
+    return (
+      pickItemValueFromFields(item, sourceFields, ["atividade"], ["principal"]) ||
+      pickItemValue(item, ["atividade", "descricao", "descrição", "texto", "nome"])
+    );
+  }
+  if (question.dynamicSource === "indicators") {
+    const indicator =
+      pickItemValueFromFields(item, sourceFields, ["indicador", "nomenclatura", "nome"]) ||
+      pickItemValue(item, ["indicador", "nomenclatura", "nome"]);
+    const goal =
+      pickItemValueFromFields(item, sourceFields, ["meta", "resultado esperado"]) ||
+      pickItemValue(item, ["meta", "resultado esperado"]);
+    return [indicator, goal ? `Meta: ${goal}` : ""].filter(Boolean).join(" | ");
+  }
+  const titleFromFields = pickItemValueFromFields(item, sourceFields, [
+    "habilidade",
+    "postura",
+    "comportamento",
+    "competencia",
+    "competência",
+    "nome",
+    "descricao",
+    "descrição",
+  ]);
+  return (
+    titleFromFields ||
+    pickItemValue(item, [
+      "habilidade",
+      "postura",
+      "comportamento",
+      "competencia",
+      "competência",
+      "nome",
+      "descricao",
+      "descrição",
+    ])
+  );
+}
+
+function buildReviewQuestions(
+  configQuestions: PerformanceQuestion[],
+  dc: DcRow,
+  reviewType: ReviewType,
+  fields: BaseFieldRow[] = [],
+) {
+  const activeQuestions = (configQuestions ?? [])
+    .filter((question) => question.active ?? true)
+    .map((question) => ({ ...question, source: "config" as const }));
+  if (reviewType !== "performance") return activeQuestions;
+
+  return activeQuestions.flatMap((question) => {
+    if (!question.dynamicSource) return [question];
+    const items = dynamicItemsForQuestion(dc, question);
+    return items
+      .map((item, index) => {
+        const title = dynamicItemTitle(question, item, fields);
+        if (!title) return null;
+        return {
+          ...question,
+          id: `${question.id}_${index + 1}`,
+          source: "job_description" as const,
+          groupId: `${question.dynamicSource}_${index + 1}`,
+          groupTitle: title,
+          helpText: question.helpText,
+        };
+      })
+      .filter((question): question is PerformanceQuestion => Boolean(question));
+  });
+}
+
+function displayQuestionGroupTitle(question: PerformanceQuestion) {
+  if (question.groupTitle && !isInternalOptionValue(question.groupTitle)) return question.groupTitle;
+  const sourceLabel: Record<string, string> = {
+    activities: "Atividade",
+    indicators: "Indicador",
+    culture_skills: "Habilidade",
+    role_skills: "Habilidade",
+    behavior: "Postura e comportamento",
+  };
+  const suffix = question.groupId?.match(/_(\d+)$/)?.[1];
+  return `${sourceLabel[question.dynamicSource ?? ""] ?? "Item"}${suffix ? ` ${suffix}` : ""}`;
 }
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
@@ -990,8 +1361,13 @@ export function PerformanceComparisonPage({
                 <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      Pergunta
+                      {question.sectionTitle ?? "Pergunta"}
                     </p>
+                    {question.groupId && (
+                      <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
+                        {displayQuestionGroupTitle(question)}
+                      </p>
+                    )}
                     <h2 className="text-base font-semibold">{question.label}</h2>
                     {question.leaderLabel?.trim() && question.leaderLabel !== question.label && (
                       <p className="mt-1 text-sm text-[#042558]/55">
@@ -1780,12 +2156,20 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   const [employees, setEmployees] = useState<PerfEmployeeRow[]>([]);
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
+  const [baseFields, setBaseFields] = useState<BaseFieldRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: revs }, { data: pos }, { data: emps }, { data: dcs }, { data: cfgs }] =
+    const [
+      { data: revs },
+      { data: pos },
+      { data: emps },
+      { data: dcs },
+      { data: cfgs },
+      { data: fields },
+    ] =
       await Promise.all([
         supabase
           .from("performance_reviews")
@@ -1812,12 +2196,18 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           .eq("project_id", projectId)
           .eq("is_active", true)
           .order("period_days", { ascending: true }),
+        supabase
+          .from("base_fields")
+          .select("field_key,label,section,base_options(label,value,is_active)")
+          .eq("project_id", projectId)
+          .eq("is_active", true),
       ]);
     setReviews((revs ?? []) as ReviewRow[]);
     setPositions((pos ?? []) as PositionRow[]);
     setEmployees((emps ?? []) as PerfEmployeeRow[]);
     setDescriptions((dcs ?? []) as DcRow[]);
     setConfigs(((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow));
+    setBaseFields((fields ?? []) as BaseFieldRow[]);
     setLoading(false);
   }, [projectId]);
 
@@ -1909,9 +2299,12 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       positions.find((position) => position.id === item.leader?.position_id) ?? null;
     if (!item.employeePosition || !leaderPosition)
       return toast.error("Colaborador ou lider invalido.");
-    const questions = (item.config.questions_schema ?? [])
-      .filter((question) => question.active ?? true)
-      .map((question) => ({ ...question, source: "config" as const }));
+    const questions = buildReviewQuestions(
+      item.config.questions_schema ?? [],
+      item.description,
+      item.reviewType,
+      baseFields,
+    );
     const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: review, error } = await supabase
@@ -2112,6 +2505,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       { data: emps },
       { data: dcs },
       { data: cfgs },
+      { data: fields },
     ] = await Promise.all([
       supabase
         .from("performance_reviews")
@@ -2139,6 +2533,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         .eq("project_id", projectId)
         .eq("is_active", true)
         .order("period_days", { ascending: true }),
+      supabase
+        .from("base_fields")
+        .select("field_key,label,section,base_options(label,value,is_active)")
+        .eq("project_id", projectId)
+        .eq("is_active", true),
     ]);
     setReviews((revs ?? []) as ReviewRow[]);
     setParticipants((parts ?? []) as ParticipantRow[]);
@@ -2147,6 +2546,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     setDescriptions((dcs ?? []) as DcRow[]);
     const rows = ((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow);
     setConfigs(rows);
+    setBaseFields((fields ?? []) as BaseFieldRow[]);
     setConfigId((current) => current || rows[0]?.id || "");
   }, [projectId]);
 
@@ -2240,9 +2640,12 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
     if (!employeePosition || !leaderPosition) return toast.error("Colaborador ou líder inválido.");
 
-    const questions = (selectedConfig.questions_schema ?? [])
-      .filter((q) => q.active ?? true)
-      .map((q) => ({ ...q, source: "config" as const }));
+    const questions = buildReviewQuestions(
+      selectedConfig.questions_schema ?? [],
+      selectedDc,
+      formReviewType,
+      baseFields,
+    );
     const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
     const { data: review, error } = await supabase
@@ -2889,6 +3292,61 @@ export function allReviewQuestions(review: ReviewRow) {
   );
 }
 
+type PublicQuestionBlock =
+  | { kind: "question"; id: string; question: PerformanceQuestion }
+  | { kind: "group"; id: string; title: string; questions: PerformanceQuestion[] };
+
+function publicQuestionSections(questions: PerformanceQuestion[]) {
+  const sections: Array<{ title: string; blocks: PublicQuestionBlock[] }> = [];
+  const getSection = (title: string) => {
+    let section = sections.find((item) => item.title === title);
+    if (!section) {
+      section = { title, blocks: [] };
+      sections.push(section);
+    }
+    return section;
+  };
+
+  questions.forEach((question) => {
+    const section = getSection(question.sectionTitle ?? "");
+    if (!question.groupId) {
+      section.blocks.push({ kind: "question", id: question.id, question });
+      return;
+    }
+    const groupId = `${question.sectionTitle ?? ""}:${question.groupId}`;
+    const existing = section.blocks.find(
+      (block): block is Extract<PublicQuestionBlock, { kind: "group" }> =>
+        block.kind === "group" && block.id === groupId,
+    );
+    if (existing) {
+      existing.questions.push(question);
+    } else {
+      section.blocks.push({
+        kind: "group",
+        id: groupId,
+        title: question.groupTitle ?? question.helpText ?? "Item",
+        questions: [question],
+      });
+    }
+  });
+
+  return sections;
+}
+
+function displayGroupTitle(block: Extract<PublicQuestionBlock, { kind: "group" }>) {
+  if (block.title && !isInternalOptionValue(block.title)) return block.title;
+  const firstQuestion = block.questions[0];
+  const sourceLabel: Record<string, string> = {
+    activities: "Atividade",
+    indicators: "Indicador",
+    culture_skills: "Habilidade",
+    role_skills: "Habilidade",
+    behavior: "Postura e comportamento",
+  };
+  const suffix = firstQuestion?.groupId?.match(/_(\d+)$/)?.[1];
+  return `${sourceLabel[firstQuestion?.dynamicSource ?? ""] ?? "Item"}${suffix ? ` ${suffix}` : ""}`;
+}
+
 export function PublicPerformanceFormFields({
   questions,
   participantType,
@@ -2901,27 +3359,63 @@ export function PublicPerformanceFormFields({
   onChange: (answers: Record<string, string>) => void;
 }) {
   const activeQuestions = useMemo(() => questions.filter((q) => q.active ?? true), [questions]);
+  const sections = useMemo(() => publicQuestionSections(activeQuestions), [activeQuestions]);
   return (
     <div className="space-y-5">
-      {activeQuestions.map((question) => (
-        <label
-          key={question.id}
-          className="block rounded-xl border border-gray-200 bg-gray-50/60 p-4"
-        >
-          <span className="mb-1 block text-sm font-semibold text-gray-700">
-            {displayQuestionLabel(question, participantType)}{" "}
-            {question.required && <span className="text-red-500">*</span>}
-          </span>
-          {question.helpText && (
-            <span className="mb-2 block text-xs text-gray-400">{question.helpText}</span>
+      {sections.map((section) => (
+        <section key={section.title || "geral"} className="space-y-3">
+          {section.title && (
+            <h2 className="border-b border-gray-200 pb-2 text-sm font-bold uppercase tracking-wide text-[#042558]">
+              {section.title}
+            </h2>
           )}
-          <QuestionInput
-            question={question}
-            participantType={participantType}
-            value={answers[question.id] ?? ""}
-            onChange={(value) => onChange({ ...answers, [question.id]: value })}
-          />
-        </label>
+          {section.blocks.map((block) =>
+            block.kind === "group" ? (
+              <div key={block.id} className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                <p className="mb-3 whitespace-pre-wrap text-sm font-semibold text-gray-800">
+                  {displayGroupTitle(block)}
+                </p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {block.questions.map((question) => (
+                    <label key={question.id} className="block">
+                      <span className="mb-1 block text-sm font-medium text-gray-700">
+                        {displayQuestionLabel(question, participantType)}{" "}
+                        {question.required && <span className="text-red-500">*</span>}
+                      </span>
+                      <QuestionInput
+                        question={question}
+                        participantType={participantType}
+                        value={answers[question.id] ?? ""}
+                        onChange={(value) => onChange({ ...answers, [question.id]: value })}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <label
+                key={block.id}
+                className="block rounded-xl border border-gray-200 bg-gray-50/60 p-4"
+              >
+                <span className="mb-1 block text-sm font-semibold text-gray-700">
+                  {displayQuestionLabel(block.question, participantType)}{" "}
+                  {block.question.required && <span className="text-red-500">*</span>}
+                </span>
+                {block.question.helpText && (
+                  <span className="mb-2 block text-xs text-gray-400">
+                    {block.question.helpText}
+                  </span>
+                )}
+                <QuestionInput
+                  question={block.question}
+                  participantType={participantType}
+                  value={answers[block.question.id] ?? ""}
+                  onChange={(value) => onChange({ ...answers, [block.question.id]: value })}
+                />
+              </label>
+            ),
+          )}
+        </section>
       ))}
     </div>
   );
