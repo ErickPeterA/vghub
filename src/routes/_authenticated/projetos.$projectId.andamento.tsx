@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, FileText, Loader2, Send } from "lucide-react";
+import { FileText, Loader2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -30,28 +30,24 @@ const STAGES: Array<{
   label: string;
   description: string;
   color: string;
-  icon: React.ComponentType<{ className?: string }>;
 }> = [
   {
     key: "em_criacao",
     label: "Em criação",
     description: "descrições ainda sendo montadas",
     color: "#2563eb",
-    icon: Clock3,
   },
   {
     key: "em_aprovacao",
     label: "Em aprovação",
     description: "descrições aguardando validação",
     color: "#d97706",
-    icon: Send,
   },
   {
     key: "concluido",
     label: "Concluídos",
     description: "descrições finalizadas",
     color: "#16a34a",
-    icon: CheckCircle2,
   },
 ];
 
@@ -99,10 +95,9 @@ function Andamento() {
     });
 
     const total = rows.length;
-    const done = counts.concluido;
     const approval = counts.em_aprovacao;
-    const progress = total === 0 ? 0 : Math.round(((done + approval * 0.55) / total) * 100);
-
+    const progress =
+      total === 0 ? 0 : Math.round(((counts.concluido + approval * 0.55) / total) * 100);
     const waveData = STAGES.map((stage) => ({
       stage: stage.label,
       key: stage.key,
@@ -111,34 +106,47 @@ function Andamento() {
       color: stage.color,
     }));
 
-    return { counts, total, progress, waveData };
+    return {
+      counts,
+      total,
+      active: counts.em_criacao + counts.em_aprovacao,
+      progress,
+      waveData,
+    };
   }, [rows]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#f59e0b]/5 px-6 py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/85 p-6 shadow-sm backdrop-blur-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#042558]/50">Dashboard</p>
-          <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#f59e0b]/5 px-4 py-6 text-[#042558] sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="rounded-xl border border-[#042558]/10 bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-[#042558]">Andamento do projeto</h1>
-              <p className="mt-1 max-w-2xl text-sm text-[#042558]/60">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#042558]/45">
+                Dashboard
+              </p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#042558] sm:text-3xl">
+                Andamento do projeto
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#042558]/60">
                 A onda mostra quantas descrições estão em criação, em aprovação e concluídas.
               </p>
             </div>
-            <div className="rounded-xl border border-[#042558]/10 bg-[#042558] px-5 py-3 text-white shadow-lg shadow-[#042558]/15">
-              <p className="text-xs uppercase tracking-wider text-white/65">Progresso estimado</p>
-              <p className="text-3xl font-bold">{stats.progress}%</p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[560px]">
+              <MetricCard label="Total" value={stats.total} />
+              <MetricCard label="Em andamento" value={stats.active} />
+              <MetricCard label="Em aprovação" value={stats.counts.em_aprovacao} tone="amber" />
+              <MetricCard label="Progresso" value={`${stats.progress}%`} tone="navy" />
             </div>
           </div>
-        </div>
+        </header>
 
         {loading ? (
-          <div className="flex h-72 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/75">
+          <div className="flex h-72 items-center justify-center rounded-xl border border-[#042558]/10 bg-white/75">
             <Loader2 className="h-7 w-7 animate-spin text-[#042558]" />
           </div>
         ) : stats.total === 0 ? (
-          <div className="flex h-72 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#042558]/20 bg-white/75 text-center">
+          <div className="flex h-72 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/75 text-center">
             <FileText className="mb-3 h-9 w-9 text-[#042558]/30" />
             <h2 className="text-lg font-semibold text-[#042558]">Sem descrições para acompanhar</h2>
             <p className="mt-1 text-sm text-[#042558]/55">
@@ -146,19 +154,27 @@ function Andamento() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            <section className="rounded-2xl border border-[#042558]/10 bg-white p-6 shadow-sm">
-              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-5">
+            <section className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[#042558]">Onda de andamento</h2>
-                  <p className="text-sm text-[#042558]/55">Baseada no estágio atual das descrições de cargo.</p>
+                  <p className="text-sm text-[#042558]/55">
+                    Baseada no estágio atual das descrições de cargo.
+                  </p>
                 </div>
-                <span className="text-sm font-medium text-[#042558]/70">{stats.total} descrições no total</span>
+                <span className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]/70">
+                  <TrendingUp className="h-4 w-4" />
+                  {stats.total} descrições
+                </span>
               </div>
 
               <div className="h-[360px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stats.waveData} margin={{ top: 18, right: 18, left: 0, bottom: 8 }}>
+                  <AreaChart
+                    data={stats.waveData}
+                    margin={{ top: 18, right: 18, left: 0, bottom: 8 }}
+                  >
                     <defs>
                       <linearGradient id="andamentoWave" x1="0" x2="1" y1="0" y2="0">
                         <stop offset="0%" stopColor="#2563eb" stopOpacity={0.78} />
@@ -220,41 +236,34 @@ function Andamento() {
                 </ResponsiveContainer>
               </div>
             </section>
-
-            <section className="grid gap-4 md:grid-cols-3">
-              {STAGES.map((stage) => {
-                const Icon = stage.icon;
-                const value = stats.counts[stage.key];
-                const percent = stats.total === 0 ? 0 : Math.round((value / stats.total) * 100);
-
-                return (
-                  <article key={stage.key} className="rounded-2xl border border-[#042558]/10 bg-white p-5 shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="rounded-lg p-2" style={{ backgroundColor: `${stage.color}18`, color: stage.color }}>
-                          <Icon className="h-5 w-5" />
-                        </span>
-                        <div>
-                          <h3 className="font-semibold text-[#042558]">{stage.label}</h3>
-                          <p className="text-xs text-[#042558]/50">{stage.description}</p>
-                        </div>
-                      </div>
-                      <span className="text-2xl font-bold text-[#042558]">{value}</span>
-                    </div>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#042558]/8">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${percent}%`, backgroundColor: stage.color }}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs font-medium text-[#042558]/55">{percent}% do projeto</p>
-                  </article>
-                );
-              })}
-            </section>
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number | string;
+  tone?: "default" | "amber" | "navy";
+}) {
+  const toneClass =
+    tone === "navy"
+      ? "border-[#042558] bg-[#042558] text-white"
+      : tone === "amber"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-[#042558]/10 bg-white text-[#042558]";
+  const labelClass = tone === "navy" ? "text-white/65" : "text-[#042558]/55";
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 shadow-sm ${toneClass}`}>
+      <p className={`text-xs font-medium ${labelClass}`}>{label}</p>
+      <p className="mt-1 text-2xl font-bold">{value}</p>
+    </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   Copy,
   Eye,
   History,
-  Maximize2,
   MessageSquare,
   Plus,
   RotateCcw,
@@ -1374,12 +1373,6 @@ export function PerformanceComparisonPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => document.documentElement.requestFullscreen?.()}
-              className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/20 px-3 py-2 text-sm hover:bg-[#042558]/5"
-            >
-              <Maximize2 className="h-4 w-4" /> Tela cheia
-            </button>
             {review.status === "finalized" ? (
               <button
                 onClick={reopen}

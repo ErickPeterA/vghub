@@ -1,18 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { History, Clock, User, Tag, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/historico")({
   component: Historico,
 });
 
-type Item = { id: string; acao: string; entidade: string | null; user_id: string | null; detalhes: Record<string, unknown>; created_at: string };
+type Item = {
+  id: string;
+  acao: string;
+  entidade: string | null;
+  user_id: string | null;
+  detalhes: Record<string, unknown> | null;
+  created_at: string;
+};
 
 const labelMap: Record<string, string> = {
   projeto_criado: "Projeto criado",
   dc_criada: "Descrição de cargo criada",
   dc_atualizada: "Descrição de cargo atualizada",
   dc_excluida: "Descrição de cargo excluída",
+  dc_etapa: "Etapa alterada",
+  dc_revisao_finalizada: "Revisão finalizada",
+  dc_aprovada: "Descrição de cargo aprovada",
+  membro_vinculado: "Membro vinculado",
+  papel_membro_alterado: "Papel alterado",
+  membro_removido: "Membro removido",
   modelo_criado: "Modelo adicionado",
   modelo_removido: "Modelo removido",
   hub_item_criado: "Item adicionado à Página Central",
@@ -24,11 +38,102 @@ const acaoColors: Record<string, string> = {
   dc_criada: "bg-emerald-50 text-emerald-700",
   dc_atualizada: "bg-blue-50 text-blue-700",
   dc_excluida: "bg-red-50 text-red-700",
+  dc_etapa: "bg-sky-50 text-sky-700",
+  dc_revisao_finalizada: "bg-emerald-50 text-emerald-700",
+  dc_aprovada: "bg-emerald-50 text-emerald-700",
+  membro_vinculado: "bg-indigo-50 text-indigo-700",
+  papel_membro_alterado: "bg-amber-50 text-amber-700",
+  membro_removido: "bg-rose-50 text-rose-700",
   modelo_criado: "bg-purple-50 text-purple-700",
   modelo_removido: "bg-orange-50 text-orange-700",
   hub_item_criado: "bg-indigo-50 text-indigo-700",
   hub_item_removido: "bg-rose-50 text-rose-700",
 };
+
+const stageLabels: Record<string, string> = {
+  em_criacao: "Em criação",
+  em_aprovacao: "Em aprovação",
+  concluido: "Concluído",
+};
+
+const roleLabels: Record<string, string> = {
+  admin: "Administrador",
+  gp: "GP",
+  lider_estrategico: "Líder estratégico",
+  lider: "Líder",
+};
+
+const detailLabels: Record<string, string> = {
+  cargo: "Cargo",
+  nome: "Nome",
+  user_id: "Usuário",
+  role: "Papel",
+  de: "De",
+  para: "Para",
+  comentarios: "Comentários",
+};
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatValue(key: string, value: unknown, users: Record<string, string>): string {
+  if (value === null || value === undefined || value === "") return "Não informado";
+  if (key === "user_id" && typeof value === "string") return users[value] ?? value;
+  if ((key === "de" || key === "para") && typeof value === "string") return stageLabels[value] ?? value;
+  if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (Array.isArray(value)) return value.map((item) => formatValue(key, item, users)).join(", ");
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([childKey, childValue]) => `${detailLabels[childKey] ?? childKey}: ${formatValue(childKey, childValue, users)}`)
+      .join("; ");
+  }
+  return String(value);
+}
+
+function formatDetails(item: Item, users: Record<string, string>) {
+  const details = item.detalhes ?? {};
+  const cargo = formatValue("cargo", details.cargo, users);
+  const targetUser = formatValue("user_id", details.user_id, users);
+  const role = formatValue("role", details.role, users);
+  const fromStage = formatValue("de", details.de, users);
+  const toStage = formatValue("para", details.para, users);
+
+  switch (item.acao) {
+    case "projeto_criado":
+      return `Projeto: ${formatValue("nome", details.nome, users)}`;
+    case "dc_criada":
+    case "dc_atualizada":
+    case "dc_excluida":
+      return `Cargo: ${cargo}`;
+    case "dc_etapa":
+      return `Etapa alterada de ${fromStage} para ${toStage}`;
+    case "dc_revisao_finalizada":
+      return `${formatValue("comentarios", details.comentarios, users)} comentário(s). Status: ${toStage}`;
+    case "dc_aprovada":
+      return `Status alterado para ${toStage}`;
+    case "membro_vinculado":
+      return `Membro: ${targetUser}. Papel: ${role}`;
+    case "papel_membro_alterado":
+      return `Membro: ${targetUser}. Novo papel: ${role}`;
+    case "membro_removido":
+      return `Membro removido: ${targetUser}`;
+    default: {
+      const entries = Object.entries(details);
+      if (!entries.length) return "Sem alteração detalhada";
+      return entries
+        .map(([key, value]) => `${detailLabels[key] ?? key}: ${formatValue(key, value, users)}`)
+        .join("; ");
+    }
+  }
+}
 
 function Historico() {
   const { projectId } = Route.useParams();
@@ -37,126 +142,142 @@ function Historico() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("project_history").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(200);
+    let active = true;
+
+    const load = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("project_history")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (!active) return;
+
       const list = (data as Item[]) ?? [];
       setItems(list);
-      const ids = Array.from(new Set(list.map((i) => i.user_id).filter(Boolean))) as string[];
+
+      const ids = Array.from(
+        new Set(
+          list
+            .flatMap((item) => [item.user_id, item.detalhes?.user_id])
+            .filter((id): id is string => typeof id === "string" && id.length > 0),
+        ),
+      );
+
       if (ids.length) {
         const { data: profs } = await supabase.from("profiles").select("id,nome").in("id", ids);
+        if (!active) return;
         const map: Record<string, string> = {};
-        (profs ?? []).forEach((p) => { map[p.id] = p.nome; });
+        (profs ?? []).forEach((profile) => {
+          map[profile.id] = profile.nome;
+        });
         setUsers(map);
+      } else {
+        setUsers({});
       }
+
       setLoading(false);
-    })();
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
   }, [projectId]);
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
+    <main className="min-h-screen bg-[#042558]/5 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        {/* Header */}
-        <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">Auditoria</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">Histórico</h1>
-            <p className="mt-1 text-sm text-[#042558]/60">Registro completo de ações realizadas no projeto.</p>
+        {/* Header melhorado */}
+        <div className="mb-8 rounded-xl bg-white p-6 shadow-sm shadow-[#042558]/5">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-[#042558] p-2.5">
+                <History className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-[#042558]/50">
+                  Auditoria
+                </p>
+                <h1 className="text-2xl font-bold text-[#042558]">Histórico</h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-full bg-[#042558]/5 px-3.5 py-1.5 text-sm font-medium text-[#042558]">
+              <Clock className="h-4 w-4" />
+              <span>{items.length} registro{items.length !== 1 ? "s" : ""}</span>
+            </div>
           </div>
+          <p className="mt-3 text-sm text-[#042558]/60">
+            Registro das ações realizadas no projeto, com a alteração já visível.
+          </p>
         </div>
 
-        {/* Content */}
+        {/* Conteúdo */}
         {loading ? (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
+          <div className="flex h-80 items-center justify-center rounded-xl bg-white shadow-sm shadow-[#042558]/5">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
               <p className="text-sm text-[#042558]/60">Carregando histórico...</p>
             </div>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-12">
-            <p className="text-sm font-medium text-[#042558]/40">Nenhuma ação registrada</p>
-            <p className="text-xs text-[#042558]/30">As ações realizadas no projeto aparecerão aqui</p>
+          <div className="rounded-xl bg-white p-12 text-center shadow-sm shadow-[#042558]/5">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#042558]/5">
+              <History className="h-8 w-8 text-[#042558]/30" />
+            </div>
+            <h3 className="text-lg font-medium text-[#042558]/60">Nenhuma ação registrada</h3>
+            <p className="mt-1 text-sm text-[#042558]/40">
+              As ações realizadas no projeto aparecerão aqui.
+            </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-[#042558]/10 bg-white/60 shadow-sm backdrop-blur-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#042558]/10 bg-[#042558]/5">
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      Data/Hora
-                    </th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      Usuário
-                    </th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      Ação
-                    </th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      Detalhes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it, index) => {
-                    const acaoLabel = labelMap[it.acao] ?? it.acao;
-                    const acaoColor = acaoColors[it.acao] ?? "bg-[#042558]/5 text-[#042558]";
-                    const userName = it.user_id ? users[it.user_id] ?? "—" : "—";
-                    const hasDetails = it.detalhes && Object.keys(it.detalhes).length > 0;
-                    
-                    return (
-                      <tr 
-                        key={it.id} 
-                        className={`border-b border-[#042558]/5 transition-colors hover:bg-[#042558]/5 ${
-                          index % 2 === 0 ? "bg-white/50" : "bg-white/30"
-                        }`}
-                      >
-                        <td className="whitespace-nowrap px-5 py-3.5 text-xs text-[#042558]/60">
-                          {formatDate(it.created_at)}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-3.5 text-sm font-medium text-[#042558]">
-                          {userName}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${acaoColor}`}>
-                            {acaoLabel}
+          <div className="space-y-3">
+            {items.map((item) => {
+              const actionLabel = labelMap[item.acao] ?? item.acao;
+              const actionColor = acaoColors[item.acao] ?? "bg-[#042558]/5 text-[#042558]";
+              const userName = item.user_id ? users[item.user_id] ?? "Usuário não encontrado" : "Sistema";
+              const detailText = formatDetails(item, users);
+
+              return (
+                <div
+                  key={item.id}
+                  className="group rounded-xl bg-white p-5 shadow-sm shadow-[#042558]/5 transition-all hover:shadow-md hover:shadow-[#042558]/10"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${actionColor}`}
+                        >
+                          {actionLabel}
+                        </span>
+                        {item.entidade && (
+                          <span className="inline-flex items-center gap-1 text-xs text-[#042558]/40">
+                            <Tag className="h-3 w-3" />
+                            {item.entidade}
                           </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-xs text-[#042558]/50 font-mono">
-                          {hasDetails ? (
-                            <details className="cursor-pointer">
-                              <summary className="text-[#042558]/40 hover:text-[#042558]/70">Ver detalhes</summary>
-                              <pre className="mt-1 rounded bg-[#042558]/5 p-2 text-[10px] text-[#042558]/70 overflow-x-auto">
-                                {JSON.stringify(it.detalhes, null, 2)}
-                              </pre>
-                            </details>
-                          ) : (
-                            <span className="text-[#042558]/30">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Footer com contagem */}
-            <div className="border-t border-[#042558]/10 bg-[#042558]/5 px-5 py-3">
-              <p className="text-xs text-[#042558]/40">
-                Mostrando {items.length} registro{items.length !== 1 ? 's' : ''}
-              </p>
-            </div>
+                        )}
+                      </div>
+                      <p className="text-sm leading-relaxed text-[#042558]/80">
+                        {detailText}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
+                      <div className="flex items-center gap-1.5 text-[#042558]/50">
+                        <User className="h-3 w-3" />
+                        <span>{userName}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[#042558]/40">
+                        <Clock className="h-3 w-3" />
+                        <span>{formatDate(item.created_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
