@@ -61,21 +61,34 @@ const ACTIVITY_STAGES: Array<{
 const ACTIVITY_LINK_DAYS = 7;
 const ACTIVITY_REOPEN_DAYS = 3;
 
+type EmployeeRow = {
+  id: string;
+  nome: string;
+  position_id: string;
+  area_id: string | null;
+  sector_id: string | null;
+};
+
+type PositionRow = { id: string; nome: string };
+
 export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectId: string; onUnreviewedChange?: (n: number) => void }) {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [configId, setConfigId] = useState<string | null>(null);
   const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
-  const [headerAnswers, setHeaderAnswers] = useState<Record<string, string>>({});
-  const [label, setLabel] = useState("");
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [positions, setPositions] = useState<PositionRow[]>([]);
+  const [generating, setGenerating] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [openResp, setOpenResp] = useState<{ link: LinkRow; response: ResponseRow | null } | null>(null);
   const areas = useProjectAreas(projectId);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: cfg }, { data: ls }] = await Promise.all([
+    const [{ data: cfg }, { data: ls }, { data: emps }, { data: pos }] = await Promise.all([
       supabase.from("activity_configs").select("id,header_schema,questions_schema").eq("project_id", projectId).maybeSingle(),
       supabase.from("activity_links").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+      (supabase as any).from("project_employees").select("id,nome,position_id,area_id,sector_id").eq("project_id", projectId).order("nome"),
+      (supabase as any).from("project_positions").select("id,nome").eq("project_id", projectId),
     ]);
     if (cfg) {
       setConfigId(cfg.id);
@@ -87,6 +100,9 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
       setConfigId(null);
       setConfigFields(null);
     }
+
+    setEmployees((emps ?? []) as EmployeeRow[]);
+    setPositions((pos ?? []) as PositionRow[]);
 
     const now = new Date().toISOString();
     const rows = (ls ?? []) as LinkRow[];
@@ -106,33 +122,60 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   const areaField = gpHeaderFields.find((field) => field.dataSource === "areas");
   const setorField = gpHeaderFields.find((field) => field.dataSource === "setores");
 
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+  const positionById = new Map(positions.map((p) => [p.id, p]));
+
+  const employeeIdOf = (link: LinkRow) =>
+    ((link.header_answers as Record<string, string> | null)?.__employee_id as string | undefined) ?? null;
+
+  const linkByEmployee = new Map<string, LinkRow>();
+  links
+    .filter((l) => l.status !== "cancelled")
+    .forEach((l) => {
+      const eid = employeeIdOf(l);
+      if (eid && !linkByEmployee.has(eid)) linkByEmployee.set(eid, l);
+    });
+
   const stageFor = (link: LinkRow): ActivityStage => {
     if (link.status === "answered") return "answered";
     if (link.status === "pending" && link.draft_saved_at) return "creating";
     return "sent";
   };
 
-  const gerar = async () => {
+  const gerar = async (employee: EmployeeRow) => {
     if (!configId) return toast.error("Configure o formulário primeiro.");
-    const missing = gpHeaderFields.find((field) => field.required && !headerAnswers[field.id]?.trim());
-    if (missing) return toast.error(`Preencha no cabeçalho: ${missing.label}`);
 
+    const areaName = employee.area_id ? areaById.get(employee.area_id)?.nome ?? "" : "";
+    const setorName = employee.sector_id ? areaById.get(employee.sector_id)?.nome ?? "" : "";
+    const cargoName = positionById.get(employee.position_id)?.nome ?? "";
+
+    const header: Record<string, string> = { __employee_id: employee.id };
+    if (areaField && areaName) header[areaField.id] = employee.area_id ?? areaName;
+    if (setorField && setorName) header[setorField.id] = employee.sector_id ?? setorName;
+    gpHeaderFields.forEach((field) => {
+      const key = `${field.id} ${field.label}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      if (field.dataSource === "areas" || field.dataSource === "setores") return;
+      if (key.includes("cargo") && cargoName) header[field.id] = cargoName;
+      else if (key.includes("nome") || key.includes("colaborador") || key.includes("funcionario")) header[field.id] = employee.nome;
+    });
+
+    setGenerating(employee.id);
     const expires_at = new Date(Date.now() + ACTIVITY_LINK_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const { data: userData } = await supabase.auth.getUser();
     const { error } = await supabase.from("activity_links").insert({
       project_id: projectId,
       config_id: configId,
       expires_at,
-      header_answers: headerAnswers,
-      label: label || null,
+      header_answers: header,
+      label: employee.nome,
       created_by: userData.user?.id ?? null,
     });
+    setGenerating(null);
     if (error) return toast.error(error.message);
-    setLabel("");
-    setHeaderAnswers({});
-    toast.success("Link gerado");
+    toast.success(`Link gerado para ${employee.nome}`);
     void load();
   };
+
 
   const copiar = async (token: string) => {
     const url = `${window.location.origin}/atividades/preencher/${token}`;
