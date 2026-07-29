@@ -217,41 +217,82 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Gerar novo link</h3>
+        <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Funcionários do projeto ({employees.length})</h3>
+          <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
+        </div>
+        {!configId && <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>}
 
-        {gpHeaderFields.length > 0 && (
-          <div className="mt-3 rounded-xl border border-[#042558]/10 bg-white/50 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#042558]/60">Cabeçalho preenchido pela GP</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              {gpHeaderFields.map((field) => (
-                <FieldInput
-                  key={field.id}
-                  field={field}
-                  value={headerAnswers[field.id] ?? ""}
-                  areas={areas}
-                  parentAreaId={field.dataSource === "setores" && areaField ? headerAnswers[areaField.id] : undefined}
-                  onChange={(value) => setHeaderAnswers((current) => {
-                    const next = { ...current, [field.id]: value };
-                    if (field.dataSource === "areas" && setorField) next[setorField.id] = "";
-                    return next;
-                  })}
-                />
-              ))}
-            </div>
+        {loading ? (
+          <div className="py-6 text-center text-sm text-[#042558]/60">Carregando...</div>
+        ) : employees.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/40">
+            Nenhum funcionário cadastrado. Cadastre-os na aba Funcionários.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[#042558]/10">
+            <table className="w-full text-sm">
+              <thead className="bg-[#042558]/5 text-left text-xs uppercase tracking-wider text-[#042558]/60">
+                <tr>
+                  <th className="px-3 py-2">Nome</th>
+                  <th className="px-3 py-2">Área</th>
+                  <th className="px-3 py-2">Setor</th>
+                  <th className="px-3 py-2">Cargo</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#042558]/10 bg-white/60">
+                {employees.map((emp) => {
+                  const link = linkByEmployee.get(emp.id) ?? null;
+                  const status = link ? STATUS_LABEL[link.status] : "Sem link";
+                  const color = link ? STATUS_COLOR[link.status] : "bg-slate-100 text-slate-600";
+                  return (
+                    <tr key={emp.id} className="text-[#042558]">
+                      <td className="px-3 py-2 font-medium">{emp.nome}</td>
+                      <td className="px-3 py-2 text-[#042558]/70">{(emp.area_id && areaById.get(emp.area_id)?.nome) || "—"}</td>
+                      <td className="px-3 py-2 text-[#042558]/70">{(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "—"}</td>
+                      <td className="px-3 py-2 text-[#042558]/70">{positionById.get(emp.position_id)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>{status}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {!link || link.status === "expired" ? (
+                            <button
+                              onClick={() => void gerar(emp)}
+                              disabled={!configId || generating === emp.id}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#042558]/90 disabled:opacity-40"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Gerar link
+                            </button>
+                          ) : null}
+                          {link && link.status === "pending" && (
+                            <>
+                              <button onClick={() => void copiar(link.token)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20">
+                                <Copy className="h-3.5 w-3.5" /> Copiar link
+                              </button>
+                              <button onClick={() => void cancelar(link)} className="rounded-lg p-1.5 text-[#042558]/40 hover:bg-red-50 hover:text-red-600" title="Cancelar link">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          {link && link.status === "answered" && (
+                            <button onClick={() => void abrirResposta(link)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20">
+                              <Eye className="h-3.5 w-3.5" /> Ver resposta
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto]">
-          <input placeholder="Rótulo (ex: João - RH)" value={label} onChange={(e) => setLabel(e.target.value)} className="rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm outline-none focus:border-[#042558]" />
-          <span className="inline-flex items-center justify-center rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]/70">
-            Validade: 7 dias
-          </span>
-          <button onClick={gerar} disabled={!configId} className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white hover:bg-[#042558]/90 disabled:opacity-40">
-            <Plus className="h-4 w-4" /> Gerar link
-          </button>
-        </div>
-        {!configId && <p className="mt-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>}
       </div>
+
 
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
