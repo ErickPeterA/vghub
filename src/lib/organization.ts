@@ -78,7 +78,10 @@ export function countDescendants(positions: OrganizationPosition[], positionId: 
   return getDescendantIds(positions, positionId).size;
 }
 
-export function availableParents(positions: OrganizationPosition[], position?: OrganizationPosition | null) {
+export function availableParents(
+  positions: OrganizationPosition[],
+  position?: OrganizationPosition | null,
+) {
   if (!position) return positions;
   const blocked = getDescendantIds(positions, position.id);
   blocked.add(position.id);

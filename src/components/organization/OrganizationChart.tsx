@@ -23,7 +23,11 @@ type OrganizationChartProps = {
   onMove: (position: OrganizationPosition) => void;
   onDelete: (position: OrganizationPosition) => void;
   onReorder: (position: OrganizationPosition, direction: "up" | "down") => void;
-  onDropOn: (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => void;
+  onDropOn: (
+    sourceId: string,
+    target: OrganizationPosition,
+    placement: "before" | "inside" | "after",
+  ) => void;
 };
 
 const MIN_ZOOM = 0.5;
@@ -41,9 +45,13 @@ function getPageScroller() {
 
 export function OrganizationChart(props: OrganizationChartProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const dragStateRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number; pageScrollLeft: number | null } | null>(
-    null,
-  );
+  const dragStateRef = useRef<{
+    x: number;
+    y: number;
+    scrollLeft: number;
+    scrollTop: number;
+    pageScrollLeft: number | null;
+  } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const nodesKey = useMemo(() => props.nodes.map((node) => node.id).join("|"), [props.nodes]);
 
@@ -59,8 +67,11 @@ export function OrganizationChart(props: OrganizationChartProps) {
 
   const canStartPan = (target: EventTarget | null) => {
     if (!(target instanceof HTMLElement)) return false;
-    return !target.closest("[data-position-id], button, input, textarea, select, a, [role='menuitem']");
+    return !target.closest(
+      "[data-position-id], button, input, textarea, select, a, [role='menuitem']",
+    );
   };
+  const { nodes, ...rowProps } = props;
 
   return (
     <div
@@ -120,13 +131,15 @@ export function OrganizationChart(props: OrganizationChartProps) {
         const viewport = viewportRef.current;
         dragStateRef.current = null;
         setIsPanning(false);
-        if (viewport?.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+        if (viewport?.hasPointerCapture(event.pointerId))
+          viewport.releasePointerCapture(event.pointerId);
       }}
       onPointerCancel={(event) => {
         const viewport = viewportRef.current;
         dragStateRef.current = null;
         setIsPanning(false);
-        if (viewport?.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+        if (viewport?.hasPointerCapture(event.pointerId))
+          viewport.releasePointerCapture(event.pointerId);
       }}
       className={`min-h-0 flex-1 overflow-auto rounded-xl border border-[#042558]/10 bg-white/55 p-4 shadow-inner sm:p-6 ${
         isPanning ? "cursor-grabbing select-none" : "cursor-grab"
@@ -137,7 +150,7 @@ export function OrganizationChart(props: OrganizationChartProps) {
         style={{ transform: `scale(${props.zoom})`, transformOrigin: "top center" }}
       >
         <div className="flex items-start justify-center gap-4">
-          <OrganizationSiblingRow parentId={null} nodes={props.nodes} {...props} />
+          <OrganizationSiblingRow parentId={null} nodes={nodes} {...rowProps} />
         </div>
       </div>
     </div>
@@ -170,7 +183,11 @@ function OrganizationSiblingRow({
   nodes,
   withIncomingLine = false,
   ...props
-}: Omit<OrganizationChartProps, "nodes"> & { parentId: string | null; nodes: OrganizationNodeData[]; withIncomingLine?: boolean }) {
+}: Omit<OrganizationChartProps, "nodes"> & {
+  parentId: string | null;
+  nodes: OrganizationNodeData[];
+  withIncomingLine?: boolean;
+}) {
   const hasMultipleNodes = nodes.length > 1;
   const addButtonTopClass = withIncomingLine ? "top-[5.25rem]" : "top-16";
 
@@ -180,8 +197,12 @@ function OrganizationSiblingRow({
         <div key={child.id} className="relative flex flex-col items-center">
           {withIncomingLine && (
             <div className="relative h-5 w-full">
-              {hasMultipleNodes && index > 0 && <div className="absolute -left-5 right-1/2 top-0 border-t border-[#042558]/25" />}
-              {hasMultipleNodes && index < nodes.length - 1 && <div className="absolute left-1/2 -right-5 top-0 border-t border-[#042558]/25" />}
+              {hasMultipleNodes && index > 0 && (
+                <div className="absolute -left-5 right-1/2 top-0 border-t border-[#042558]/25" />
+              )}
+              {hasMultipleNodes && index < nodes.length - 1 && (
+                <div className="absolute left-1/2 -right-5 top-0 border-t border-[#042558]/25" />
+              )}
               <div className="absolute left-1/2 top-0 h-5 -translate-x-1/2 border-l border-[#042558]/25" />
             </div>
           )}
@@ -189,8 +210,19 @@ function OrganizationSiblingRow({
 
           <div className={`absolute -right-9 ${addButtonTopClass} z-10 flex h-8 items-center`}>
             <AddPositionButton
-              title={index === nodes.length - 1 ? "Adicionar cargo no final" : "Adicionar cargo entre estes cargos"}
-              onClick={() => props.onAddAt(parentId, index === nodes.length - 1 ? getAppendDisplayOrder(nodes) : getInsertDisplayOrder(child))}
+              title={
+                index === nodes.length - 1
+                  ? "Adicionar cargo no final"
+                  : "Adicionar cargo entre estes cargos"
+              }
+              onClick={() =>
+                props.onAddAt(
+                  parentId,
+                  index === nodes.length - 1
+                    ? getAppendDisplayOrder(nodes)
+                    : getInsertDisplayOrder(child),
+                )
+              }
             />
           </div>
         </div>
@@ -199,7 +231,10 @@ function OrganizationSiblingRow({
   );
 }
 
-function OrganizationBranch({ node, ...props }: Omit<OrganizationChartProps, "nodes"> & { node: OrganizationNodeData }) {
+function OrganizationBranch({
+  node,
+  ...props
+}: Omit<OrganizationChartProps, "nodes"> & { node: OrganizationNodeData }) {
   const isCollapsed = props.collapsed.has(node.id);
   const visibleChildren = isCollapsed ? [] : node.children;
 
@@ -227,14 +262,22 @@ function OrganizationBranch({ node, ...props }: Omit<OrganizationChartProps, "no
       {visibleChildren.length > 0 && (
         <div className="mt-5 flex flex-col items-center">
           <div className="h-5 border-l border-[#042558]/25" />
-          <OrganizationSiblingRow parentId={node.id} nodes={visibleChildren} withIncomingLine {...props} />
+          <OrganizationSiblingRow
+            parentId={node.id}
+            nodes={visibleChildren}
+            withIncomingLine
+            {...props}
+          />
         </div>
       )}
 
       {visibleChildren.length === 0 && !isCollapsed && (
         <div className="mt-5 flex flex-col items-center">
           <div className="h-5 border-l border-[#042558]/25" />
-          <AddPositionButton title="Adicionar subordinado" onClick={() => props.onAddAt(node.id, 10)} />
+          <AddPositionButton
+            title="Adicionar subordinado"
+            onClick={() => props.onAddAt(node.id, 10)}
+          />
         </div>
       )}
     </div>

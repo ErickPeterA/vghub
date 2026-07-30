@@ -7,7 +7,14 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { listUsersAdmin, updateUserAdmin, deleteUserAdmin } from "@/lib/admin.functions";
 import { withTimeout } from "@/lib/auth-safe";
 
-type Row = { id: string; nome: string; email: string; status: string; isAdmin: boolean; created_at: string };
+type Row = {
+  id: string;
+  nome: string;
+  email: string;
+  status: string;
+  isAdmin: boolean;
+  created_at: string;
+};
 
 export function UsersManagementPage() {
   const { isAdmin, loading: lu } = useCurrentUser();
@@ -19,7 +26,9 @@ export function UsersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Row | null>(null);
 
-  useEffect(() => { if (!lu && !isAdmin) void navigate({ to: "/projetos" }); }, [isAdmin, lu, navigate]);
+  useEffect(() => {
+    if (!lu && !isAdmin) void navigate({ to: "/projetos" });
+  }, [isAdmin, lu, navigate]);
 
   const load = async () => {
     setLoading(true);
@@ -29,16 +38,22 @@ export function UsersManagementPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao carregar");
       setRows([]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { if (isAdmin) void load(); }, [isAdmin]);
+  useEffect(() => {
+    if (isAdmin) void load();
+  }, [isAdmin]);
 
   const toggleStatus = async (r: Row) => {
     try {
       await updFn({ data: { userId: r.id, status: r.status === "ativo" ? "inativo" : "ativo" } });
       toast.success("Status atualizado");
       void load();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
   };
 
   const excluir = async (r: Row) => {
@@ -47,7 +62,9 @@ export function UsersManagementPage() {
       await delFn({ data: { userId: r.id } });
       toast.success("Usuário excluído");
       void load();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
   };
 
   return (
@@ -57,12 +74,17 @@ export function UsersManagementPage() {
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Gerenciamento</p>
           <h1 className="mt-2 font-display text-4xl">Usuários</h1>
         </div>
-        <Link to="/gerenciamento/usuarios/novo" className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
+        <Link
+          to="/gerenciamento/usuarios/novo"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
+        >
           <UserPlus className="h-4 w-4" /> Criar usuário
         </Link>
       </div>
 
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -79,13 +101,39 @@ export function UsersManagementPage() {
                 <tr key={r.id} className="border-t border-border/60 hover:bg-secondary/30">
                   <td className="px-5 py-3 font-medium">{r.nome}</td>
                   <td className="px-5 py-3 text-muted-foreground">{r.email}</td>
-                  <td className="px-5 py-3"><span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{r.isAdmin ? "Admin" : "Usuário"}</span></td>
-                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-xs ${r.status === "ativo" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>{r.status}</span></td>
+                  <td className="px-5 py-3">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+                      {r.isAdmin ? "Admin" : "Usuário"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${r.status === "ativo" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {r.status}
+                    </span>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => setEditing(r)} className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => toggleStatus(r)} className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground" title="Ativar/Desativar"><Power className="h-4 w-4" /></button>
-                      <button onClick={() => excluir(r)} className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                      <button
+                        onClick={() => setEditing(r)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => toggleStatus(r)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        title="Ativar/Desativar"
+                      >
+                        <Power className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => excluir(r)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -95,12 +143,29 @@ export function UsersManagementPage() {
         </div>
       )}
 
-      {editing && <EditDialog row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load(); }} />}
+      {editing && (
+        <EditDialog
+          row={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
+        />
+      )}
     </main>
   );
 }
 
-function EditDialog({ row, onClose, onSaved }: { row: Row; onClose: () => void; onSaved: () => void }) {
+function EditDialog({
+  row,
+  onClose,
+  onSaved,
+}: {
+  row: Row;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const updFn = useServerFn(updateUserAdmin);
   const [nome, setNome] = useState(row.nome);
   const [email, setEmail] = useState(row.email);
@@ -112,24 +177,73 @@ function EditDialog({ row, onClose, onSaved }: { row: Row; onClose: () => void; 
     e.preventDefault();
     setSaving(true);
     try {
-      await updFn({ data: { userId: row.id, nome, email, isAdmin, ...(password ? { password } : {}) } });
+      await updFn({
+        data: { userId: row.id, nome, email, isAdmin, ...(password ? { password } : {}) },
+      });
       toast.success("Atualizado");
       onSaved();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); } finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl border border-border bg-card p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="mb-4 font-display text-2xl">Editar usuário</h2>
         <form onSubmit={submit} className="space-y-3">
-          <input className={inp} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome" required />
-          <input type="email" className={inp} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" required />
-          <input type="password" className={inp} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Nova senha (deixe em branco para manter)" />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} /> Administrador</label>
+          <input
+            className={inp}
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome"
+            required
+          />
+          <input
+            type="email"
+            className={inp}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="E-mail"
+            required
+          />
+          <input
+            type="password"
+            className={inp}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Nova senha (deixe em branco para manter)"
+          />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isAdmin}
+              onChange={(e) => setIsAdmin(e.target.checked)}
+            />{" "}
+            Administrador
+          </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm">Cancelar</button>
-            <button disabled={saving} className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">{saving ? "Salvando..." : "Salvar"}</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-border px-4 py-2 text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              disabled={saving}
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+            >
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
           </div>
         </form>
       </div>
@@ -137,4 +251,5 @@ function EditDialog({ row, onClose, onSaved }: { row: Row; onClose: () => void; 
   );
 }
 
-const inp = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+const inp =
+  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";

@@ -8,7 +8,7 @@ export const SECTION_PLAN_LABELS: Record<SectionPlan, string> = {
 };
 
 const SECTION_PLAN_ACCESS: Record<string, SectionPlan[]> = {
-  "Cabeçalho": ["free", "starter", "pro", "enterprise"],
+  Cabeçalho: ["free", "starter", "pro", "enterprise"],
   Instrução: ["free", "starter", "pro", "enterprise"],
   Experiência: ["starter", "pro", "enterprise"],
   Conhecimento: ["starter", "pro", "enterprise"],
@@ -28,12 +28,22 @@ export function getCurrentUserPlan(): SectionPlan {
   }
 
   const queryPlan = new URLSearchParams(window.location.search).get("plan");
-  if (queryPlan === "free" || queryPlan === "starter" || queryPlan === "pro" || queryPlan === "enterprise") {
+  if (
+    queryPlan === "free" ||
+    queryPlan === "starter" ||
+    queryPlan === "pro" ||
+    queryPlan === "enterprise"
+  ) {
     return queryPlan;
   }
 
   const envPlan = import.meta.env.VITE_APP_PLAN;
-  if (envPlan === "free" || envPlan === "starter" || envPlan === "pro" || envPlan === "enterprise") {
+  if (
+    envPlan === "free" ||
+    envPlan === "starter" ||
+    envPlan === "pro" ||
+    envPlan === "enterprise"
+  ) {
     return envPlan;
   }
 
@@ -41,5 +51,7 @@ export function getCurrentUserPlan(): SectionPlan {
 }
 
 export function canAccessSection(sectionKey: string, plan: SectionPlan = getCurrentUserPlan()) {
-  return (SECTION_PLAN_ACCESS[sectionKey] ?? ["free", "starter", "pro", "enterprise"]).includes(plan);
+  return (SECTION_PLAN_ACCESS[sectionKey] ?? ["free", "starter", "pro", "enterprise"]).includes(
+    plan,
+  );
 }

@@ -89,7 +89,10 @@ function arrayFromSnapshot(snapshot: JsonRecord, key: string) {
   return Array.isArray(value) ? (value as JsonRecord[]) : [];
 }
 
-function fieldsForDynamicSource(fields: BaseFieldRow[], source?: PerformanceQuestion["dynamicSource"]) {
+function fieldsForDynamicSource(
+  fields: BaseFieldRow[],
+  source?: PerformanceQuestion["dynamicSource"],
+) {
   const sectionNames: Record<string, string[]> = {
     activities: ["atividades"],
     indicators: ["indicadores"],
@@ -97,7 +100,7 @@ function fieldsForDynamicSource(fields: BaseFieldRow[], source?: PerformanceQues
     role_skills: ["habilidades do cargo"],
     behavior: ["postura", "comportamento"],
   };
-  const expected = source ? sectionNames[source] ?? [] : [];
+  const expected = source ? (sectionNames[source] ?? []) : [];
   return fields.filter((field) =>
     expected.some((name) => normalizeLookup(field.section).includes(name)),
   );
@@ -168,22 +171,35 @@ function pickLongestText(item: JsonRecord, preferredKeys: string[]) {
     const value = match ? stringFromUnknown(match[1]) : "";
     if (value && !isNonTitleValue(value)) return value;
   }
-  return entries
-    .map(([, value]) => stringFromUnknown(value))
-    .filter((value) => value && !["sim", "nao", "não"].includes(normalizeLookup(value)) && !isInternalOptionValue(value))
-    .sort((a, b) => b.length - a.length)[0] ?? "";
+  return (
+    entries
+      .map(([, value]) => stringFromUnknown(value))
+      .filter(
+        (value) =>
+          value &&
+          !["sim", "nao", "não"].includes(normalizeLookup(value)) &&
+          !isInternalOptionValue(value),
+      )
+      .sort((a, b) => b.length - a.length)[0] ?? ""
+  );
 }
 
 function itemsForQuestion(snapshot: JsonRecord, question: PerformanceQuestion) {
   if (question.dynamicSource === "activities") return arrayFromSnapshot(snapshot, "atividades");
   if (question.dynamicSource === "indicators") return arrayFromSnapshot(snapshot, "indicadores");
-  if (question.dynamicSource === "culture_skills") return arrayFromSnapshot(snapshot, "habilidades_culturais");
-  if (question.dynamicSource === "role_skills") return arrayFromSnapshot(snapshot, "habilidades_cargo");
+  if (question.dynamicSource === "culture_skills")
+    return arrayFromSnapshot(snapshot, "habilidades_culturais");
+  if (question.dynamicSource === "role_skills")
+    return arrayFromSnapshot(snapshot, "habilidades_cargo");
   if (question.dynamicSource === "behavior") return arrayFromSnapshot(snapshot, "postura");
   return [];
 }
 
-function titleForQuestion(snapshot: JsonRecord, fields: BaseFieldRow[], question: PerformanceQuestion) {
+function titleForQuestion(
+  snapshot: JsonRecord,
+  fields: BaseFieldRow[],
+  question: PerformanceQuestion,
+) {
   if (!question.dynamicSource || !question.groupId) return question.groupTitle;
   const index = Number(question.groupId.match(/_(\d+)$/)?.[1] ?? "0") - 1;
   const item = itemsForQuestion(snapshot, question)[index];
@@ -348,15 +364,13 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           .select("field_key,label,section,base_options(label,value,is_active)")
           .eq("project_id", review.project_id)
           .eq("is_active", true);
-        const questions = [
-          ...((review.questions_snapshot as PerformanceQuestion[] | null) ?? []),
-        ]
+        const questions = [...((review.questions_snapshot as PerformanceQuestion[] | null) ?? [])]
           .filter((question) => question.active ?? true)
           .map((question) => ({
             ...question,
             groupTitle: titleForQuestion(
               snapshot,
-              ((baseFields ?? []) as unknown) as BaseFieldRow[],
+              (baseFields ?? []) as unknown as BaseFieldRow[],
               question,
             ),
           }));
@@ -385,13 +399,25 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
                   .maybeSingle()
               : Promise.resolve({ data: null }),
           ]);
-        const employeeRow = employee as { admission_date?: string; area_id?: string | null; sector_id?: string | null } | null;
+        const employeeRow = employee as {
+          admission_date?: string;
+          area_id?: string | null;
+          sector_id?: string | null;
+        } | null;
         const [{ data: area }, { data: sector }] = await Promise.all([
           employeeRow?.area_id
-            ? supabaseAdmin.from("project_areas").select("nome").eq("id", employeeRow.area_id).maybeSingle()
+            ? supabaseAdmin
+                .from("project_areas")
+                .select("nome")
+                .eq("id", employeeRow.area_id)
+                .maybeSingle()
             : Promise.resolve({ data: null }),
           employeeRow?.sector_id
-            ? supabaseAdmin.from("project_areas").select("nome").eq("id", employeeRow.sector_id).maybeSingle()
+            ? supabaseAdmin
+                .from("project_areas")
+                .select("nome")
+                .eq("id", employeeRow.sector_id)
+                .maybeSingle()
             : Promise.resolve({ data: null }),
         ]);
 

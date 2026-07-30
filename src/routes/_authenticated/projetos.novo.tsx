@@ -21,11 +21,18 @@ function NovoProjeto() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && !isAdmin) { toast.error("Acesso restrito"); navigate({ to: "/projetos" }); }
+    if (!loading && !isAdmin) {
+      toast.error("Acesso restrito");
+      navigate({ to: "/projetos" });
+    }
   }, [isAdmin, loading, navigate]);
 
   useEffect(() => {
-    supabase.from("profiles").select("id,nome").order("nome").then(({ data }) => setUsers(data ?? []));
+    supabase
+      .from("profiles")
+      .select("id,nome")
+      .order("nome")
+      .then(({ data }) => setUsers(data ?? []));
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -53,14 +60,31 @@ function NovoProjeto() {
           <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inp} />
         </Field>
         <Field label="Responsável">
-          <select value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)} className={inp}>
+          <select
+            value={responsavelId}
+            onChange={(e) => setResponsavelId(e.target.value)}
+            className={inp}
+          >
             <option value="">— sem responsável —</option>
-            {users.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
           </select>
         </Field>
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={() => navigate({ to: "/projetos" })} className="rounded-md border border-border px-4 py-2 text-sm">Cancelar</button>
-          <button disabled={saving} className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/projetos" })}
+            className="rounded-md border border-border px-4 py-2 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={saving}
+            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+          >
             {saving ? "Salvando..." : "Criar projeto"}
           </button>
         </div>
@@ -69,7 +93,15 @@ function NovoProjeto() {
   );
 }
 
-const inp = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+const inp =
+  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (<label className="block"><span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span><div className="mt-1.5">{children}</div></label>);
+  return (
+    <label className="block">
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <div className="mt-1.5">{children}</div>
+    </label>
+  );
 }

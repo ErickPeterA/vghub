@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock3, Copy, Download, Eye, Link2, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock3,
+  Copy,
+  Download,
+  Eye,
+  Link2,
+  Plus,
+  RotateCcw,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeActivityFields, type ActivityField } from "./ActivityConfigManager";
 import { useProjectAreas, type ProjectArea } from "./DynamicFields";
@@ -53,9 +64,27 @@ const ACTIVITY_STAGES: Array<{
   icon: ComponentType<{ className?: string }>;
   iconClass: string;
 }> = [
-  { key: "creating", label: "Em criação", empty: "Nenhuma atividade em criação", icon: Clock3, iconClass: "text-blue-500" },
-  { key: "sent", label: "Link enviado", empty: "Nenhum link enviado", icon: Send, iconClass: "text-amber-500" },
-  { key: "answered", label: "Respondido", empty: "Nenhuma resposta recebida", icon: CheckCircle2, iconClass: "text-emerald-500" },
+  {
+    key: "creating",
+    label: "Em criação",
+    empty: "Nenhuma atividade em criação",
+    icon: Clock3,
+    iconClass: "text-blue-500",
+  },
+  {
+    key: "sent",
+    label: "Link enviado",
+    empty: "Nenhum link enviado",
+    icon: Send,
+    iconClass: "text-amber-500",
+  },
+  {
+    key: "answered",
+    label: "Respondido",
+    empty: "Nenhuma resposta recebida",
+    icon: CheckCircle2,
+    iconClass: "text-emerald-500",
+  },
 ];
 
 const ACTIVITY_LINK_DAYS = 7;
@@ -71,24 +100,47 @@ type EmployeeRow = {
 
 type PositionRow = { id: string; nome: string };
 
-export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectId: string; onUnreviewedChange?: (n: number) => void }) {
+export function ActivityLinksPanel({
+  projectId,
+  onUnreviewedChange,
+}: {
+  projectId: string;
+  onUnreviewedChange?: (n: number) => void;
+}) {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [configId, setConfigId] = useState<string | null>(null);
-  const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
+  const [configFields, setConfigFields] = useState<{
+    header: ActivityField[];
+    questions: ActivityField[];
+  } | null>(null);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [generating, setGenerating] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openResp, setOpenResp] = useState<{ link: LinkRow; response: ResponseRow | null } | null>(null);
+  const [openResp, setOpenResp] = useState<{ link: LinkRow; response: ResponseRow | null } | null>(
+    null,
+  );
   const areas = useProjectAreas(projectId);
 
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data: cfg }, { data: ls }, { data: emps }, { data: pos }] = await Promise.all([
-      supabase.from("activity_configs").select("id,header_schema,questions_schema").eq("project_id", projectId).maybeSingle(),
-      supabase.from("activity_links").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
-      (supabase as any).from("project_employees").select("id,nome,position_id,area_id,sector_id").eq("project_id", projectId).order("nome"),
-      (supabase as any).from("project_positions").select("id,nome").eq("project_id", projectId),
+      supabase
+        .from("activity_configs")
+        .select("id,header_schema,questions_schema")
+        .eq("project_id", projectId)
+        .maybeSingle(),
+      supabase
+        .from("activity_links")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("project_employees")
+        .select("id,nome,position_id,area_id,sector_id")
+        .eq("project_id", projectId)
+        .order("nome"),
+      supabase.from("project_positions").select("id,nome").eq("project_id", projectId),
     ]);
     if (cfg) {
       setConfigId(cfg.id);
@@ -106,19 +158,28 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
 
     const now = new Date().toISOString();
     const rows = (ls ?? []) as LinkRow[];
-    const toExpire = rows.filter((l) => l.status === "pending" && l.expires_at < now).map((l) => l.id);
+    const toExpire = rows
+      .filter((l) => l.status === "pending" && l.expires_at < now)
+      .map((l) => l.id);
     if (toExpire.length) {
       await supabase.from("activity_links").update({ status: "expired" }).in("id", toExpire);
-      rows.forEach((l) => { if (toExpire.includes(l.id)) l.status = "expired"; });
+      rows.forEach((l) => {
+        if (toExpire.includes(l.id)) l.status = "expired";
+      });
     }
     setLinks(rows);
     onUnreviewedChange?.(rows.filter((l) => l.status === "answered" && !l.reviewed_at).length);
     setLoading(false);
   }, [projectId, onUnreviewedChange]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const gpHeaderFields = configFields?.header.filter((field) => (field.active ?? true) && (field.filledBy ?? "collaborator") === "gp") ?? [];
+  const gpHeaderFields =
+    configFields?.header.filter(
+      (field) => (field.active ?? true) && (field.filledBy ?? "collaborator") === "gp",
+    ) ?? [];
   const areaField = gpHeaderFields.find((field) => field.dataSource === "areas");
   const setorField = gpHeaderFields.find((field) => field.dataSource === "setores");
 
@@ -126,7 +187,8 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   const positionById = new Map(positions.map((p) => [p.id, p]));
 
   const employeeIdOf = (link: LinkRow) =>
-    ((link.header_answers as Record<string, string> | null)?.__employee_id as string | undefined) ?? null;
+    ((link.header_answers as Record<string, string> | null)?.__employee_id as string | undefined) ??
+    null;
 
   const linkByEmployee = new Map<string, LinkRow>();
   links
@@ -145,22 +207,28 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   const gerar = async (employee: EmployeeRow) => {
     if (!configId) return toast.error("Configure o formulário primeiro.");
 
-    const areaName = employee.area_id ? areaById.get(employee.area_id)?.nome ?? "" : "";
-    const setorName = employee.sector_id ? areaById.get(employee.sector_id)?.nome ?? "" : "";
+    const areaName = employee.area_id ? (areaById.get(employee.area_id)?.nome ?? "") : "";
+    const setorName = employee.sector_id ? (areaById.get(employee.sector_id)?.nome ?? "") : "";
     const cargoName = positionById.get(employee.position_id)?.nome ?? "";
 
     const header: Record<string, string> = { __employee_id: employee.id };
     if (areaField && areaName) header[areaField.id] = employee.area_id ?? areaName;
     if (setorField && setorName) header[setorField.id] = employee.sector_id ?? setorName;
     gpHeaderFields.forEach((field) => {
-      const key = `${field.id} ${field.label}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const key = `${field.id} ${field.label}`
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
       if (field.dataSource === "areas" || field.dataSource === "setores") return;
       if (key.includes("cargo") && cargoName) header[field.id] = cargoName;
-      else if (key.includes("nome") || key.includes("colaborador") || key.includes("funcionario")) header[field.id] = employee.nome;
+      else if (key.includes("nome") || key.includes("colaborador") || key.includes("funcionario"))
+        header[field.id] = employee.nome;
     });
 
     setGenerating(employee.id);
-    const expires_at = new Date(Date.now() + ACTIVITY_LINK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const expires_at = new Date(
+      Date.now() + ACTIVITY_LINK_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const { data: userData } = await supabase.auth.getUser();
     const { error } = await supabase.from("activity_links").insert({
       project_id: projectId,
@@ -176,7 +244,6 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     void load();
   };
 
-
   const copiar = async (token: string) => {
     const url = `${window.location.origin}/atividades/preencher/${token}`;
     try {
@@ -189,13 +256,18 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
 
   const cancelar = async (l: LinkRow) => {
     if (!confirm("Cancelar este link?")) return;
-    const { error } = await supabase.from("activity_links").update({ status: "cancelled" }).eq("id", l.id);
+    const { error } = await supabase
+      .from("activity_links")
+      .update({ status: "cancelled" })
+      .eq("id", l.id);
     if (error) return toast.error(error.message);
     void load();
   };
 
   const reativar = async (l: LinkRow) => {
-    const expires_at = new Date(Date.now() + ACTIVITY_REOPEN_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const expires_at = new Date(
+      Date.now() + ACTIVITY_REOPEN_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const { error } = await supabase
       .from("activity_links")
       .update({ status: "pending", expires_at })
@@ -206,10 +278,17 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
   };
 
   const abrirResposta = async (l: LinkRow) => {
-    const { data } = await supabase.from("activity_responses").select("*").eq("link_id", l.id).maybeSingle();
+    const { data } = await supabase
+      .from("activity_responses")
+      .select("*")
+      .eq("link_id", l.id)
+      .maybeSingle();
     setOpenResp({ link: l, response: (data as ResponseRow | null) ?? null });
     if (l.status === "answered" && !l.reviewed_at) {
-      await supabase.from("activity_links").update({ reviewed_at: new Date().toISOString() }).eq("id", l.id);
+      await supabase
+        .from("activity_links")
+        .update({ reviewed_at: new Date().toISOString() })
+        .eq("id", l.id);
       void load();
     }
   };
@@ -218,10 +297,14 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Funcionários do projeto ({employees.length})</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+            Funcionários do projeto ({employees.length})
+          </h3>
           <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
         </div>
-        {!configId && <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>}
+        {!configId && (
+          <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>
+        )}
 
         {loading ? (
           <div className="py-6 text-center text-sm text-[#042558]/60">Carregando...</div>
@@ -250,11 +333,19 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
                   return (
                     <tr key={emp.id} className="text-[#042558]">
                       <td className="px-3 py-2 font-medium">{emp.nome}</td>
-                      <td className="px-3 py-2 text-[#042558]/70">{(emp.area_id && areaById.get(emp.area_id)?.nome) || "—"}</td>
-                      <td className="px-3 py-2 text-[#042558]/70">{(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "—"}</td>
-                      <td className="px-3 py-2 text-[#042558]/70">{positionById.get(emp.position_id)?.nome ?? "—"}</td>
+                      <td className="px-3 py-2 text-[#042558]/70">
+                        {(emp.area_id && areaById.get(emp.area_id)?.nome) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-[#042558]/70">
+                        {(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-[#042558]/70">
+                        {positionById.get(emp.position_id)?.nome ?? "—"}
+                      </td>
                       <td className="px-3 py-2">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>{status}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+                          {status}
+                        </span>
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -269,16 +360,26 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
                           ) : null}
                           {link && link.status === "pending" && (
                             <>
-                              <button onClick={() => void copiar(link.token)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20">
+                              <button
+                                onClick={() => void copiar(link.token)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
+                              >
                                 <Copy className="h-3.5 w-3.5" /> Copiar link
                               </button>
-                              <button onClick={() => void cancelar(link)} className="rounded-lg p-1.5 text-[#042558]/40 hover:bg-red-50 hover:text-red-600" title="Cancelar link">
+                              <button
+                                onClick={() => void cancelar(link)}
+                                className="rounded-lg p-1.5 text-[#042558]/40 hover:bg-red-50 hover:text-red-600"
+                                title="Cancelar link"
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </>
                           )}
                           {link && link.status === "answered" && (
-                            <button onClick={() => void abrirResposta(link)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20">
+                            <button
+                              onClick={() => void abrirResposta(link)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20"
+                            >
                               <Eye className="h-3.5 w-3.5" /> Ver resposta
                             </button>
                           )}
@@ -293,15 +394,18 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
         )}
       </div>
 
-
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Kanban de atividades ({links.length})</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+            Kanban de atividades ({links.length})
+          </h3>
         </div>
         {loading ? (
           <div className="py-6 text-center text-sm text-[#042558]/60">Carregando...</div>
         ) : links.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/40">Nenhum link gerado ainda.</div>
+          <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/40">
+            Nenhum link gerado ainda.
+          </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-3">
             {ACTIVITY_STAGES.map((stage) => {
@@ -309,13 +413,18 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
               const items = links.filter((link) => stageFor(link) === stage.key);
 
               return (
-                <section key={stage.key} className="flex min-h-[280px] flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm transition-all hover:shadow-lg">
+                <section
+                  key={stage.key}
+                  className="flex min-h-[280px] flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm transition-all hover:shadow-lg"
+                >
                   <header className="mb-4 flex items-center justify-between border-b border-[#042558]/10 pb-3">
                     <div className="flex items-center gap-2">
                       <div className="rounded-md bg-[#042558]/10 p-1.5">
                         <Icon className={`h-4 w-4 ${stage.iconClass}`} />
                       </div>
-                      <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">{stage.label}</h2>
+                      <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+                        {stage.label}
+                      </h2>
                     </div>
                     <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#042558]/10 px-2 text-xs font-medium text-[#042558]">
                       {items.length}
@@ -351,7 +460,6 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
       {openResp && configFields && (
         <ResponseDrawer data={openResp} fields={configFields} onClose={() => setOpenResp(null)} />
       )}
-
     </div>
   );
 }
@@ -359,16 +467,31 @@ export function ActivityLinksPanel({ projectId, onUnreviewedChange }: { projectI
 export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [responses, setResponses] = useState<ResponseRow[]>([]);
-  const [configFields, setConfigFields] = useState<{ header: ActivityField[]; questions: ActivityField[] } | null>(null);
+  const [configFields, setConfigFields] = useState<{
+    header: ActivityField[];
+    questions: ActivityField[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data: cfg }, { data: ls }, { data: rs, error }] = await Promise.all([
-      supabase.from("activity_configs").select("header_schema,questions_schema").eq("project_id", projectId).maybeSingle(),
-      supabase.from("activity_links").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
-      supabase.from("activity_responses").select("*").eq("project_id", projectId).order("submitted_at", { ascending: true }),
+      supabase
+        .from("activity_configs")
+        .select("header_schema,questions_schema")
+        .eq("project_id", projectId)
+        .maybeSingle(),
+      supabase
+        .from("activity_links")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("activity_responses")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("submitted_at", { ascending: true }),
     ]);
 
     if (error) {
@@ -378,15 +501,21 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
     }
 
     setConfigFields({
-      header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(includeInCompilation),
-      questions: normalizeActivityFields((cfg?.questions_schema as ActivityField[] | null) ?? []).filter(includeInCompilation),
+      header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(
+        includeInCompilation,
+      ),
+      questions: normalizeActivityFields(
+        (cfg?.questions_schema as ActivityField[] | null) ?? [],
+      ).filter(includeInCompilation),
     });
     setLinks(((ls ?? []) as LinkRow[]).filter((link) => link.status === "answered"));
     setResponses(((rs ?? []) as ResponseRow[]).filter((response) => response.link_id));
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const linksById = new Map(links.map((link) => [link.id, link]));
   const completedResponses = responses.filter((response) => linksById.has(response.link_id));
@@ -405,7 +534,10 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       responses: completedResponses,
       fields,
     });
-    downloadBlob(blob, `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`);
+    downloadBlob(
+      blob,
+      `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`,
+    );
     toast.success("PDF da compilação baixado");
   };
 
@@ -414,8 +546,12 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       <div className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Atividades concluídas</h3>
-            <p className="mt-1 text-sm text-[#042558]/60">{completedResponses.length} resposta(s) pronta(s) para compilar</p>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+              Atividades concluídas
+            </h3>
+            <p className="mt-1 text-sm text-[#042558]/60">
+              {completedResponses.length} resposta(s) pronta(s) para compilar
+            </p>
           </div>
           <button
             onClick={previewCompilation}
@@ -429,7 +565,9 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-8 text-center text-sm text-[#042558]/60">Carregando...</div>
+        <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-8 text-center text-sm text-[#042558]/60">
+          Carregando...
+        </div>
       ) : completedResponses.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-[#042558]/15 bg-white/50 p-8 text-center text-sm text-[#042558]/40">
           Nenhuma atividade respondida ainda.
@@ -439,13 +577,22 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
           {completedResponses.map((response) => {
             const link = linksById.get(response.link_id);
             return (
-              <article key={response.id} className="rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm">
+              <article
+                key={response.id}
+                className="rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm"
+              >
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold text-[#042558]">{link?.label ?? "Sem rótulo"}</h4>
-                    <p className="mt-1 text-xs text-[#042558]/50">Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}</p>
+                    <h4 className="text-sm font-semibold text-[#042558]">
+                      {link?.label ?? "Sem rótulo"}
+                    </h4>
+                    <p className="mt-1 text-xs text-[#042558]/50">
+                      Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}
+                    </p>
                   </div>
-                  <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Concluído</span>
+                  <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                    Concluído
+                  </span>
                 </div>
               </article>
             );
@@ -480,17 +627,28 @@ function CompilationPreview({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 md:p-8" onClick={onClose}>
-      <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="mx-auto max-w-4xl rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-[#042558]/10 bg-white/95 p-5 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da compilação</h3>
-            <p className="text-sm text-[#042558]/60">{responses.length} resposta(s) serão incluídas no PDF</p>
+            <p className="text-sm text-[#042558]/60">
+              {responses.length} resposta(s) serão incluídas no PDF
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={onClose} className="rounded-lg border border-[#042558]/20 bg-white px-4 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-[#042558]/20 bg-white px-4 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+            >
               Fechar
             </button>
-            <button onClick={onDownload} className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white hover:bg-[#042558]/90">
+            <button
+              onClick={onDownload}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white hover:bg-[#042558]/90"
+            >
               <Download className="h-4 w-4" />
               Baixar PDF
             </button>
@@ -513,7 +671,10 @@ function CompilationPreview({
                         {item.answers.length ? (
                           <div className="mt-2 space-y-2">
                             {item.answers.map((answer, index) => (
-                              <p key={`${item.id}-${index}`} className="whitespace-pre-wrap rounded-lg bg-[#042558]/5 px-3 py-2 text-sm leading-6 text-[#042558]">
+                              <p
+                                key={`${item.id}-${index}`}
+                                className="whitespace-pre-wrap rounded-lg bg-[#042558]/5 px-3 py-2 text-sm leading-6 text-[#042558]"
+                              >
                                 {answer}
                               </p>
                             ))}
@@ -534,7 +695,6 @@ function CompilationPreview({
   );
 }
 
-
 function ActivityLinkCard({
   link,
   onCopy,
@@ -552,12 +712,16 @@ function ActivityLinkCard({
     <article className="group rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="truncate text-sm font-semibold text-[#042558]">{link.label ?? "Sem rótulo"}</h4>
+          <h4 className="truncate text-sm font-semibold text-[#042558]">
+            {link.label ?? "Sem rótulo"}
+          </h4>
           <p className="mt-1 text-xs text-[#042558]/50">
             Criado {new Date(link.created_at).toLocaleDateString("pt-BR")}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[link.status]}`}>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[link.status]}`}
+        >
           {STATUS_LABEL[link.status]}
           {link.status === "answered" && !link.reviewed_at && " · novo"}
         </span>
@@ -574,21 +738,36 @@ function ActivityLinkCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#042558]/10 pt-3">
-        <button onClick={() => onCopy(link.token)} className="rounded-lg p-2 text-[#042558]/60 hover:bg-[#042558]/5" title="Copiar link">
+        <button
+          onClick={() => onCopy(link.token)}
+          className="rounded-lg p-2 text-[#042558]/60 hover:bg-[#042558]/5"
+          title="Copiar link"
+        >
           <Copy className="h-4 w-4" />
         </button>
         {link.status === "answered" && (
-          <button onClick={() => onOpenResponse(link)} className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20">
+          <button
+            onClick={() => onOpenResponse(link)}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
+          >
             <Eye className="h-3.5 w-3.5" /> Ver resposta
           </button>
         )}
         {link.status === "pending" && (
-          <button onClick={() => onCancel(link)} className="rounded-lg p-2 text-[#042558]/40 hover:bg-red-50 hover:text-red-600" title="Cancelar">
+          <button
+            onClick={() => onCancel(link)}
+            className="rounded-lg p-2 text-[#042558]/40 hover:bg-red-50 hover:text-red-600"
+            title="Cancelar"
+          >
             <Trash2 className="h-4 w-4" />
           </button>
         )}
         {link.status === "expired" && (
-          <button onClick={() => onReactivate(link)} className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20" title="Reabrir por 3 dias">
+          <button
+            onClick={() => onReactivate(link)}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
+            title="Reabrir por 3 dias"
+          >
             <RotateCcw className="h-3.5 w-3.5" /> Reabrir por 3 dias
           </button>
         )}
@@ -616,7 +795,9 @@ function normalizeCompilationField(value: string) {
     .toLowerCase();
 }
 
-function questionAnswerGroups(answers?: QuestionAnswerGroup | QuestionAnswerGroup[] | null): QuestionAnswerGroup[] {
+function questionAnswerGroups(
+  answers?: QuestionAnswerGroup | QuestionAnswerGroup[] | null,
+): QuestionAnswerGroup[] {
   if (Array.isArray(answers)) return answers.length ? answers : [{}];
   if (answers && typeof answers === "object") return [answers];
   return [{}];
@@ -657,7 +838,10 @@ function buildActivityResponsesPdf({
   return createPdfBlob(lines);
 }
 
-function buildCompilationSections(responses: ResponseRow[], fields: { header: ActivityField[]; questions: ActivityField[] }) {
+function buildCompilationSections(
+  responses: ResponseRow[],
+  fields: { header: ActivityField[]; questions: ActivityField[] },
+) {
   return [
     {
       title: "Cabecalho",
@@ -666,7 +850,9 @@ function buildCompilationSections(responses: ResponseRow[], fields: { header: Ac
         .map((field) => ({
           id: field.id,
           label: field.label,
-          answers: responses.map((response) => response.header_answers?.[field.id]?.trim()).filter(isFilledAnswer),
+          answers: responses
+            .map((response) => response.header_answers?.[field.id]?.trim())
+            .filter(isFilledAnswer),
         })),
     },
     {
@@ -745,7 +931,9 @@ function createPdfBlob(lines: Array<{ text: string; size?: number; gap?: number 
 
     if (y - lineHeight < marginBottom) addPage();
     if (line.text) {
-      pages[pages.length - 1].push(`BT /F1 ${size} Tf ${marginX} ${y.toFixed(2)} Td (${escapePdfText(line.text)}) Tj ET`);
+      pages[pages.length - 1].push(
+        `BT /F1 ${size} Tf ${marginX} ${y.toFixed(2)} Td (${escapePdfText(line.text)}) Tj ET`,
+      );
     }
     y -= lineHeight;
   });
@@ -782,11 +970,13 @@ function buildPdf(pageContents: string[][], width: number, height: number) {
     const pageObjectId = pageObjectStart + index;
     const contentObjectId = contentObjectStart + index;
     const stream = content.join("\n");
-    objects[pageObjectId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`;
+    objects[pageObjectId] =
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`;
     objects[contentObjectId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
   });
 
-  objects[fontObjectId] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objects[fontObjectId] =
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
 
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
@@ -831,55 +1021,110 @@ function FieldInput({
   areas?: ProjectArea[];
   parentAreaId?: string;
 }) {
-  const base = "w-full rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558]";
+  const base =
+    "w-full rounded-lg border border-[#042558]/20 bg-white/60 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558]";
   const areaOptions = areas.filter((area) => !area.parent_id);
-  const setorOptions = areas.filter((area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId));
+  const setorOptions = areas.filter(
+    (area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId),
+  );
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
         {field.label} {field.required && <span className="text-red-500">*</span>}
       </span>
       {field.type === "textarea" ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className={base} />
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className={base}
+        />
       ) : field.dataSource === "areas" ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
           <option value="">Selecione</option>
-          {areaOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+          {areaOptions.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.nome}
+            </option>
+          ))}
         </select>
       ) : field.dataSource === "setores" ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={base} disabled={!parentAreaId}>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+          disabled={!parentAreaId}
+        >
           <option value="">{parentAreaId ? "Selecione" : "Selecione a Área primeiro"}</option>
-          {setorOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+          {setorOptions.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.nome}
+            </option>
+          ))}
         </select>
       ) : field.type === "select" ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
           <option value="">Selecione</option>
-          {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
+          {(field.options ?? []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
       ) : field.type === "date" ? (
-        <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+        />
       ) : (
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className={base} />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+        />
       )}
     </label>
   );
 }
 
-function ResponseDrawer({ data, fields, onClose }: { data: { link: LinkRow; response: ResponseRow | null }; fields: { header: ActivityField[]; questions: ActivityField[] }; onClose: () => void }) {
+function ResponseDrawer({
+  data,
+  fields,
+  onClose,
+}: {
+  data: { link: LinkRow; response: ResponseRow | null };
+  fields: { header: ActivityField[]; questions: ActivityField[] };
+  onClose: () => void;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
-      <div className="h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-xl text-[#042558]">Resposta</h3>
-          <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">×</button>
+          <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">
+            ×
+          </button>
         </div>
-        <p className="text-xs text-[#042558]/50">{data.link.label ?? "Sem rótulo"} · Enviado {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}</p>
+        <p className="text-xs text-[#042558]/50">
+          {data.link.label ?? "Sem rótulo"} · Enviado{" "}
+          {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}
+        </p>
 
         {!data.response ? (
           <p className="mt-6 text-sm text-[#042558]/60">Sem resposta registrada.</p>
         ) : (
           <>
-            <Section title="Cabeçalho" fields={fields.header.filter((field) => field.active ?? true)} answers={data.response.header_answers} />
+            <Section
+              title="Cabeçalho"
+              fields={fields.header.filter((field) => field.active ?? true)}
+              answers={data.response.header_answers}
+            />
             {questionAnswerGroups(data.response.question_answers).map((answers, index) => (
               <Section
                 key={index}
@@ -895,7 +1140,15 @@ function ResponseDrawer({ data, fields, onClose }: { data: { link: LinkRow; resp
   );
 }
 
-function Section({ title, fields, answers }: { title: string; fields: ActivityField[]; answers: Record<string, string> }) {
+function Section({
+  title,
+  fields,
+  answers,
+}: {
+  title: string;
+  fields: ActivityField[];
+  answers: Record<string, string>;
+}) {
   return (
     <div className="mt-6">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/60">{title}</h4>
@@ -903,7 +1156,9 @@ function Section({ title, fields, answers }: { title: string; fields: ActivityFi
         {fields.map((f) => (
           <div key={f.id}>
             <dt className="text-xs font-medium text-[#042558]/70">{f.label}</dt>
-            <dd className="mt-0.5 whitespace-pre-wrap text-sm text-[#042558]">{answers[f.id] || <span className="italic text-[#042558]/30">sem resposta</span>}</dd>
+            <dd className="mt-0.5 whitespace-pre-wrap text-sm text-[#042558]">
+              {answers[f.id] || <span className="italic text-[#042558]/30">sem resposta</span>}
+            </dd>
           </div>
         ))}
       </dl>

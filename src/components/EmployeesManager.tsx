@@ -1,11 +1,27 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, Building2, CalendarDays, Loader2, Plus, UserPlus, Users, X } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  CalendarDays,
+  Loader2,
+  Plus,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type PositionRow = {
   id: string;
@@ -74,19 +90,15 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     const [employeesResult, positionsResult, areasResult] = await Promise.all([
-      (supabase as any)
-        .from("project_employees")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("nome"),
-      (supabase as any)
+      supabase.from("project_employees").select("*").eq("project_id", projectId).order("nome"),
+      supabase
         .from("project_positions")
         .select("id,nome,parent_id,display_order,created_at")
         .eq("project_id", projectId)
         .eq("status", "active")
         .order("display_order")
         .order("created_at"),
-      (supabase as any)
+      supabase
         .from("project_areas")
         .select("id,project_id,parent_id,nome,display_order,created_at")
         .eq("project_id", projectId)
@@ -117,9 +129,15 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     () => areas.filter((area) => area.parent_id === (form.areaId || null)),
     [areas, form.areaId],
   );
-  const positionsById = useMemo(() => new Map(positions.map((position) => [position.id, position])), [positions]);
+  const positionsById = useMemo(
+    () => new Map(positions.map((position) => [position.id, position])),
+    [positions],
+  );
   const areasById = useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
-  const employeesById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
+  const employeesById = useMemo(
+    () => new Map(employees.map((employee) => [employee.id, employee])),
+    [employees],
+  );
   const ancestorPositionIds = useMemo(() => {
     if (!form.positionId) return [];
 
@@ -195,7 +213,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     }
 
     setSaving(true);
-    const { error } = await (supabase as any).from("project_employees").insert({
+    const { error } = await supabase.from("project_employees").insert({
       project_id: projectId,
       position_id: form.positionId,
       area_id: form.areaId || null,
@@ -227,13 +245,21 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
         <div className="mb-6 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">Projeto</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">Funcionarios</h1>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+                Projeto
+              </p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
+                Funcionarios
+              </h1>
               <p className="mt-2 max-w-2xl text-sm text-[#042558]/55">
                 Cadastre pessoas vinculadas aos cargos do organograma e aos setores do projeto.
               </p>
             </div>
-            <Button type="button" onClick={() => setFormOpen(true)} className="bg-[#042558] text-white hover:bg-[#042558]/90">
+            <Button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              className="bg-[#042558] text-white hover:bg-[#042558]/90"
+            >
               <UserPlus className="h-4 w-4" />
               Cadastrar funcionario
             </Button>
@@ -243,8 +269,12 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
         <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5 shadow-sm backdrop-blur-sm">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Lista de funcionarios</h2>
-              <p className="mt-1 text-xs text-[#042558]/50">Os cargos vem do organograma. Os setores aparecem conforme a area escolhida.</p>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+                Lista de funcionarios
+              </h2>
+              <p className="mt-1 text-xs text-[#042558]/50">
+                Os cargos vem do organograma. Os setores aparecem conforme a area escolhida.
+              </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-[#042558]">
               <Metric icon={Users} label="Pessoas" value={employees.length} />
@@ -261,8 +291,12 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           ) : employees.length === 0 ? (
             <div className="flex h-56 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/15 bg-white/50 p-8 text-center">
               <Users className="mb-3 h-10 w-10 text-[#042558]/20" />
-              <p className="text-sm font-medium text-[#042558]/60">Nenhum funcionario cadastrado.</p>
-              <p className="mt-1 text-xs text-[#042558]/40">Abra o formulario acima para criar o primeiro registro.</p>
+              <p className="text-sm font-medium text-[#042558]/60">
+                Nenhum funcionario cadastrado.
+              </p>
+              <p className="mt-1 text-xs text-[#042558]/40">
+                Abra o formulario acima para criar o primeiro registro.
+              </p>
             </div>
           ) : (
             <Table>
@@ -280,11 +314,15 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 {employees.map((employee) => (
                   <TableRow key={employee.id} className="border-[#042558]/10">
                     <TableCell className="font-medium text-[#042558]">{employee.nome}</TableCell>
-                    <TableCell className="text-[#042558]/70">{positionsById.get(employee.position_id)?.nome ?? "Cargo removido"}</TableCell>
+                    <TableCell className="text-[#042558]/70">
+                      {positionsById.get(employee.position_id)?.nome ?? "Cargo removido"}
+                    </TableCell>
                     <TableCell className="text-[#042558]/70">
                       <div className="flex flex-col">
                         <span>{areasById.get(employee.area_id ?? "")?.nome ?? "-"}</span>
-                        <span className="text-xs text-[#042558]/45">{areasById.get(employee.sector_id ?? "")?.nome ?? "Sem setor"}</span>
+                        <span className="text-xs text-[#042558]/45">
+                          {areasById.get(employee.sector_id ?? "")?.nome ?? "Sem setor"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="text-[#042558]/70">
@@ -296,7 +334,9 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                         {formatDate(employee.admission_date)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-[#042558]/70">{formatDate(employee.last_performance_review_date)}</TableCell>
+                    <TableCell className="text-[#042558]/70">
+                      {formatDate(employee.last_performance_review_date)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -313,8 +353,12 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">Novo funcionario</h2>
-                <p className="mt-1 text-xs text-[#042558]/50">Pressione Enter para cadastrar e continuar preenchendo o proximo.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
+                  Novo funcionario
+                </h2>
+                <p className="mt-1 text-xs text-[#042558]/50">
+                  Pressione Enter para cadastrar e continuar preenchendo o proximo.
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-[#042558]/10 text-[#042558]">
@@ -334,41 +378,70 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">Nome</span>
-                <input ref={nameRef} value={form.nome} onChange={(event) => setField("nome", event.target.value)} className={inputClass} placeholder="Nome completo" />
+                <input
+                  ref={nameRef}
+                  value={form.nome}
+                  onChange={(event) => setField("nome", event.target.value)}
+                  className={inputClass}
+                  placeholder="Nome completo"
+                />
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">Cargo</span>
-                <select value={form.positionId} onChange={(event) => setField("positionId", event.target.value)} className={inputClass}>
+                <select
+                  value={form.positionId}
+                  onChange={(event) => setField("positionId", event.target.value)}
+                  className={inputClass}
+                >
                   <option value="">Selecione um cargo</option>
                   {positions.map((position) => (
-                    <option key={position.id} value={position.id}>{position.nome}</option>
+                    <option key={position.id} value={position.id}>
+                      {position.nome}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">Area</span>
-                <select value={form.areaId} onChange={(event) => setField("areaId", event.target.value)} className={inputClass}>
+                <select
+                  value={form.areaId}
+                  onChange={(event) => setField("areaId", event.target.value)}
+                  className={inputClass}
+                >
                   <option value="">Selecione uma area</option>
                   {areaOptions.map((area) => (
-                    <option key={area.id} value={area.id}>{area.nome}</option>
+                    <option key={area.id} value={area.id}>
+                      {area.nome}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">Setor</span>
-                <select value={form.sectorId} onChange={(event) => setField("sectorId", event.target.value)} className={inputClass} disabled={!form.areaId}>
-                  <option value="">{form.areaId ? "Selecione um setor" : "Selecione uma area primeiro"}</option>
+                <select
+                  value={form.sectorId}
+                  onChange={(event) => setField("sectorId", event.target.value)}
+                  className={inputClass}
+                  disabled={!form.areaId}
+                >
+                  <option value="">
+                    {form.areaId ? "Selecione um setor" : "Selecione uma area primeiro"}
+                  </option>
                   {sectorOptions.map((sector) => (
-                    <option key={sector.id} value={sector.id}>{sector.nome}</option>
+                    <option key={sector.id} value={sector.id}>
+                      {sector.nome}
+                    </option>
                   ))}
                 </select>
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Lider pelo organograma</span>
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+                  Lider pelo organograma
+                </span>
                 <select
                   value={form.superiorImediatoId}
                   onChange={(event) => setField("superiorImediatoId", event.target.value)}
@@ -392,34 +465,68 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 {form.positionId && leaderOptions.length > 0 && (
                   <p className="mt-1 text-xs text-[#042558]/45">
                     Opcoes puxadas dos cargos acima:{" "}
-                    {ancestorPositionIds.map((positionId) => positionsById.get(positionId)?.nome).filter(Boolean).join(" > ")}.
+                    {ancestorPositionIds
+                      .map((positionId) => positionsById.get(positionId)?.nome)
+                      .filter(Boolean)
+                      .join(" > ")}
+                    .
                   </p>
                 )}
-                {form.positionId && leaderOptions.length === 0 && ancestorPositionIds.length > 0 && (
-                  <p className="mt-1 text-xs text-[#042558]/45">
-                    Cargos acima encontrados, mas sem funcionarios cadastrados neles:{" "}
-                    {ancestorPositionIds.map((positionId) => positionsById.get(positionId)?.nome).filter(Boolean).join(" > ")}.
-                  </p>
-                )}
+                {form.positionId &&
+                  leaderOptions.length === 0 &&
+                  ancestorPositionIds.length > 0 && (
+                    <p className="mt-1 text-xs text-[#042558]/45">
+                      Cargos acima encontrados, mas sem funcionarios cadastrados neles:{" "}
+                      {ancestorPositionIds
+                        .map((positionId) => positionsById.get(positionId)?.nome)
+                        .filter(Boolean)
+                        .join(" > ")}
+                      .
+                    </p>
+                  )}
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Data de admissao</span>
-                <input type="date" value={form.admissionDate} onChange={(event) => setField("admissionDate", event.target.value)} className={inputClass} />
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+                  Data de admissao
+                </span>
+                <input
+                  type="date"
+                  value={form.admissionDate}
+                  onChange={(event) => setField("admissionDate", event.target.value)}
+                  className={inputClass}
+                />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Ultima avaliacao de desempenho</span>
-                <input type="date" value={form.lastPerformanceReviewDate} onChange={(event) => setField("lastPerformanceReviewDate", event.target.value)} className={inputClass} />
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+                  Ultima avaliacao de desempenho
+                </span>
+                <input
+                  type="date"
+                  value={form.lastPerformanceReviewDate}
+                  onChange={(event) => setField("lastPerformanceReviewDate", event.target.value)}
+                  className={inputClass}
+                />
               </label>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#042558]/10 pt-4">
-              <Button type="submit" disabled={saving} className="bg-[#042558] text-white hover:bg-[#042558]/90">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              <Button
+                type="submit"
+                disabled={saving}
+                className="bg-[#042558] text-white hover:bg-[#042558]/90"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
                 Adicionar
               </Button>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Fechar formulario</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+                Fechar formulario
+              </Button>
             </div>
           </form>
         </div>
@@ -428,7 +535,15 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+function Metric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number;
+}) {
   return (
     <div className="min-w-20 rounded-lg border border-[#042558]/10 bg-white/70 px-3 py-2">
       <div className="flex items-center gap-1.5 text-xs text-[#042558]/45">

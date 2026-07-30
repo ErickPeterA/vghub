@@ -3,22 +3,45 @@ import { Plus, Trash2 } from "lucide-react";
 import { type DescricaoCargo, type DynamicItem } from "@/lib/dc-types";
 import { DC_SECTIONS } from "@/lib/dc-sections";
 import { canAccessSection, getCurrentUserPlan } from "@/lib/section-access";
-import { DynamicFieldControl, useProjectFields, useProjectAreas, useSectionLimits, type DynamicField, type ProjectArea } from "@/components/DynamicFields";
+import {
+  DynamicFieldControl,
+  useProjectFields,
+  useProjectAreas,
+  useSectionLimits,
+  type DynamicField,
+  type ProjectArea,
+} from "@/components/DynamicFields";
 import { FieldCommentButton } from "@/components/FieldCommentButton";
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
 
 const HEADER_SCALAR_KEYS = [
-  "cargo", "unidade_negocio", "departamento", "nivelamento", "superior_imediato",
-  "tipo_carreira", "data_versao", "data_revisao", "status", "objetivo",
+  "cargo",
+  "unidade_negocio",
+  "departamento",
+  "nivelamento",
+  "superior_imediato",
+  "tipo_carreira",
+  "data_versao",
+  "data_revisao",
+  "status",
+  "objetivo",
 ] as const;
 type HeaderScalarKey = (typeof HEADER_SCALAR_KEYS)[number];
 const isHeaderScalar = (key: string): key is HeaderScalarKey =>
   (HEADER_SCALAR_KEYS as readonly string[]).includes(key);
 
 const SectionShell = memo(function SectionShell({
-  num, title, desc, children,
-}: { num: string; title: string; desc?: string; children: React.ReactNode }) {
+  num,
+  title,
+  desc,
+  children,
+}: {
+  num: string;
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
       <header className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -33,7 +56,15 @@ const SectionShell = memo(function SectionShell({
   );
 });
 
-const FieldWrap = memo(function FieldWrap({ label, action, children }: { label: string; action?: React.ReactNode; children: React.ReactNode }) {
+const FieldWrap = memo(function FieldWrap({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="block">
       <div className="flex items-center justify-between gap-2">
@@ -72,25 +103,38 @@ const SingleField = memo(function SingleField({
 }) {
   const handleChange = useCallback(
     (next: string | number | boolean | string[]) => onChange(field.field_key, next),
-    [field.field_key, onChange]
+    [field.field_key, onChange],
   );
   return (
     <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`} action={action}>
-      <DynamicFieldControl field={field} value={value} onChange={handleChange} areas={areas} parentAreaId={parentAreaId} disabled={disabled} />
+      <DynamicFieldControl
+        field={field}
+        value={value}
+        onChange={handleChange}
+        areas={areas}
+        parentAreaId={parentAreaId}
+        disabled={disabled}
+      />
     </FieldWrap>
   );
 });
 
 // resolve o uuid de Área dentro de um conjunto de valores (header ou item)
 function normalizeAreaName(raw: string) {
-  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
 function resolveAreaId(raw: DynamicItem[string] | undefined, areas: ProjectArea[]) {
   if (typeof raw !== "string" || !raw) return null;
   const direct = areas.find((area) => area.id === raw);
   if (direct) return direct.id;
-  const byName = areas.find((area) => !area.parent_id && normalizeAreaName(area.nome) === normalizeAreaName(raw));
+  const byName = areas.find(
+    (area) => !area.parent_id && normalizeAreaName(area.nome) === normalizeAreaName(raw),
+  );
   return byName?.id ?? null;
 }
 
@@ -180,15 +224,27 @@ function withRequiredHeaderArea(sectionFields: DynamicField[]) {
 }
 
 export function DCForm({
-  projectId, initial, onSubmit, submitLabel = "Salvar",
-  readOnly = false, commentTarget, headerExtra, footerExtra,
+  projectId,
+  initial,
+  onSubmit,
+  submitLabel = "Salvar",
+  readOnly = false,
+  commentTarget,
+  headerExtra,
+  footerExtra,
 }: {
   projectId: string;
   initial: DescricaoCargo;
   onSubmit: (dc: DescricaoCargo) => Promise<void>;
   submitLabel?: string;
   readOnly?: boolean;
-  commentTarget?: { dcId: string; versionId: string | null; canAddComment: boolean; canDecideComment?: boolean; onCommentDecision?: () => void };
+  commentTarget?: {
+    dcId: string;
+    versionId: string | null;
+    canAddComment: boolean;
+    canDecideComment?: boolean;
+    onCommentDecision?: () => void;
+  };
   headerExtra?: React.ReactNode;
   footerExtra?: React.ReactNode;
 }) {
@@ -196,7 +252,11 @@ export function DCForm({
   const [saving, setSaving] = useState(false);
   const { fields, loading: loadingFields } = useProjectFields(projectId);
   const areas = useProjectAreas(projectId);
-  const { limits: sectionLimits, enabledSections, loading: loadingSectionSettings } = useSectionLimits(projectId);
+  const {
+    limits: sectionLimits,
+    enabledSections,
+    loading: loadingSectionSettings,
+  } = useSectionLimits(projectId);
   const currentPlan = getCurrentUserPlan();
 
   // Todo bloco repetidor precisa ter pelo menos 1 item já preenchido na tela
@@ -223,57 +283,94 @@ export function DCForm({
     });
   }, [loadingFields, loadingSectionSettings, enabledSections, fields, readOnly, currentPlan]);
 
-  const setScalar = useCallback(<K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
-    setDc((p) => ({ ...p, [k]: v })), []);
+  const setScalar = useCallback(
+    <K extends keyof DescricaoCargo>(k: K, v: DescricaoCargo[K]) =>
+      setDc((p) => ({ ...p, [k]: v })),
+    [],
+  );
 
-  const setDynamicHeader = useCallback((key: string, value: DynamicItem[string]) =>
-    setDc((p) => ({ ...p, dynamic_values: { ...p.dynamic_values, [key]: value } })), []);
+  const setDynamicHeader = useCallback(
+    (key: string, value: DynamicItem[string]) =>
+      setDc((p) => ({ ...p, dynamic_values: { ...p.dynamic_values, [key]: value } })),
+    [],
+  );
 
-  const handleHeaderChange = useCallback((key: string, val: DynamicItem[string]) => {
-    if (isHeaderScalar(key)) setScalar(key, String(val ?? ""));
-    else setDynamicHeader(key, val);
-    // Se mudou a Área, limpa o Setor para não ficar inconsistente
-    const changed = fields.find((f) => f.field_key === key);
-    if (changed?.data_source === "areas" || key === "unidade_negocio" || key === "area") {
-      const setores = fields.filter((f) => f.data_source === "setores" && (!changed || f.section === changed.section));
-      setores.forEach((setor) => {
-        if (isHeaderScalar(setor.field_key)) setScalar(setor.field_key, "");
-        else setDynamicHeader(setor.field_key, "");
-      });
-    }
-  }, [setScalar, setDynamicHeader, fields]);
-
-  const updItem = useCallback((arrayKey: keyof DescricaoCargo, i: number, fieldKey: string, val: DynamicItem[string]) => {
-    setDc((p) => {
-      const arr = [...(p[arrayKey] as DynamicItem[])];
-      const next = { ...arr[i], [fieldKey]: val };
-      // Limpa setor se área mudou dentro do item
-      const changed = fields.find((f) => f.field_key === fieldKey);
-      if (changed?.data_source === "areas") {
-        const setor = fields.find((f) => f.section === changed.section && f.data_source === "setores");
-        if (setor) next[setor.field_key] = "";
+  const handleHeaderChange = useCallback(
+    (key: string, val: DynamicItem[string]) => {
+      if (isHeaderScalar(key)) setScalar(key, String(val ?? ""));
+      else setDynamicHeader(key, val);
+      // Se mudou a Área, limpa o Setor para não ficar inconsistente
+      const changed = fields.find((f) => f.field_key === key);
+      if (changed?.data_source === "areas" || key === "unidade_negocio" || key === "area") {
+        const setores = fields.filter(
+          (f) => f.data_source === "setores" && (!changed || f.section === changed.section),
+        );
+        setores.forEach((setor) => {
+          if (isHeaderScalar(setor.field_key)) setScalar(setor.field_key, "");
+          else setDynamicHeader(setor.field_key, "");
+        });
       }
-      arr[i] = next;
-      return { ...p, [arrayKey]: arr } as DescricaoCargo;
-    });
-  }, [fields]);
+    },
+    [setScalar, setDynamicHeader, fields],
+  );
 
-  const addItem = useCallback((arrayKey: keyof DescricaoCargo) =>
-    setDc((p) => ({ ...p, [arrayKey]: [...(p[arrayKey] as DynamicItem[]), {}] }) as DescricaoCargo), []);
+  const updItem = useCallback(
+    (arrayKey: keyof DescricaoCargo, i: number, fieldKey: string, val: DynamicItem[string]) => {
+      setDc((p) => {
+        const arr = [...(p[arrayKey] as DynamicItem[])];
+        const next = { ...arr[i], [fieldKey]: val };
+        // Limpa setor se área mudou dentro do item
+        const changed = fields.find((f) => f.field_key === fieldKey);
+        if (changed?.data_source === "areas") {
+          const setor = fields.find(
+            (f) => f.section === changed.section && f.data_source === "setores",
+          );
+          if (setor) next[setor.field_key] = "";
+        }
+        arr[i] = next;
+        return { ...p, [arrayKey]: arr } as DescricaoCargo;
+      });
+    },
+    [fields],
+  );
 
-  const delItem = useCallback((arrayKey: keyof DescricaoCargo, i: number) =>
-    setDc((p) => ({ ...p, [arrayKey]: (p[arrayKey] as DynamicItem[]).filter((_, j) => j !== i) }) as DescricaoCargo), []);
+  const addItem = useCallback(
+    (arrayKey: keyof DescricaoCargo) =>
+      setDc(
+        (p) => ({ ...p, [arrayKey]: [...(p[arrayKey] as DynamicItem[]), {}] }) as DescricaoCargo,
+      ),
+    [],
+  );
+
+  const delItem = useCallback(
+    (arrayKey: keyof DescricaoCargo, i: number) =>
+      setDc(
+        (p) =>
+          ({
+            ...p,
+            [arrayKey]: (p[arrayKey] as DynamicItem[]).filter((_, j) => j !== i),
+          }) as DescricaoCargo,
+      ),
+    [],
+  );
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    try { await onSubmit(dc); } finally { setSaving(false); }
+    try {
+      await onSubmit(dc);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const headerGetter = useCallback((key: string): DynamicItem[string] | undefined => {
-    if (isHeaderScalar(key)) return dc[key] as string;
-    return dc.dynamic_values[key];
-  }, [dc]);
+  const headerGetter = useCallback(
+    (key: string): DynamicItem[string] | undefined => {
+      if (isHeaderScalar(key)) return dc[key] as string;
+      return dc.dynamic_values[key];
+    },
+    [dc],
+  );
 
   const renderCommentButton = (fieldKey: string) => {
     if (!commentTarget) return null;
@@ -292,18 +389,23 @@ export function DCForm({
   const renderHeader = (sectionFields: DynamicField[]) => {
     const visibleFields = withRequiredHeaderArea(sectionFields);
     if (visibleFields.length === 0) {
-      return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
+      return (
+        <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />
+      );
     }
     const parentAreaId = findAreaValue(visibleFields, headerGetter, areas);
     return (
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 auto-rows-min">
         {visibleFields.map((field) => {
           const value = headerGetter(field.field_key);
-          const orgSuperiorField = field.field_key === "superior_imediato" && Boolean(dc.organization_position_id);
+          const orgSuperiorField =
+            field.field_key === "superior_imediato" && Boolean(dc.organization_position_id);
           const renderedField: DynamicField = orgSuperiorField
             ? { ...field, field_type: "text", data_source: "manual", options: [] }
             : field;
-          const wideField = renderedField.field_type === "textarea" || renderedField.field_type === "competency_description";
+          const wideField =
+            renderedField.field_type === "textarea" ||
+            renderedField.field_type === "competency_description";
           return (
             <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
               <SingleField
@@ -330,7 +432,9 @@ export function DCForm({
   ) => {
     const items = dc[arrayKey] as DynamicItem[];
     if (sectionFields.length === 0) {
-      return <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />;
+      return (
+        <EmptyConfig message="Nenhum campo configurado neste bloco. Configure em Base do projeto." />
+      );
     }
     const maxItems = sectionLimits[sectionKey]; // undefined = sem limite
     const reachedLimit = typeof maxItems === "number" && items.length >= maxItems;
@@ -359,7 +463,9 @@ export function DCForm({
               <p className="mb-3 text-xs text-muted-foreground">#{i + 1}</p>
               <div className="grid gap-3 grid-cols-1 md:grid-cols-2 auto-rows-min">
                 {sectionFields.map((field) => {
-                  const wideField = field.field_type === "textarea" || field.field_type === "competency_description";
+                  const wideField =
+                    field.field_type === "textarea" ||
+                    field.field_type === "competency_description";
                   return (
                     <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
                       <SingleField
@@ -411,7 +517,12 @@ export function DCForm({
             return (
               <SectionShell key={section.key} num={section.num} title={section.label}>
                 {section.repeater
-                  ? renderRepeater(section.arrayKey as keyof DescricaoCargo, section.itemSingular ?? "item", sectionFields, section.key)
+                  ? renderRepeater(
+                      section.arrayKey as keyof DescricaoCargo,
+                      section.itemSingular ?? "item",
+                      sectionFields,
+                      section.key,
+                    )
                   : renderHeader(sectionFields)}
               </SectionShell>
             );

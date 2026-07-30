@@ -25,12 +25,21 @@ export function useCurrentUser(): CurrentUser {
     try {
       const [{ data: roleRow }, { data: prof }] = await Promise.all([
         withTimeout(
-          supabase.from("user_roles").select("role").eq("user_id", s.user.id).eq("role", "admin").maybeSingle(),
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", s.user.id)
+            .eq("role", "admin")
+            .maybeSingle(),
           8_000,
           "Não foi possível carregar permissões.",
         ),
         withTimeout(
-          supabase.from("profiles").select("id,nome,email,status").eq("id", s.user.id).maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("id,nome,email,status")
+            .eq("id", s.user.id)
+            .maybeSingle(),
           8_000,
           "Não foi possível carregar perfil.",
         ),
@@ -65,7 +74,9 @@ export function useCurrentUser(): CurrentUser {
 
     getSessionSafely().then(applySession);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, s) => {
       if (!active) return;
       setSession(s);
       setLoading(true);

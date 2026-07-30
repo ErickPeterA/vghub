@@ -49,7 +49,10 @@ function PublicPerformanceForm() {
   const steps = useMemo(() => buildPerformanceSteps(form?.questions ?? []), [form?.questions]);
   const currentStep = steps[stepIndex] ?? steps[0];
   const answeredCount = useMemo(
-    () => (form?.questions ?? []).filter((question) => (question.active ?? true) && answers[question.id]?.trim()).length,
+    () =>
+      (form?.questions ?? []).filter(
+        (question) => (question.active ?? true) && answers[question.id]?.trim(),
+      ).length,
     [answers, form?.questions],
   );
   const totalQuestions = useMemo(
@@ -397,13 +400,19 @@ function isInternalOptionValue(value: string) {
   );
 }
 
-function displayQuestionLabel(question: PerformanceQuestion, participantType?: FormData["participantType"]) {
+function displayQuestionLabel(
+  question: PerformanceQuestion,
+  participantType?: FormData["participantType"],
+) {
   return participantType === "leader" && question.leaderLabel?.trim()
     ? question.leaderLabel
     : question.label;
 }
 
-function questionOptions(question: PerformanceQuestion, participantType?: FormData["participantType"]) {
+function questionOptions(
+  question: PerformanceQuestion,
+  participantType?: FormData["participantType"],
+) {
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
     : (question.options ?? []);
@@ -470,9 +479,7 @@ function SectionStep({
   return (
     <section className="space-y-4">
       <div className="border-b border-gray-200 pb-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-[#042558]">
-          {title}
-        </h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-[#042558]">{title}</h2>
       </div>
       {questions.length === 0 ? (
         <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
@@ -596,9 +603,7 @@ function QuestionField({
   );
   if (unframed) return <label className="block">{content}</label>;
   return (
-    <label className="block rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-      {content}
-    </label>
+    <label className="block rounded-xl border border-gray-200 bg-gray-50/60 p-4">{content}</label>
   );
 }
 
@@ -617,7 +622,11 @@ function QuestionInput({
     "w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
   if (question.type === "select") {
     return (
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={inputClass}
+      >
         <option value="">Selecione uma opção</option>
         {questionOptions(question, participantType).map((option) => (
           <option key={option} value={option}>
@@ -637,7 +646,13 @@ function QuestionInput({
       />
     );
   }
-  return <input value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />;
+  return (
+    <input
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={inputClass}
+    />
+  );
 }
 
 function EvaluationHeader({ header }: { header?: FormData["header"] }) {
@@ -655,8 +670,14 @@ function EvaluationHeader({ header }: { header?: FormData["header"] }) {
   return (
     <section className="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
       <div className="grid gap-px bg-gray-200 md:grid-cols-2">
-        <HeaderItem label="Data de Envio da Avaliação" value={formatHeaderDateTime(header.sentAt)} />
-        <HeaderItem label="Data Máxima de preenchimento" value={formatHeaderDateTime(header.expiresAt)} />
+        <HeaderItem
+          label="Data de Envio da Avaliação"
+          value={formatHeaderDateTime(header.sentAt)}
+        />
+        <HeaderItem
+          label="Data Máxima de preenchimento"
+          value={formatHeaderDateTime(header.expiresAt)}
+        />
       </div>
       <div className="grid gap-px bg-gray-200 md:grid-cols-2">
         {fields.map(([label, value]) => (

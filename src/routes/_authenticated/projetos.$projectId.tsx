@@ -26,11 +26,7 @@ function ProjectLayout() {
     setLoading(true);
     setNotFound(false);
     withTimeout(
-      supabase
-        .from("projects")
-        .select("nome")
-        .eq("id", projectIdRef.current)
-        .maybeSingle(),
+      supabase.from("projects").select("nome").eq("id", projectIdRef.current).maybeSingle(),
       10_000,
       "Nao foi possivel carregar o projeto.",
     )
@@ -50,7 +46,9 @@ function ProjectLayout() {
         setNotFound(true);
         setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   if (loading) {
@@ -71,7 +69,12 @@ function ProjectLayout() {
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)]">
-      <ProjectSidebar projectId={projectId} projectName={name} isAdmin={isAdmin} fixed={!pathname.includes("/organograma")} />
+      <ProjectSidebar
+        projectId={projectId}
+        projectName={name}
+        isAdmin={isAdmin}
+        fixed={!pathname.includes("/organograma")}
+      />
       <div className="min-w-0 flex-1 overflow-x-hidden">
         <Outlet />
       </div>

@@ -35,7 +35,9 @@ function AtividadesPage() {
       .then(({ data }) => {
         if (!cancelled) setCanManage(data?.role === "gp" || data?.role === "admin");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAdmin, projectId, user]);
 
   return (
@@ -43,9 +45,16 @@ function AtividadesPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">Atividades</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">Coleta de atividades</h1>
-            <p className="mt-1 text-sm text-[#042558]/60">Configure o formulário, preencha o cabeçalho, gere links para colaboradores e receba as respostas.</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+              Atividades
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
+              Coleta de atividades
+            </h1>
+            <p className="mt-1 text-sm text-[#042558]/60">
+              Configure o formulário, preencha o cabeçalho, gere links para colaboradores e receba
+              as respostas.
+            </p>
           </div>
         </div>
 
@@ -105,9 +114,7 @@ function TabBtn({
     <button
       onClick={onClick}
       className={`relative pb-3 text-sm font-medium transition-all duration-200 ${
-        active
-          ? "text-[#042558]"
-          : "text-[#042558]/40 hover:text-[#042558]/70"
+        active ? "text-[#042558]" : "text-[#042558]/40 hover:text-[#042558]/70"
       }`}
     >
       {children}

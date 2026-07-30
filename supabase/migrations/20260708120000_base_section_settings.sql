@@ -1,7 +1,7 @@
 -- Limite de itens por bloco (repeater) configurado na Base (geral ou por projeto).
 -- Segue o mesmo padrão de base_fields: project_id NULL = Base Geral, project_id setado = Base do Projeto.
 
-CREATE TABLE public.base_section_settings (
+CREATE TABLE IF NOT EXISTS public.base_section_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid NULL REFERENCES public.projects(id) ON DELETE CASCADE,
   section text NOT NULL,
@@ -15,26 +15,31 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.base_section_settings TO authenti
 GRANT ALL ON public.base_section_settings TO service_role;
 ALTER TABLE public.base_section_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE UNIQUE INDEX base_section_settings_general_unique ON public.base_section_settings(section) WHERE project_id IS NULL;
-CREATE UNIQUE INDEX base_section_settings_project_unique ON public.base_section_settings(project_id, section) WHERE project_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS base_section_settings_general_unique ON public.base_section_settings(section) WHERE project_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS base_section_settings_project_unique ON public.base_section_settings(project_id, section) WHERE project_id IS NOT NULL;
 
+DROP POLICY IF EXISTS "Authenticated users can read section settings" ON public.base_section_settings;
 CREATE POLICY "Authenticated users can read section settings"
 ON public.base_section_settings FOR SELECT TO authenticated
 USING (project_id IS NULL OR public.is_project_member(auth.uid(), project_id) OR public.is_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "Managers can create section settings" ON public.base_section_settings;
 CREATE POLICY "Managers can create section settings"
 ON public.base_section_settings FOR INSERT TO authenticated
 WITH CHECK ((project_id IS NULL AND public.is_admin(auth.uid())) OR (project_id IS NOT NULL AND public.can_manage_project_base(auth.uid(), project_id)));
 
+DROP POLICY IF EXISTS "Managers can update section settings" ON public.base_section_settings;
 CREATE POLICY "Managers can update section settings"
 ON public.base_section_settings FOR UPDATE TO authenticated
 USING ((project_id IS NULL AND public.is_admin(auth.uid())) OR (project_id IS NOT NULL AND public.can_manage_project_base(auth.uid(), project_id)))
 WITH CHECK ((project_id IS NULL AND public.is_admin(auth.uid())) OR (project_id IS NOT NULL AND public.can_manage_project_base(auth.uid(), project_id)));
 
+DROP POLICY IF EXISTS "Managers can delete section settings" ON public.base_section_settings;
 CREATE POLICY "Managers can delete section settings"
 ON public.base_section_settings FOR DELETE TO authenticated
 USING ((project_id IS NULL AND public.is_admin(auth.uid())) OR (project_id IS NOT NULL AND public.can_manage_project_base(auth.uid(), project_id)));
 
+DROP TRIGGER IF EXISTS set_base_section_settings_updated_at ON public.base_section_settings;
 CREATE TRIGGER set_base_section_settings_updated_at BEFORE UPDATE ON public.base_section_settings
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 

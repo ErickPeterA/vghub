@@ -86,13 +86,17 @@ function formatDate(date: string) {
 function formatValue(key: string, value: unknown, users: Record<string, string>): string {
   if (value === null || value === undefined || value === "") return "Não informado";
   if (key === "user_id" && typeof value === "string") return users[value] ?? value;
-  if ((key === "de" || key === "para") && typeof value === "string") return stageLabels[value] ?? value;
+  if ((key === "de" || key === "para") && typeof value === "string")
+    return stageLabels[value] ?? value;
   if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (Array.isArray(value)) return value.map((item) => formatValue(key, item, users)).join(", ");
   if (typeof value === "object") {
     return Object.entries(value as Record<string, unknown>)
-      .map(([childKey, childValue]) => `${detailLabels[childKey] ?? childKey}: ${formatValue(childKey, childValue, users)}`)
+      .map(
+        ([childKey, childValue]) =>
+          `${detailLabels[childKey] ?? childKey}: ${formatValue(childKey, childValue, users)}`,
+      )
       .join("; ");
   }
   return String(value);
@@ -206,7 +210,9 @@ function Historico() {
             </div>
             <div className="flex items-center gap-2 rounded-full bg-[#042558]/5 px-3.5 py-1.5 text-sm font-medium text-[#042558]">
               <Clock className="h-4 w-4" />
-              <span>{items.length} registro{items.length !== 1 ? "s" : ""}</span>
+              <span>
+                {items.length} registro{items.length !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
           <p className="mt-3 text-sm text-[#042558]/60">
@@ -237,7 +243,9 @@ function Historico() {
             {items.map((item) => {
               const actionLabel = labelMap[item.acao] ?? item.acao;
               const actionColor = acaoColors[item.acao] ?? "bg-[#042558]/5 text-[#042558]";
-              const userName = item.user_id ? users[item.user_id] ?? "Usuário não encontrado" : "Sistema";
+              const userName = item.user_id
+                ? (users[item.user_id] ?? "Usuário não encontrado")
+                : "Sistema";
               const detailText = formatDetails(item, users);
 
               return (
@@ -260,9 +268,7 @@ function Historico() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm leading-relaxed text-[#042558]/80">
-                        {detailText}
-                      </p>
+                      <p className="text-sm leading-relaxed text-[#042558]/80">{detailText}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
                       <div className="flex items-center gap-1.5 text-[#042558]/50">

@@ -42,7 +42,9 @@ export function FieldCommentButton({
   const load = async () => {
     let query = supabase
       .from("field_comments")
-      .select("id,author_id,content,created_at,version_id,decision,decided_at,decided_by,approved_version_id")
+      .select(
+        "id,author_id,content,created_at,version_id,decision,decided_at,decided_by,approved_version_id",
+      )
       .eq("job_description_id", dcId)
       .eq("field_key", fieldKey)
       .order("created_at", { ascending: true });
@@ -50,19 +52,23 @@ export function FieldCommentButton({
     const { data } = await query;
     const list = (data ?? []) as Comment[];
     setComments(list);
-    const authorIds = list.flatMap((comment) => [comment.author_id, comment.decided_by]).filter(Boolean) as string[];
+    const authorIds = list
+      .flatMap((comment) => [comment.author_id, comment.decided_by])
+      .filter(Boolean) as string[];
     const missing = Array.from(new Set(authorIds)).filter((id) => !authors[id]);
     if (missing.length) {
       const { data: profs } = await supabase.from("profiles").select("id,nome").in("id", missing);
       const next = { ...authors };
-      (profs ?? []).forEach((p) => { next[p.id] = p.nome; });
+      (profs ?? []).forEach((p) => {
+        next[p.id] = p.nome;
+      });
       setAuthors(next);
     }
   };
 
   const decide = async (commentId: string, decision: "approved" | "rejected") => {
     setLoading(true);
-    const { error } = await (supabase as any).rpc("decide_field_comment", {
+    const { error } = await supabase.rpc("decide_field_comment", {
       _comment_id: commentId,
       _decision: decision,
     });
@@ -76,7 +82,9 @@ export function FieldCommentButton({
     onChange?.();
   };
 
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [dcId, fieldKey, versionId]);
+  useEffect(() => {
+    void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [dcId, fieldKey, versionId]);
 
   const submit = async () => {
     if (!user || !text.trim()) return;
@@ -89,7 +97,10 @@ export function FieldCommentButton({
       content: text.trim(),
     });
     setLoading(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setText("");
     await load();
     onChange?.();
@@ -100,21 +111,24 @@ export function FieldCommentButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-  <button
-    type="button"
-    form="field-comment-trigger"
-    className={`inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] transition ${count > 0 ? "border-amber-300 bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-secondary"}`}
-    title="Comentários"
-  
+        <button
+          type="button"
+          form="field-comment-trigger"
+          className={`inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] transition ${count > 0 ? "border-amber-300 bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-secondary"}`}
+          title="Comentários"
         >
           <MessageSquare className="h-3 w-3" />
           {count > 0 && <span className="font-semibold">{count}</span>}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="end">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Comentários</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Comentários
+        </p>
         <div className="max-h-56 space-y-2 overflow-y-auto">
-          {comments.length === 0 && <p className="text-xs italic text-muted-foreground">Sem comentários.</p>}
+          {comments.length === 0 && (
+            <p className="text-xs italic text-muted-foreground">Sem comentários.</p>
+          )}
           {comments.map((c) => (
             <div key={c.id} className="rounded-md border border-border bg-background p-2 text-xs">
               <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
@@ -124,9 +138,13 @@ export function FieldCommentButton({
               <p className="whitespace-pre-wrap">{c.content}</p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
                 {c.decision === "pending" ? (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Pendente</span>
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    Pendente
+                  </span>
                 ) : (
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.decision === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.decision === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                  >
                     {c.decision === "approved" ? "Aprovado" : "Reprovado"}
                   </span>
                 )}

@@ -28,7 +28,13 @@ type FormState = {
   defaultDisplayOrder: number | null;
 };
 
-const initialFormState: FormState = { open: false, mode: "create", position: null, defaultParentId: null, defaultDisplayOrder: null };
+const initialFormState: FormState = {
+  open: false,
+  mode: "create",
+  position: null,
+  defaultParentId: null,
+  defaultDisplayOrder: null,
+};
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.6;
 
@@ -54,13 +60,13 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data, error }, { data: descriptions, error: descriptionsError }] = await Promise.all([
-      (supabase as any)
+      supabase
         .from("project_positions")
         .select("*")
         .eq("project_id", projectId)
         .order("display_order")
         .order("created_at"),
-      (supabase as any)
+      supabase
         .from("descricoes_cargo")
         .select("organization_position_id")
         .eq("project_id", projectId)
@@ -70,11 +76,22 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     if (error) toast.error(error.message);
     if (descriptionsError) toast.error(descriptionsError.message);
     setPositions((data ?? []) as OrganizationPosition[]);
-    setPositionsWithDescription(new Set((descriptions ?? []).map((description: { organization_position_id: string | null }) => description.organization_position_id).filter(Boolean)));
+    setPositionsWithDescription(
+      new Set(
+        (descriptions ?? [])
+          .map(
+            (description: { organization_position_id: string | null }) =>
+              description.organization_position_id,
+          )
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const tree = useMemo(() => buildOrganizationTree(positions), [positions]);
   const flatTree = useMemo(() => flattenTree(tree), [tree]);
@@ -102,7 +119,9 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     if (!focusPendingRef.current) return;
     const id = focusPendingRef.current;
     const timeout = window.setTimeout(() => {
-      document.querySelector(`[data-position-id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      document
+        .querySelector(`[data-position-id="${id}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
       focusPendingRef.current = null;
     }, 80);
     return () => window.clearTimeout(timeout);
@@ -110,7 +129,9 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
   const getAppendDisplayOrder = (parentId: string | null) => {
     const siblings = getChildren(positions, parentId);
-    return siblings.length > 0 ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10 : 10;
+    return siblings.length > 0
+      ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10
+      : 10;
   };
 
   const openCreate = (parentId: string | null = null, displayOrder: number | null = null) => {
@@ -124,25 +145,49 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
   };
 
   const openSibling = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "create", position: null, defaultParentId: position.parent_id, defaultDisplayOrder: getAppendDisplayOrder(position.parent_id) });
+    setFormState({
+      open: true,
+      mode: "create",
+      position: null,
+      defaultParentId: position.parent_id,
+      defaultDisplayOrder: getAppendDisplayOrder(position.parent_id),
+    });
   };
 
   const openEdit = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "edit", position, defaultParentId: position.parent_id, defaultDisplayOrder: position.display_order });
+    setFormState({
+      open: true,
+      mode: "edit",
+      position,
+      defaultParentId: position.parent_id,
+      defaultDisplayOrder: position.display_order,
+    });
   };
 
   const openInsertAbove = (position: OrganizationPosition) => {
-    setFormState({ open: true, mode: "insertAbove", position, defaultParentId: position.parent_id, defaultDisplayOrder: position.display_order });
+    setFormState({
+      open: true,
+      mode: "insertAbove",
+      position,
+      defaultParentId: position.parent_id,
+      defaultDisplayOrder: position.display_order,
+    });
   };
 
-  const savePosition = async (values: { nome: string; descricao: string | null; parent_id: string | null; display_order: number; status: PositionStatus }) => {
+  const savePosition = async (values: {
+    nome: string;
+    descricao: string | null;
+    parent_id: string | null;
+    display_order: number;
+    status: PositionStatus;
+  }) => {
     if (!values.nome) {
       toast.error("Nome do cargo é obrigatório.");
       return;
     }
 
     if (formState.mode === "insertAbove" && formState.position) {
-      const { error } = await (supabase as any).rpc("insert_project_position_above", {
+      const { error } = await supabase.rpc("insert_project_position_above", {
         _target_id: formState.position.id,
         _nome: values.nome,
         _descricao: values.descricao,
@@ -151,7 +196,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       if (error) return toast.error(error.message);
       toast.success("Cargo inserido acima");
     } else if (formState.mode === "edit" && formState.position) {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("project_positions")
         .update({
           nome: values.nome,
@@ -166,25 +211,30 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       toast.success("Cargo atualizado");
     } else {
       const siblings = getChildren(positions, values.parent_id);
-      const fallbackOrder = siblings.length > 0 ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10 : 10;
-      const displayOrder = Number.isFinite(values.display_order) ? values.display_order : fallbackOrder;
+      const fallbackOrder =
+        siblings.length > 0
+          ? Math.max(...siblings.map((sibling) => sibling.display_order)) + 10
+          : 10;
+      const displayOrder = Number.isFinite(values.display_order)
+        ? values.display_order
+        : fallbackOrder;
       const positionsToShift = siblings.filter((sibling) => sibling.display_order >= displayOrder);
 
       if (positionsToShift.length > 0) {
         const updates = await Promise.all(
           positionsToShift.map((sibling) =>
-            (supabase as any)
+            supabase
               .from("project_positions")
               .update({ display_order: sibling.display_order + 10 })
               .eq("id", sibling.id)
-              .eq("project_id", projectId)
-          )
+              .eq("project_id", projectId),
+          ),
         );
         const shiftError = updates.find((result) => result.error)?.error;
         if (shiftError) return toast.error(shiftError.message);
       }
 
-      const { error } = await (supabase as any).from("project_positions").insert({
+      const { error } = await supabase.from("project_positions").insert({
         project_id: projectId,
         parent_id: values.parent_id,
         nome: values.nome,
@@ -210,12 +260,15 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       toast.error("Não é permitido mover um cargo para baixo de um subordinado.");
       return;
     }
-    if (parentId && !availableParents(positions, position).some((option) => option.id === parentId)) {
+    if (
+      parentId &&
+      !availableParents(positions, position).some((option) => option.id === parentId)
+    ) {
       toast.error("Superior imediato inválido.");
       return;
     }
 
-    const { error } = await (supabase as any).rpc("move_project_position", {
+    const { error } = await supabase.rpc("move_project_position", {
       _position_id: position.id,
       _new_parent_id: parentId,
     });
@@ -227,7 +280,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
   const deletePosition = async (childrenParentId: string | null) => {
     if (!deleteTarget) return;
-    const { error } = await (supabase as any).rpc("delete_project_position_with_reassignment", {
+    const { error } = await supabase.rpc("delete_project_position_with_reassignment", {
       _position_id: deleteTarget.id,
       _children_parent_id: childrenParentId,
     });
@@ -239,7 +292,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
   };
 
   const reorderPosition = async (position: OrganizationPosition, direction: "up" | "down") => {
-    const { error } = await (supabase as any).rpc("reorder_project_position", {
+    const { error } = await supabase.rpc("reorder_project_position", {
       _position_id: position.id,
       _direction: direction,
     });
@@ -247,9 +300,15 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     await load();
   };
 
-  const reorderAsSibling = async (source: OrganizationPosition, target: OrganizationPosition, placement: "before" | "after") => {
+  const reorderAsSibling = async (
+    source: OrganizationPosition,
+    target: OrganizationPosition,
+    placement: "before" | "after",
+  ) => {
     const nextParentId = target.parent_id;
-    const siblings = getChildren(positions, nextParentId).filter((position) => position.id !== source.id);
+    const siblings = getChildren(positions, nextParentId).filter(
+      (position) => position.id !== source.id,
+    );
     const targetIndex = siblings.findIndex((position) => position.id === target.id);
     if (targetIndex < 0) return;
 
@@ -258,12 +317,12 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
     const updates = await Promise.all(
       next.map((position, index) =>
-        (supabase as any)
+        supabase
           .from("project_positions")
           .update({ parent_id: nextParentId, display_order: (index + 1) * 10 })
           .eq("id", position.id)
-          .eq("project_id", projectId)
-      )
+          .eq("project_id", projectId),
+      ),
     );
     const error = updates.find((result) => result.error)?.error;
     if (error) return toast.error(error.message);
@@ -271,7 +330,11 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     await load();
   };
 
-  const handleDropOn = async (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => {
+  const handleDropOn = async (
+    sourceId: string,
+    target: OrganizationPosition,
+    placement: "before" | "inside" | "after",
+  ) => {
     const source = positions.find((position) => position.id === sourceId);
     if (!source || source.id === target.id) return;
     const nextParentId = placement === "inside" ? target.id : target.parent_id;
@@ -285,12 +348,24 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       return;
     }
 
-    if (!confirm(`Deseja mover o cargo ${source.nome} para ${placement === "before" ? "antes" : "depois"} de ${target.nome}?`)) return;
+    if (
+      !confirm(
+        `Deseja mover o cargo ${source.nome} para ${placement === "before" ? "antes" : "depois"} de ${target.nome}?`,
+      )
+    )
+      return;
     await reorderAsSibling(source, target, placement);
   };
 
   const expandAll = () => setCollapsed(new Set());
-  const collapseAll = () => setCollapsed(new Set(positions.filter((position) => getChildren(positions, position.id).length > 0).map((position) => position.id)));
+  const collapseAll = () =>
+    setCollapsed(
+      new Set(
+        positions
+          .filter((position) => getChildren(positions, position.id).length > 0)
+          .map((position) => position.id),
+      ),
+    );
 
   return (
     <main className="h-[calc(100vh-3rem)] min-h-0 overflow-hidden bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-3 py-3 sm:px-4 sm:py-4">
@@ -298,10 +373,15 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         <div className="shrink-0 rounded-xl border border-[#042558]/10 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">Projeto</p>
-              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#042558]">Organograma</h1>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+                Projeto
+              </p>
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#042558]">
+                Organograma
+              </h1>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-[#042558]/55">
-                Cadastre cargos e organize relações de liderança. A posição visual é calculada automaticamente pela hierarquia.
+                Cadastre cargos e organize relações de liderança. A posição visual é calculada
+                automaticamente pela hierarquia.
               </p>
             </div>
           </div>
@@ -329,8 +409,14 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         ) : positions.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-6 text-center">
             <Network className="mb-4 h-12 w-12 text-[#042558]/25" />
-            <h2 className="text-lg font-semibold text-[#042558]">Este projeto ainda não possui um organograma.</h2>
-            <button type="button" onClick={() => openCreate(null)} className="mt-5 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#042558]/90">
+            <h2 className="text-lg font-semibold text-[#042558]">
+              Este projeto ainda não possui um organograma.
+            </h2>
+            <button
+              type="button"
+              onClick={() => openCreate(null)}
+              className="mt-5 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#042558]/90"
+            >
               Cadastrar primeiro cargo
             </button>
           </div>
@@ -345,12 +431,14 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
             selectedId={selected?.id ?? null}
             highlightedId={highlightedId}
             onSelect={setSelected}
-            onToggle={(id) => setCollapsed((current) => {
-              const next = new Set(current);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            })}
+            onToggle={(id) =>
+              setCollapsed((current) => {
+                const next = new Set(current);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })
+            }
             onAddChild={(position) => openCreate(position.id)}
             onAddAt={(parentId, displayOrder) => openCreate(parentId, displayOrder)}
             onAddSibling={openSibling}
@@ -364,7 +452,8 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         )}
 
         <p className="shrink-0 text-xs text-[#042558]/45">
-          {positions.length} cargo(s) cadastrado(s). {flatTree.length} cargo(s) visível(is) na hierarquia atual.
+          {positions.length} cargo(s) cadastrado(s). {flatTree.length} cargo(s) visível(is) na
+          hierarquia atual.
         </p>
       </div>
 

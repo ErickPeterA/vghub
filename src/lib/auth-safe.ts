@@ -4,7 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 const DEFAULT_TIMEOUT_MS = 10_000;
 const AUTH_TIMEOUT_MS = 8_000;
 
-export function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = DEFAULT_TIMEOUT_MS, message = "A operação demorou demais.") {
+export function withTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  message = "A operação demorou demais.",
+) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const timeout = new Promise<never>((_, reject) => {

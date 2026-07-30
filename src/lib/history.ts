@@ -8,7 +8,9 @@ export async function logAction(args: {
   entidadeId?: string;
   detalhes?: JsonObj;
 }) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from("project_history").insert({
     project_id: args.projectId,

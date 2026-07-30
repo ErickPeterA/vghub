@@ -1,4 +1,16 @@
-import { CheckCircle2, ChevronDown, ChevronRight, FileText, MoreVertical, MoveDown, MoveUp, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  MoreVertical,
+  MoveDown,
+  MoveUp,
+  Pencil,
+  Plus,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +36,11 @@ type OrganizationNodeProps = {
   onMove: (position: OrganizationPosition) => void;
   onDelete: (position: OrganizationPosition) => void;
   onReorder: (position: OrganizationPosition, direction: "up" | "down") => void;
-  onDropOn: (sourceId: string, target: OrganizationPosition, placement: "before" | "inside" | "after") => void;
+  onDropOn: (
+    sourceId: string,
+    target: OrganizationPosition,
+    placement: "before" | "inside" | "after",
+  ) => void;
 };
 
 export function OrganizationNode({
@@ -62,7 +78,8 @@ export function OrganizationNode({
         if (sourceId) {
           const rect = event.currentTarget.getBoundingClientRect();
           const x = event.clientX - rect.left;
-          const placement = x < rect.width * 0.33 ? "before" : x > rect.width * 0.67 ? "after" : "inside";
+          const placement =
+            x < rect.width * 0.33 ? "before" : x > rect.width * 0.67 ? "after" : "inside";
           onDropOn(sourceId, node, placement);
         }
       }}
@@ -88,11 +105,19 @@ export function OrganizationNode({
           <span className="block truncate text-sm font-semibold text-[#042558]">{node.nome}</span>
           <span
             className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-              hasDescription ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+              hasDescription
+                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
             }`}
-            title={hasDescription ? "Descricao de cargo criada" : "Descricao de cargo ainda nao criada"}
+            title={
+              hasDescription ? "Descricao de cargo criada" : "Descricao de cargo ainda nao criada"
+            }
           >
-            {hasDescription ? <CheckCircle2 className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+            {hasDescription ? (
+              <CheckCircle2 className="h-3 w-3" />
+            ) : (
+              <FileText className="h-3 w-3" />
+            )}
             {hasDescription ? "Descricao criada" : "Sem descricao"}
           </span>
           <span className="mt-1 block text-xs text-[#042558]/45">
@@ -102,7 +127,11 @@ export function OrganizationNode({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="rounded-md p-1.5 text-[#042558]/45 hover:bg-[#042558]/10 hover:text-[#042558]" title="Ações">
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-[#042558]/45 hover:bg-[#042558]/10 hover:text-[#042558]"
+              title="Ações"
+            >
               <MoreVertical className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
@@ -123,10 +152,17 @@ export function OrganizationNode({
             <DropdownMenuItem onClick={() => onEdit(node)}>
               <Pencil className="mr-2 h-4 w-4" /> Editar cargo
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onReorder(node, "up")}>Mover para cima</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onReorder(node, "down")}>Mover para baixo</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onReorder(node, "up")}>
+              Mover para cima
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onReorder(node, "down")}>
+              Mover para baixo
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(node)} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem
+              onClick={() => onDelete(node)}
+              className="text-red-600 focus:text-red-600"
+            >
               <Trash2 className="mr-2 h-4 w-4" /> Excluir cargo
             </DropdownMenuItem>
           </DropdownMenuContent>

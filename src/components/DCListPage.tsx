@@ -1,6 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { FileText, ArrowRight, ArrowLeft, Check, Trash2, Users, Clock, GitFork } from "lucide-react";
+import {
+  FileText,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Trash2,
+  Users,
+  Clock,
+  GitFork,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -22,7 +31,11 @@ type Profile = { id: string; nome: string };
 
 const STAGES: { key: Stage; label: string; icon: React.ReactNode }[] = [
   { key: "em_criacao", label: "Em Criação", icon: <Clock className="h-4 w-4 text-blue-500" /> },
-  { key: "em_aprovacao", label: "Em Aprovação", icon: <Users className="h-4 w-4 text-yellow-500" /> },
+  {
+    key: "em_aprovacao",
+    label: "Em Aprovação",
+    icon: <Users className="h-4 w-4 text-yellow-500" />,
+  },
   { key: "concluido", label: "Concluídos", icon: <Check className="h-4 w-4 text-green-500" /> },
 ];
 
@@ -40,20 +53,24 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [{ data: dcs, error }, { data: ars }, { data: profs }, { data: proj }] = await Promise.all([
-        withTimeout(
+      const [{ data: dcs, error }, { data: ars }, { data: profs }, { data: proj }] =
+        await Promise.all([
+          withTimeout(
+            supabase
+              .from("descricoes_cargo")
+              .select("id,cargo,departamento,unidade_negocio,created_by,created_at,etapa")
+              .eq("project_id", projectId)
+              .order("created_at", { ascending: false }),
+            10_000,
+            "Não foi possível carregar descrições.",
+          ),
           supabase
-            .from("descricoes_cargo")
-            .select("id,cargo,departamento,unidade_negocio,created_by,created_at,etapa")
-            .eq("project_id", projectId)
-            .order("created_at", { ascending: false }),
-          10_000,
-          "Não foi possível carregar descrições.",
-        ),
-        supabase.from("project_areas").select("id,nome,cor,parent_id").eq("project_id", projectId),
-        supabase.from("profiles").select("id,nome"),
-        supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle(),
-      ]);
+            .from("project_areas")
+            .select("id,nome,cor,parent_id")
+            .eq("project_id", projectId),
+          supabase.from("profiles").select("id,nome"),
+          supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle(),
+        ]);
       if (error) throw error;
       setRows((dcs as Row[]) ?? []);
       setAreas((ars ?? []) as Area[]);
@@ -61,28 +78,53 @@ export function DCListPage({ projectId }: { projectId: string }) {
       if (user) setIsResponsavel(proj?.responsavel_id === user.id);
       if (user) {
         const { data: mem } = await supabase
-          .from("project_members").select("role").eq("project_id", projectId).eq("user_id", user.id).maybeSingle();
+          .from("project_members")
+          .select("role")
+          .eq("project_id", projectId)
+          .eq("user_id", user.id)
+          .maybeSingle();
         setProjectRole(mem?.role ?? null);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao carregar");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [projectId, user?.id]);
+  useEffect(() => {
+    void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [projectId, user?.id]);
 
   const areaById = useMemo(() => new Map(areas.map((a) => [a.id, a])), [areas]);
   const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
-  const isLider = projectRole === "lider_estrategico" || projectRole === "lider_tatico" || projectRole === "lider_operacional" || projectRole === "lider_superior" || projectRole === "lider_setor";
+  const isLider =
+    projectRole === "lider_estrategico" ||
+    projectRole === "lider_tatico" ||
+    projectRole === "lider_operacional" ||
+    projectRole === "lider_superior" ||
+    projectRole === "lider_setor";
   const canDecideApproval = isAdmin || projectRole === "gp" || projectRole === "admin" || isLider;
-  const hasFullControl = isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
+  const hasFullControl =
+    isAdmin || isResponsavel || projectRole === "gp" || projectRole === "admin";
   const isOnlyLider = isLider && !hasFullControl;
-  const visibleStages = isOnlyLider ? STAGES.filter((s) => s.key === "em_aprovacao" || s.key === "concluido") : STAGES;
+  const visibleStages = isOnlyLider
+    ? STAGES.filter((s) => s.key === "em_aprovacao" || s.key === "concluido")
+    : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
-    const { error } = await supabase.from("descricoes_cargo").update({ etapa: target }).eq("id", row.id);
+    const { error } = await supabase
+      .from("descricoes_cargo")
+      .update({ etapa: target })
+      .eq("id", row.id);
     if (error) return toast.error(error.message);
-    await logAction({ projectId, acao: "dc_etapa", entidade: "descricao_cargo", entidadeId: row.id, detalhes: { de: row.etapa, para: target } });
+    await logAction({
+      projectId,
+      acao: "dc_etapa",
+      entidade: "descricao_cargo",
+      entidadeId: row.id,
+      detalhes: { de: row.etapa, para: target },
+    });
     void load();
   };
 
@@ -90,7 +132,13 @@ export function DCListPage({ projectId }: { projectId: string }) {
     if (!confirm(`Excluir "${row.cargo}"?`)) return;
     const { error } = await supabase.from("descricoes_cargo").delete().eq("id", row.id);
     if (error) return toast.error(error.message);
-    await logAction({ projectId, acao: "dc_excluida", entidade: "descricao_cargo", entidadeId: row.id, detalhes: { cargo: row.cargo } });
+    await logAction({
+      projectId,
+      acao: "dc_excluida",
+      entidade: "descricao_cargo",
+      entidadeId: row.id,
+      detalhes: { cargo: row.cargo },
+    });
     void load();
   };
 
@@ -100,7 +148,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
     const parent = setor.parent_id ? areaById.get(setor.parent_id) : null;
     return {
       nome: setor.nome,
-      cor: setor.cor ?? parent?.cor ?? "#042558"
+      cor: setor.cor ?? parent?.cor ?? "#042558",
     };
   };
 
@@ -111,17 +159,20 @@ export function DCListPage({ projectId }: { projectId: string }) {
         <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <div className="">
-              </div>
+              <div className=""></div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[#042558]">Aprovações e acompanhamento</h1>
-                <p className="text-sm text-[#042558]/60">Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.</p>
+                <h1 className="text-2xl font-bold tracking-tight text-[#042558]">
+                  Aprovações e acompanhamento
+                </h1>
+                <p className="text-sm text-[#042558]/60">
+                  Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.
+                </p>
               </div>
             </div>
           </div>
-          <Link 
-            to="/projetos/$projectId/organograma" 
-            params={{ projectId }} 
+          <Link
+            to="/projetos/$projectId/organograma"
+            params={{ projectId }}
             className="group inline-flex items-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
           >
             <GitFork className="h-4 w-4" />
@@ -138,11 +189,16 @@ export function DCListPage({ projectId }: { projectId: string }) {
             </div>
           </div>
         ) : (
-          <div className={`grid gap-6 ${visibleStages.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3"}`}>
+          <div
+            className={`grid gap-6 ${visibleStages.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3"}`}
+          >
             {visibleStages.map((stage) => {
               const items = rows.filter((r) => r.etapa === stage.key);
               return (
-                <section key={stage.key} className="flex flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-lg">
+                <section
+                  key={stage.key}
+                  className="flex flex-col rounded-2xl border border-[#042558]/10 bg-white/60 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-lg"
+                >
                   <header className="mb-4 flex items-center justify-between border-b border-[#042558]/10 pb-3">
                     <div className="flex items-center gap-2">
                       <div className="rounded-md bg-[#042558]/10 p-1.5 text-[#042558]">
@@ -156,7 +212,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                       {items.length}
                     </span>
                   </header>
-                  
+
                   {items.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
                       <FileText className="mb-2 h-8 w-8 text-[#042558]/30" />
@@ -167,34 +223,46 @@ export function DCListPage({ projectId }: { projectId: string }) {
                       {items.map((row) => {
                         const responsavel = profileById.get(row.created_by);
                         const stageIdx = stageOrder(row.etapa);
-                        const canMoveToApproval = row.etapa === "em_criacao" && (projectRole === "gp" || projectRole === "admin" || isAdmin || isResponsavel);
-                        const canApprove = row.etapa === "em_aprovacao" && canDecideApproval && !isOnlyLider;
+                        const canMoveToApproval =
+                          row.etapa === "em_criacao" &&
+                          (projectRole === "gp" ||
+                            projectRole === "admin" ||
+                            isAdmin ||
+                            isResponsavel);
+                        const canApprove =
+                          row.etapa === "em_aprovacao" && canDecideApproval && !isOnlyLider;
                         const setorInfo = getSetorInfo(row);
-                        
+
                         return (
-                          <article key={row.id} className="group rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md">
-                            <Link 
-                              to="/projetos/$projectId/descricao-cargo/$dcId" 
-                              params={{ projectId, dcId: row.id }} 
+                          <article
+                            key={row.id}
+                            className="group rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md"
+                          >
+                            <Link
+                              to="/projetos/$projectId/descricao-cargo/$dcId"
+                              params={{ projectId, dcId: row.id }}
                               className="block"
                             >
                               <h3 className="text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80">
                                 {row.cargo || "(sem cargo)"}
                               </h3>
                             </Link>
-                            
+
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <span className="text-xs font-medium text-[#042558]/60 uppercase">
-                                {row.cargo?.toUpperCase() || "SEM CARGO"}, 
+                                {row.cargo?.toUpperCase() || "SEM CARGO"},
                               </span>
                               <span className="text-xs text-[#042558]/40">
                                 {new Date(row.created_at).toLocaleDateString("pt-BR")}
                               </span>
                             </div>
-                            
+
                             {responsavel && (
                               <p className="mt-1 text-xs text-[#042558]/40">
-                                por <span className="font-medium text-[#042558]/70">{responsavel.nome}</span>
+                                por{" "}
+                                <span className="font-medium text-[#042558]/70">
+                                  {responsavel.nome}
+                                </span>
                               </p>
                             )}
 
@@ -202,8 +270,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                               <div className="flex items-center gap-2">
                                 {setorInfo && (
                                   <div className="flex items-center gap-1.5">
-                                    <span 
-                                      className="h-2.5 w-2.5 rounded-full" 
+                                    <span
+                                      className="h-2.5 w-2.5 rounded-full"
                                       style={{ background: setorInfo.cor }}
                                     />
                                     <span className="text-[10px] font-medium text-[#042558]/60">
@@ -214,8 +282,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                               </div>
                               <div className="flex items-center gap-0.5">
                                 {hasFullControl && stageIdx > 0 && (
-                                  <button 
-                                    onClick={() => moveStage(row, STAGES[stageIdx - 1].key)} 
+                                  <button
+                                    onClick={() => moveStage(row, STAGES[stageIdx - 1].key)}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
                                     title="Etapa anterior"
                                   >
@@ -223,8 +291,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   </button>
                                 )}
                                 {canMoveToApproval && (
-                                  <button 
-                                    onClick={() => moveStage(row, "em_aprovacao")} 
+                                  <button
+                                    onClick={() => moveStage(row, "em_aprovacao")}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
                                     title="Enviar para aprovação"
                                   >
@@ -232,8 +300,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   </button>
                                 )}
                                 {hasFullControl && (
-                                  <button 
-                                    onClick={() => remove(row)} 
+                                  <button
+                                    onClick={() => remove(row)}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-red-50 hover:text-red-600"
                                     title="Excluir"
                                   >
@@ -241,8 +309,8 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   </button>
                                 )}
                                 {canApprove && (
-                                  <button 
-                                    onClick={() => moveStage(row, "concluido")} 
+                                  <button
+                                    onClick={() => moveStage(row, "concluido")}
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl"
                                   >
                                     <Check className="h-3.5 w-3.5" /> Aprovar

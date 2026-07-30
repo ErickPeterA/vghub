@@ -20,7 +20,15 @@ type PositionDetailsPanelProps = {
   onAddChild: (position: OrganizationPosition) => void;
 };
 
-export function PositionDetailsPanel({ projectId, position, positions, onClose, onEdit, onMove, onAddChild }: PositionDetailsPanelProps) {
+export function PositionDetailsPanel({
+  projectId,
+  position,
+  positions,
+  onClose,
+  onEdit,
+  onMove,
+  onAddChild,
+}: PositionDetailsPanelProps) {
   const navigate = useNavigate();
   const [linkedDescription, setLinkedDescription] = useState<LinkedDescription | null>(null);
   const [loadingDescription, setLoadingDescription] = useState(false);
@@ -33,18 +41,19 @@ export function PositionDetailsPanel({ projectId, position, positions, onClose, 
 
     let cancelled = false;
     setLoadingDescription(true);
-    void (supabase as any)
-      .from("descricoes_cargo")
-      .select("id,cargo")
-      .eq("project_id", projectId)
-      .eq("organization_position_id", position.id)
-      .maybeSingle()
-      .then(({ data }: { data: LinkedDescription | null }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("descricoes_cargo")
+          .select("id,cargo")
+          .eq("project_id", projectId)
+          .eq("organization_position_id", position.id)
+          .maybeSingle();
         if (!cancelled) setLinkedDescription(data ?? null);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoadingDescription(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -57,7 +66,10 @@ export function PositionDetailsPanel({ projectId, position, positions, onClose, 
 
   const openDescription = () => {
     if (linkedDescription) {
-      navigate({ to: "/projetos/$projectId/descricao-cargo/$dcId", params: { projectId, dcId: linkedDescription.id } });
+      navigate({
+        to: "/projetos/$projectId/descricao-cargo/$dcId",
+        params: { projectId, dcId: linkedDescription.id },
+      });
       return;
     }
 
@@ -75,13 +87,19 @@ export function PositionDetailsPanel({ projectId, position, positions, onClose, 
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">Cargo</p>
           <h2 className="mt-1 text-xl font-bold text-[#042558]">{position.nome}</h2>
         </div>
-        <button type="button" onClick={onClose} className="rounded-lg p-2 text-[#042558]/45 hover:bg-[#042558]/10 hover:text-[#042558]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-2 text-[#042558]/45 hover:bg-[#042558]/10 hover:text-[#042558]"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">Subordinados diretos</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+          Subordinados diretos
+        </h3>
         <div className="mt-2 space-y-2">
           {children.length === 0 ? (
             <p className="rounded-lg border border-dashed border-[#042558]/15 bg-[#042558]/5 px-3 py-3 text-sm text-[#042558]/55">
@@ -89,7 +107,10 @@ export function PositionDetailsPanel({ projectId, position, positions, onClose, 
             </p>
           ) : (
             children.map((child) => (
-              <div key={child.id} className="rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]">
+              <div
+                key={child.id}
+                className="rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]"
+              >
                 {child.nome}
               </div>
             ))
@@ -104,18 +125,34 @@ export function PositionDetailsPanel({ projectId, position, positions, onClose, 
           disabled={loadingDescription}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#042558]/90 disabled:opacity-60"
         >
-          {loadingDescription ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+          {loadingDescription ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileText className="h-4 w-4" />
+          )}
           {linkedDescription ? "Abrir descrição de cargo" : "Criar descrição de cargo"}
         </button>
-        <button type="button" onClick={() => onEdit(position)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">
+        <button
+          type="button"
+          onClick={() => onEdit(position)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+        >
           <Pencil className="h-4 w-4" />
           Editar cargo
         </button>
-        <button type="button" onClick={() => onMove(position)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">
+        <button
+          type="button"
+          onClick={() => onMove(position)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+        >
           <MoveDown className="h-4 w-4" />
           Alterar superior
         </button>
-        <button type="button" onClick={() => onAddChild(position)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5">
+        <button
+          type="button"
+          onClick={() => onAddChild(position)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+        >
           <Plus className="h-4 w-4" />
           Adicionar subordinado
         </button>

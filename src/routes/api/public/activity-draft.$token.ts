@@ -8,14 +8,20 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
       POST: async ({ params, request }) => {
         const token = params.token;
         if (!token || token.length < 20) {
-          return Response.json({ error: "invalid_token", message: "Link inválido." }, { status: 400 });
+          return Response.json(
+            { error: "invalid_token", message: "Link inválido." },
+            { status: 400 },
+          );
         }
 
         let body: { header_answers?: Record<string, string>; question_answers?: QuestionAnswers };
         try {
           body = await request.json();
         } catch {
-          return Response.json({ error: "invalid_body", message: "Payload inválido." }, { status: 400 });
+          return Response.json(
+            { error: "invalid_body", message: "Payload inválido." },
+            { status: 400 },
+          );
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -25,11 +31,23 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
           .eq("token", token)
           .maybeSingle();
 
-        if (!link) return Response.json({ error: "not_found", message: "Link não encontrado." }, { status: 404 });
-        if (link.status === "cancelled") return Response.json({ error: "cancelled", message: "Link cancelado." }, { status: 410 });
-        if (link.status === "answered") return Response.json({ error: "already_answered", message: "Já respondido." }, { status: 410 });
+        if (!link)
+          return Response.json(
+            { error: "not_found", message: "Link não encontrado." },
+            { status: 404 },
+          );
+        if (link.status === "cancelled")
+          return Response.json({ error: "cancelled", message: "Link cancelado." }, { status: 410 });
+        if (link.status === "answered")
+          return Response.json(
+            { error: "already_answered", message: "Já respondido." },
+            { status: 410 },
+          );
         if (link.status === "expired" || new Date(link.expires_at) < new Date()) {
-          await supabaseAdmin.from("activity_links").update({ status: "expired" }).eq("id", link.id);
+          await supabaseAdmin
+            .from("activity_links")
+            .update({ status: "expired" })
+            .eq("id", link.id);
           return Response.json({ error: "expired", message: "Link expirado." }, { status: 410 });
         }
 
@@ -43,7 +61,8 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
           })
           .eq("id", link.id);
 
-        if (error) return Response.json({ error: "server_error", message: error.message }, { status: 500 });
+        if (error)
+          return Response.json({ error: "server_error", message: error.message }, { status: 500 });
         return Response.json({ ok: true, savedAt });
       },
     },

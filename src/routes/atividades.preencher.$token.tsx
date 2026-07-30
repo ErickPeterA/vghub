@@ -41,7 +41,9 @@ export const Route = createFileRoute("/atividades/preencher/$token")({
 
 function PublicForm() {
   const { token } = Route.useParams();
-  const [state, setState] = useState<"loading" | "ready" | "error" | "submitting" | "success">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error" | "submitting" | "success">(
+    "loading",
+  );
   const [form, setForm] = useState<FormData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [headerAns, setHeaderAns] = useState<Record<string, string>>({});
@@ -73,9 +75,14 @@ function PublicForm() {
         }
       })
       .catch(() => {
-        if (!cancelled) { setErrorMsg("Erro de conexão."); setState("error"); }
+        if (!cancelled) {
+          setErrorMsg("Erro de conexão.");
+          setState("error");
+        }
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   useEffect(() => {
@@ -123,22 +130,29 @@ function PublicForm() {
   };
 
   const removeQuestionGroup = (index: number) => {
-    setQuestionGroups((current) => current.length <= 1 ? current : current.filter((_, currentIndex) => currentIndex !== index));
+    setQuestionGroups((current) =>
+      current.length <= 1 ? current : current.filter((_, currentIndex) => currentIndex !== index),
+    );
   };
 
   const updateQuestionGroup = (index: number, field: Field, value: string) => {
-    setQuestionGroups((current) => current.map((group, currentIndex) => {
-      if (currentIndex !== index) return group;
-      const next = { ...group, [field.id]: value };
-      if (field.dataSource === "areas" && questionSetorField) next[questionSetorField.id] = "";
-      return next;
-    }));
+    setQuestionGroups((current) =>
+      current.map((group, currentIndex) => {
+        if (currentIndex !== index) return group;
+        const next = { ...group, [field.id]: value };
+        if (field.dataSource === "areas" && questionSetorField) next[questionSetorField.id] = "";
+        return next;
+      }),
+    );
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validate();
-    if (err) { setErrorMsg(err); return; }
+    if (err) {
+      setErrorMsg(err);
+      return;
+    }
     setErrorMsg("");
     setDraftState("idle");
     setState("submitting");
@@ -172,9 +186,7 @@ function PublicForm() {
               <p className="text-xs font-medium uppercase tracking-wider text-white/60">
                 Formulário
               </p>
-              <h1 className="text-2xl font-bold text-white">
-                {form?.label || "Preenchimento"}
-              </h1>
+              <h1 className="text-2xl font-bold text-white">{form?.label || "Preenchimento"}</h1>
             </div>
           </div>
 
@@ -193,7 +205,12 @@ function PublicForm() {
                   {draftState === "saved" && (
                     <>
                       <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                      <span>Rascunho salvo {draftSavedAt ? `às ${new Date(draftSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>
+                      <span>
+                        Rascunho salvo{" "}
+                        {draftSavedAt
+                          ? `às ${new Date(draftSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                          : ""}
+                      </span>
                     </>
                   )}
                   {draftState === "error" && (
@@ -228,7 +245,9 @@ function PublicForm() {
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-8 text-center">
                 <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" />
                 <h3 className="text-lg font-semibold text-emerald-700">Resposta enviada!</h3>
-                <p className="mt-1 text-sm text-emerald-600">Obrigado por preencher o formulário.</p>
+                <p className="mt-1 text-sm text-emerald-600">
+                  Obrigado por preencher o formulário.
+                </p>
               </div>
             )}
 
@@ -248,12 +267,19 @@ function PublicForm() {
                           value={headerAns[f.id] ?? ""}
                           readOnly={(f.filledBy ?? "collaborator") === "gp"}
                           areas={form.areas ?? []}
-                          parentAreaId={f.dataSource === "setores" && headerAreaField ? headerAns[headerAreaField.id] : undefined}
-                          onChange={(v) => setHeaderAns((current) => {
-                            const next = { ...current, [f.id]: v };
-                            if (f.dataSource === "areas" && headerSetorField) next[headerSetorField.id] = "";
-                            return next;
-                          })}
+                          parentAreaId={
+                            f.dataSource === "setores" && headerAreaField
+                              ? headerAns[headerAreaField.id]
+                              : undefined
+                          }
+                          onChange={(v) =>
+                            setHeaderAns((current) => {
+                              const next = { ...current, [f.id]: v };
+                              if (f.dataSource === "areas" && headerSetorField)
+                                next[headerSetorField.id] = "";
+                              return next;
+                            })
+                          }
                         />
                       ))}
                     </div>
@@ -266,13 +292,17 @@ function PublicForm() {
                       <div className="flex items-center gap-2">
                         <h2 className="font-semibold text-gray-700">Perguntas</h2>
                         <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs font-medium text-[#042558]">
-                          {questionGroups.length} {questionGroups.length === 1 ? "pergunta" : "perguntas"}
+                          {questionGroups.length}{" "}
+                          {questionGroups.length === 1 ? "pergunta" : "perguntas"}
                         </span>
                       </div>
                     </div>
                     <div className="space-y-4">
                       {questionGroups.map((group, index) => (
-                        <div key={index} className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+                        <div
+                          key={index}
+                          className="rounded-xl border border-gray-200 bg-gray-50/50 p-4"
+                        >
                           <div className="mb-4 flex items-center justify-between gap-3">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]/70">
                               Pergunta {String(index + 1).padStart(2, "0")}
@@ -295,7 +325,11 @@ function PublicForm() {
                                 field={f}
                                 value={group[f.id] ?? ""}
                                 areas={form.areas ?? []}
-                                parentAreaId={f.dataSource === "setores" && questionAreaField ? group[questionAreaField.id] : undefined}
+                                parentAreaId={
+                                  f.dataSource === "setores" && questionAreaField
+                                    ? group[questionAreaField.id]
+                                    : undefined
+                                }
                                 onChange={(v) => updateQuestionGroup(index, f, v)}
                               />
                             ))}
@@ -320,9 +354,9 @@ function PublicForm() {
                   </div>
                 )}
 
-                <button 
-                  type="submit" 
-                  disabled={state === "submitting"} 
+                <button
+                  type="submit"
+                  disabled={state === "submitting"}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#042558] px-6 py-3 text-sm font-medium text-white transition-all hover:bg-[#042558]/90 hover:shadow-lg hover:shadow-[#042558]/20 disabled:opacity-50"
                 >
                   {state === "submitting" ? (
@@ -343,7 +377,9 @@ function PublicForm() {
   );
 }
 
-function normalizeQuestionGroups(value?: QuestionAnswerGroup | QuestionAnswerGroup[]): QuestionAnswerGroup[] {
+function normalizeQuestionGroups(
+  value?: QuestionAnswerGroup | QuestionAnswerGroup[],
+): QuestionAnswerGroup[] {
   if (Array.isArray(value)) return value.length ? value : [{}];
   if (value && typeof value === "object") return [value];
   return [{}];
@@ -366,31 +402,29 @@ function FieldInput({
 }) {
   const base = `w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 ${readOnly ? "bg-gray-50 text-gray-500" : "hover:border-gray-300"}`;
   const areaOptions = areas.filter((area) => !area.parent_id);
-  const setorOptions = areas.filter((area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId));
-  
+  const setorOptions = areas.filter(
+    (area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId),
+  );
+
   return (
     <div className="space-y-1.5">
       <label className="flex items-baseline gap-1 text-sm font-medium text-gray-700">
         {field.label}
         {field.required && <span className="text-red-500">*</span>}
         {readOnly && (
-          <span className="ml-auto text-xs font-normal text-gray-400">
-            (pré-preenchido)
-          </span>
+          <span className="ml-auto text-xs font-normal text-gray-400">(pré-preenchido)</span>
         )}
       </label>
-      
-      {field.helpText && (
-        <p className="text-xs text-gray-400">{field.helpText}</p>
-      )}
-      
+
+      {field.helpText && <p className="text-xs text-gray-400">{field.helpText}</p>}
+
       {field.type === "textarea" ? (
-        <textarea 
-          value={value} 
-          onChange={(e) => onChange(e.target.value)} 
-          rows={3} 
-          className={`${base} resize-y`} 
-          readOnly={readOnly} 
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className={`${base} resize-y`}
+          readOnly={readOnly}
         />
       ) : field.dataSource === "areas" ? (
         <select
@@ -400,7 +434,11 @@ function FieldInput({
           disabled={readOnly}
         >
           <option value="">Selecione uma opção</option>
-          {areaOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+          {areaOptions.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.nome}
+            </option>
+          ))}
         </select>
       ) : field.dataSource === "setores" ? (
         <select
@@ -409,36 +447,44 @@ function FieldInput({
           className={`${base} appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10`}
           disabled={readOnly || !parentAreaId}
         >
-          <option value="">{parentAreaId ? "Selecione uma opção" : "Selecione a Área primeiro"}</option>
-          {setorOptions.map((area) => <option key={area.id} value={area.id}>{area.nome}</option>)}
+          <option value="">
+            {parentAreaId ? "Selecione uma opção" : "Selecione a Área primeiro"}
+          </option>
+          {setorOptions.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.nome}
+            </option>
+          ))}
         </select>
       ) : field.type === "select" ? (
-        <select 
-          value={value} 
-          onChange={(e) => onChange(e.target.value)} 
-          className={`${base} appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10`} 
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${base} appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10`}
           disabled={readOnly}
         >
           <option value="">Selecione uma opção</option>
           {(field.options ?? []).map((o) => (
-            <option key={o} value={o}>{o}</option>
+            <option key={o} value={o}>
+              {o}
+            </option>
           ))}
         </select>
       ) : field.type === "date" ? (
-        <input 
-          type="date" 
-          value={value} 
-          onChange={(e) => onChange(e.target.value)} 
-          className={base} 
-          readOnly={readOnly} 
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+          readOnly={readOnly}
         />
       ) : (
-        <input 
-          type="text" 
-          value={value} 
-          onChange={(e) => onChange(e.target.value)} 
-          className={base} 
-          readOnly={readOnly} 
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+          readOnly={readOnly}
         />
       )}
     </div>

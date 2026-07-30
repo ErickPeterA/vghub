@@ -12,7 +12,8 @@ type OrganizationToolbarProps = {
   onCollapseAll: () => void;
 };
 
-const iconButton = "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#042558]/15 bg-white text-[#042558] transition hover:bg-[#042558]/5";
+const iconButton =
+  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#042558]/15 bg-white text-[#042558] transition hover:bg-[#042558]/5";
 
 export function OrganizationToolbar({
   query,
@@ -53,10 +54,18 @@ export function OrganizationToolbar({
         <button type="button" onClick={onFit} className={iconButton} title="Ajustar à tela">
           <Maximize2 className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onExpandAll} className="rounded-lg border border-[#042558]/15 bg-white px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5">
+        <button
+          type="button"
+          onClick={onExpandAll}
+          className="rounded-lg border border-[#042558]/15 bg-white px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5"
+        >
           Expandir
         </button>
-        <button type="button" onClick={onCollapseAll} className="inline-flex items-center gap-1 rounded-lg border border-[#042558]/15 bg-white px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5">
+        <button
+          type="button"
+          onClick={onCollapseAll}
+          className="inline-flex items-center gap-1 rounded-lg border border-[#042558]/15 bg-white px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5"
+        >
           <Shrink className="h-3.5 w-3.5" />
           Recolher
         </button>

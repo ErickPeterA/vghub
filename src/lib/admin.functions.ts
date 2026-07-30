@@ -30,12 +30,14 @@ async function assertAdmin(userId: string) {
 export const createUserAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      nome: z.string().min(1).max(255),
-      email: z.string().email(),
-      password: z.string().min(1).max(255),
-      isAdmin: z.boolean().optional(),
-    }).parse(input),
+    z
+      .object({
+        nome: z.string().min(1).max(255),
+        email: z.string().email(),
+        password: z.string().min(1).max(255),
+        isAdmin: z.boolean().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const admin = await assertAdmin(context.userId);
@@ -57,14 +59,16 @@ export const createUserAdmin = createServerFn({ method: "POST" })
 export const updateUserAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      userId: z.string().uuid(),
-      nome: z.string().min(1).max(255).optional(),
-      email: z.string().email().optional(),
-      password: z.string().min(1).max(255).optional(),
-      status: z.enum(["ativo", "inativo"]).optional(),
-      isAdmin: z.boolean().optional(),
-    }).parse(input),
+    z
+      .object({
+        userId: z.string().uuid(),
+        nome: z.string().min(1).max(255).optional(),
+        email: z.string().email().optional(),
+        password: z.string().min(1).max(255).optional(),
+        status: z.enum(["ativo", "inativo"]).optional(),
+        isAdmin: z.boolean().optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const admin = await assertAdmin(context.userId);
@@ -85,7 +89,9 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
     }
     if (data.isAdmin !== undefined) {
       if (data.isAdmin) {
-        await admin.from("user_roles").upsert({ user_id: data.userId, role: "admin" }, { onConflict: "user_id,role" });
+        await admin
+          .from("user_roles")
+          .upsert({ user_id: data.userId, role: "admin" }, { onConflict: "user_id,role" });
       } else {
         await admin.from("user_roles").delete().eq("user_id", data.userId).eq("role", "admin");
       }
@@ -112,7 +118,10 @@ export const listUsersAdmin = createServerFn({ method: "GET" })
       .select("id, nome, email, status, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const { data: roles } = await admin.from("user_roles").select("user_id, role").eq("role", "admin");
+    const { data: roles } = await admin
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("role", "admin");
     const adminIds = new Set((roles ?? []).map((r) => r.user_id));
     return (profiles ?? []).map((p) => ({ ...p, isAdmin: adminIds.has(p.id) }));
   });
@@ -120,11 +129,13 @@ export const listUsersAdmin = createServerFn({ method: "GET" })
 export const createProjectAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      nome: z.string().min(1).max(255),
-      empresa: z.string().max(255).optional(),
-      responsavelId: z.string().uuid().optional().or(z.literal("")),
-    }).parse(input),
+    z
+      .object({
+        nome: z.string().min(1).max(255),
+        empresa: z.string().max(255).optional(),
+        responsavelId: z.string().uuid().optional().or(z.literal("")),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const admin = await assertAdmin(context.userId);
@@ -166,17 +177,22 @@ export const createProjectAdmin = createServerFn({ method: "POST" })
 export const attachUserToProjectAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({
-      projectId: z.string().uuid(),
-      userId: z.string().uuid(),
-      role: projectRoleSchema,
-    }).parse(input),
+    z
+      .object({
+        projectId: z.string().uuid(),
+        userId: z.string().uuid(),
+        role: projectRoleSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const admin = await assertAdmin(context.userId);
     const { error } = await admin
       .from("project_members")
-      .upsert({ project_id: data.projectId, user_id: data.userId, role: data.role }, { onConflict: "project_id,user_id" });
+      .upsert(
+        { project_id: data.projectId, user_id: data.userId, role: data.role },
+        { onConflict: "project_id,user_id" },
+      );
     if (error) throw new Error(error.message);
     await admin.from("project_history").insert({
       project_id: data.projectId,
@@ -190,7 +206,9 @@ export const attachUserToProjectAdmin = createServerFn({ method: "POST" })
 
 export const updateProjectMemberRoleAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ memberId: z.string().uuid(), role: projectRoleSchema }).parse(input))
+  .inputValidator((input) =>
+    z.object({ memberId: z.string().uuid(), role: projectRoleSchema }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     const admin = await assertAdmin(context.userId);
     const { data: member, error: readError } = await admin
@@ -199,7 +217,10 @@ export const updateProjectMemberRoleAdmin = createServerFn({ method: "POST" })
       .eq("id", data.memberId)
       .single();
     if (readError) throw new Error(readError.message);
-    const { error } = await admin.from("project_members").update({ role: data.role }).eq("id", data.memberId);
+    const { error } = await admin
+      .from("project_members")
+      .update({ role: data.role })
+      .eq("id", data.memberId);
     if (error) throw new Error(error.message);
     await admin.from("project_history").insert({
       project_id: member.project_id,

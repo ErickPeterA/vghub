@@ -37,7 +37,9 @@ export function ProjectListPage() {
       if (error) throw error;
       const projs = (data as Projeto[]) ?? [];
       setRows(projs);
-      const ids = Array.from(new Set(projs.map((p) => p.responsavel_id).filter(Boolean))) as string[];
+      const ids = Array.from(
+        new Set(projs.map((p) => p.responsavel_id).filter(Boolean)),
+      ) as string[];
       if (ids.length) {
         const { data: profs } = await withTimeout(
           supabase.from("profiles").select("id,nome").in("id", ids),
@@ -45,7 +47,9 @@ export function ProjectListPage() {
           "Não foi possível carregar responsáveis.",
         );
         const map: Record<string, string> = {};
-        (profs ?? []).forEach((p) => { map[p.id] = p.nome; });
+        (profs ?? []).forEach((p) => {
+          map[p.id] = p.nome;
+        });
         setResponsaveis(map);
       } else {
         setResponsaveis({});
@@ -58,7 +62,9 @@ export function ProjectListPage() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   // Ativa/desativa o projeto inteiro. Ao desativar, os dados continuam
   // intactos, mas todos os vinculados perdem acesso, exceto GPs e admins
@@ -68,7 +74,7 @@ export function ProjectListPage() {
     const novo = atual === "desativado" ? "ativo" : "desativado";
     if (novo === "desativado") {
       const confirmado = confirm(
-        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuários vinculados perdem acesso, exceto GPs e administradores.`
+        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuários vinculados perdem acesso, exceto GPs e administradores.`,
       );
       if (!confirmado) return;
     }
@@ -84,21 +90,36 @@ export function ProjectListPage() {
   const renderProjectCard = (p: Projeto) => (
     <div key={p.id} className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-2">
-        <Link to="/projetos/$projectId/descricao-cargo" params={{ projectId: p.id }} className="flex-1">
+        <Link
+          to="/projetos/$projectId/descricao-cargo"
+          params={{ projectId: p.id }}
+          className="flex-1"
+        >
           <h3 className="font-display text-xl leading-tight hover:text-accent">{p.nome}</h3>
           {p.empresa && <p className="mt-1 text-sm text-muted-foreground">{p.empresa}</p>}
         </Link>
-        <span className={`rounded-full px-2 py-0.5 text-xs ${p.status === "ativo" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs ${p.status === "ativo" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}
+        >
           {p.status === "ativo" ? "Ativo" : "Desativado"}
         </span>
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-        <span>{p.responsavel_id ? responsaveis[p.responsavel_id] ?? "—" : "Sem responsável"}</span>
+        <span>
+          {p.responsavel_id ? (responsaveis[p.responsavel_id] ?? "—") : "Sem responsável"}
+        </span>
         <span>{new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
       </div>
       {isAdmin && (
         <div className="mt-4 flex gap-2 border-t border-border pt-3">
-          <button onClick={() => navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId: p.id } })} className="flex-1 rounded-md bg-[#173c78] px-3 py-1.5 text-xs text-white hover:bg-[#042558] cursor-pointer">Abrir</button>
+          <button
+            onClick={() =>
+              navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId: p.id } })
+            }
+            className="flex-1 rounded-md bg-[#173c78] px-3 py-1.5 text-xs text-white hover:bg-[#042558] cursor-pointer"
+          >
+            Abrir
+          </button>
           <button
             onClick={() => alternarStatus(p.id, p.status, p.nome)}
             className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
@@ -106,9 +127,17 @@ export function ProjectListPage() {
                 ? "border-border text-muted-foreground hover:border-red-500 hover:bg-red-50 hover:text-red-600"
                 : "border-accent/40 text-accent hover:bg-accent/10"
             }`}
-            title={p.status === "ativo" ? "Desativar projeto (bloqueia acesso, mantém os dados)" : "Ativar projeto (libera o acesso novamente)"}
+            title={
+              p.status === "ativo"
+                ? "Desativar projeto (bloqueia acesso, mantém os dados)"
+                : "Ativar projeto (libera o acesso novamente)"
+            }
           >
-            {p.status === "ativo" ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
+            {p.status === "ativo" ? (
+              <PowerOff className="h-3 w-3" />
+            ) : (
+              <Power className="h-3 w-3" />
+            )}
           </button>
         </div>
       )}
@@ -123,20 +152,27 @@ export function ProjectListPage() {
           <h1 className="mt-2 font-display text-5xl">Projetos</h1>
         </div>
         {isAdmin && (
-          <Link to="/projetos/novo" className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90">
+          <Link
+            to="/projetos/novo"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
+          >
             <Plus className="h-4 w-4" /> Novo projeto
           </Link>
         )}
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center text-sm text-muted-foreground">Carregando...</div>
+        <div className="rounded-xl border border-border bg-card p-12 text-center text-sm text-muted-foreground">
+          Carregando...
+        </div>
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
           <FolderKanban className="mx-auto h-10 w-10 text-muted-foreground" strokeWidth={1.2} />
           <h3 className="mt-4 font-display text-2xl">Nenhum projeto disponível</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {isAdmin ? "Crie o primeiro projeto." : "Você ainda não está vinculado a nenhum projeto. Fale com o administrador."}
+            {isAdmin
+              ? "Crie o primeiro projeto."
+              : "Você ainda não está vinculado a nenhum projeto. Fale com o administrador."}
           </p>
         </div>
       ) : (
@@ -149,7 +185,9 @@ export function ProjectListPage() {
             <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
               <FolderKanban className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.2} />
               <h3 className="mt-3 font-display text-xl">Nenhum projeto ativo</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Os projetos desativados ficam no menu abaixo.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Os projetos desativados ficam no menu abaixo.
+              </p>
             </div>
           )}
 

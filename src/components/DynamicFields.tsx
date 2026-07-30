@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DC_SECTIONS } from "@/lib/dc-sections";
 
 export type DataSource = "manual" | "areas" | "setores";
@@ -19,24 +25,42 @@ export type DynamicField = {
   field_key: string;
   label: string;
   section: string;
-  field_type: "text" | "textarea" | "number" | "date" | "checkbox" | "single_select" | "multi_select" | "competency_description";
+  field_type:
+    | "text"
+    | "textarea"
+    | "number"
+    | "date"
+    | "checkbox"
+    | "single_select"
+    | "multi_select"
+    | "competency_description";
   is_required: boolean;
   allows_free_text: boolean;
   data_source: DataSource;
   options: Array<{ id: string; label: string; value: string; description: string | null }>;
 };
 
-const controlClass = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-ring";
+const controlClass =
+  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-ring";
 
 function normalizeProjectAreaName(raw: string) {
-  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
-function resolveProjectAreaValue(value: string | number | boolean | string[] | undefined, options: ProjectArea[]) {
+function resolveProjectAreaValue(
+  value: string | number | boolean | string[] | undefined,
+  options: ProjectArea[],
+) {
   if (typeof value !== "string" || !value) return "";
   const direct = options.find((area) => area.id === value);
   if (direct) return direct.id;
-  const byName = options.find((area) => normalizeProjectAreaName(area.nome) === normalizeProjectAreaName(value));
+  const byName = options.find(
+    (area) => normalizeProjectAreaName(area.nome) === normalizeProjectAreaName(value),
+  );
   return byName?.id ?? "";
 }
 
@@ -46,7 +70,10 @@ export function normalizeFieldDataSource(field: {
   data_source?: string | null;
 }): DataSource {
   const key = field.field_key.toLowerCase();
-  const label = field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const label = field.label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
   if (key === "nivelamento") return "manual";
   if (key === "unidade_negocio" || key === "area" || label === "area") return "areas";
@@ -72,21 +99,28 @@ export function normalizeCoreFieldLabel(field: { field_key: string; label: strin
 }
 
 function normalizeText(raw: string) {
-  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 }
 
 function semanticFieldKey(field: { field_key: string; label: string }) {
   const key = field.field_key.toLowerCase();
   const label = normalizeText(field.label);
   if (key === "cargo" || label === "nomenclatura do cargo visivel") return "cargo";
-  if (key === "superior_imediato" || label === "cargo do superior imediato") return "superior_imediato";
+  if (key === "superior_imediato" || label === "cargo do superior imediato")
+    return "superior_imediato";
   if (key === "nivelamento") return "nivelamento";
   if (key === "unidade_negocio" || key === "area" || label === "area") return "area";
   if (key === "departamento" || key === "setor" || label === "setor") return "setor";
   return key;
 }
 
-function dedupeFields<T extends { field_key: string; label: string; section: string }>(fields: T[]) {
+function dedupeFields<T extends { field_key: string; label: string; section: string }>(
+  fields: T[],
+) {
   const seen = new Set<string>();
   return fields.filter((field) => {
     const semanticKey = `${field.section ?? ""}:${semanticFieldKey(field)}`;
@@ -104,20 +138,29 @@ export function useProjectFields(projectId: string) {
     setLoading(true);
     supabase
       .from("base_fields")
-      .select("id,field_key,label,section,field_type,is_required,allows_free_text,data_source,display_order,base_options(id,label,value,description,is_active,display_order)")
+      .select(
+        "id,field_key,label,section,field_type,is_required,allows_free_text,data_source,display_order,base_options(id,label,value,description,is_active,display_order)",
+      )
       .eq("project_id", projectId)
       .eq("is_active", true)
       .order("display_order")
       .then(({ data }) => {
-        setFields(dedupeFields(data ?? []).map((field) => ({
-          ...field,
-          label: normalizeCoreFieldLabel(field),
-          data_source: normalizeFieldDataSource(field),
-          options: (field.base_options ?? [])
-            .filter((option) => option.is_active)
-            .sort((a, b) => a.display_order - b.display_order)
-            .map(({ id, label, value, description }) => ({ id, label, value, description: description ?? null })),
-        })) as DynamicField[]);
+        setFields(
+          dedupeFields(data ?? []).map((field) => ({
+            ...field,
+            label: normalizeCoreFieldLabel(field),
+            data_source: normalizeFieldDataSource(field),
+            options: (field.base_options ?? [])
+              .filter((option) => option.is_active)
+              .sort((a, b) => a.display_order - b.display_order)
+              .map(({ id, label, value, description }) => ({
+                id,
+                label,
+                value,
+                description: description ?? null,
+              })),
+          })) as DynamicField[],
+        );
         setLoading(false);
       });
   }, [projectId]);
@@ -207,7 +250,12 @@ export function DynamicFieldControl({
   }, [field.options]);
 
   const slugify = (raw: string) =>
-    raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    raw
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
 
   const handleAddOption = async () => {
     const label = newOptionLabel.trim();
@@ -221,7 +269,10 @@ export function DynamicFieldControl({
         field_id: field.id,
         label,
         value: valueKey,
-        description: field.field_type === "competency_description" ? (newOptionDescription.trim() || null) : null,
+        description:
+          field.field_type === "competency_description"
+            ? newOptionDescription.trim() || null
+            : null,
         display_order: localOptions.length * 10 + 10,
         is_active: true,
       })
@@ -234,7 +285,12 @@ export function DynamicFieldControl({
       return;
     }
 
-    const nextOption = { id: data.id, label: data.label, value: data.value, description: data.description ?? null };
+    const nextOption = {
+      id: data.id,
+      label: data.label,
+      value: data.value,
+      description: data.description ?? null,
+    };
     setLocalOptions((prev) => [...prev, nextOption]);
     setNewOptionLabel("");
     setNewOptionDescription("");
@@ -243,7 +299,11 @@ export function DynamicFieldControl({
   };
 
   const renderOptionAdder = () => {
-    if (disabled || !["single_select", "multi_select", "competency_description"].includes(field.field_type)) return null;
+    if (
+      disabled ||
+      !["single_select", "multi_select", "competency_description"].includes(field.field_type)
+    )
+      return null;
 
     return (
       <>
@@ -260,7 +320,9 @@ export function DynamicFieldControl({
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Nova opção</DialogTitle>
-              <DialogDescription>Cadastre uma nova opção para este campo e ela será salva na base do projeto.</DialogDescription>
+              <DialogDescription>
+                Cadastre uma nova opção para este campo e ela será salva na base do projeto.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div>
@@ -274,7 +336,9 @@ export function DynamicFieldControl({
               </div>
               {field.field_type === "competency_description" && (
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">Descrição</label>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Descrição
+                  </label>
                   <textarea
                     value={newOptionDescription}
                     onChange={(e) => setNewOptionDescription(e.target.value)}
@@ -286,8 +350,19 @@ export function DynamicFieldControl({
               )}
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-md border border-border px-3 py-2 text-sm">Cancelar</button>
-              <button type="button" onClick={handleAddOption} disabled={savingOption || !newOptionLabel.trim()} className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-md border border-border px-3 py-2 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAddOption}
+                disabled={savingOption || !newOptionLabel.trim()}
+                className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
+              >
                 {savingOption ? "Salvando..." : "Salvar"}
               </button>
             </div>
@@ -304,7 +379,11 @@ export function DynamicFieldControl({
     return (
       <select {...common} value={selectedValue} onChange={(e) => onChange(e.target.value)}>
         <option value="">— Selecione —</option>
-        {opts.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+        {opts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.nome}
+          </option>
+        ))}
       </select>
     );
   }
@@ -313,17 +392,59 @@ export function DynamicFieldControl({
     const opts = parentAreaId ? allSetores.filter((a) => a.parent_id === parentAreaId) : [];
     const selectedValue = resolveProjectAreaValue(value, opts);
     return (
-      <select {...common} value={selectedValue} onChange={(e) => onChange(e.target.value)} disabled={disabled || !parentAreaId}>
+      <select
+        {...common}
+        value={selectedValue}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled || !parentAreaId}
+      >
         <option value="">{parentAreaId ? "— Selecione —" : "Selecione a Área primeiro"}</option>
-        {opts.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+        {opts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.nome}
+          </option>
+        ))}
       </select>
     );
   }
 
-  if (field.field_type === "textarea") return <textarea {...common} rows={4} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
-  if (field.field_type === "number") return <input {...common} type="number" value={String(value ?? "")} onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} />;
-  if (field.field_type === "date") return <input {...common} type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
-  if (field.field_type === "checkbox") return <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} disabled={disabled} className="h-5 w-5 accent-primary" />;
+  if (field.field_type === "textarea")
+    return (
+      <textarea
+        {...common}
+        rows={4}
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  if (field.field_type === "number")
+    return (
+      <input
+        {...common}
+        type="number"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+      />
+    );
+  if (field.field_type === "date")
+    return (
+      <input
+        {...common}
+        type="date"
+        value={String(value ?? "")}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  if (field.field_type === "checkbox")
+    return (
+      <input
+        type="checkbox"
+        checked={Boolean(value)}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        className="h-5 w-5 accent-primary"
+      />
+    );
   if (field.field_type === "multi_select") {
     const selected = Array.isArray(value) ? value : [];
     return (
@@ -334,7 +455,19 @@ export function DynamicFieldControl({
         </div>
         {localOptions.map((option) => (
           <label key={option.id} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={selected.includes(option.value)} onChange={(e) => onChange(e.target.checked ? [...selected, option.value] : selected.filter((item) => item !== option.value))} disabled={disabled} className="h-4 w-4 rounded" />
+            <input
+              type="checkbox"
+              checked={selected.includes(option.value)}
+              onChange={(e) =>
+                onChange(
+                  e.target.checked
+                    ? [...selected, option.value]
+                    : selected.filter((item) => item !== option.value),
+                )
+              }
+              disabled={disabled}
+              className="h-4 w-4 rounded"
+            />
             {option.label}
           </label>
         ))}
@@ -346,15 +479,28 @@ export function DynamicFieldControl({
     return (
       <div className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_2.5fr]">
         <div className="flex items-center gap-2">
-          <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={`${controlClass} flex-1`}>
+          <select
+            {...common}
+            value={String(value ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+            className={`${controlClass} flex-1`}
+          >
             <option value="">— Selecione —</option>
-            {localOptions.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
+            {localOptions.map((option) => (
+              <option key={option.id} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
           {renderOptionAdder()}
         </div>
-        <div className={`${controlClass} min-h-[4rem] rounded-lg bg-muted/20 text-muted-foreground`}>
+        <div
+          className={`${controlClass} min-h-[4rem] rounded-lg bg-muted/20 text-muted-foreground`}
+        >
           <div className="flex h-full items-center p-3 text-sm leading-6">
-            {selected?.description || <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>}
+            {selected?.description || (
+              <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>
+            )}
           </div>
         </div>
       </div>
@@ -363,13 +509,24 @@ export function DynamicFieldControl({
   if (field.field_type === "single_select") {
     return (
       <div className="flex items-center gap-2">
-        <select {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className={`${controlClass} flex-1`}>
+        <select
+          {...common}
+          value={String(value ?? "")}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${controlClass} flex-1`}
+        >
           <option value="">— Selecione —</option>
-          {localOptions.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
+          {localOptions.map((option) => (
+            <option key={option.id} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         {renderOptionAdder()}
       </div>
     );
   }
-  return <input {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
+  return (
+    <input {...common} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />
+  );
 }

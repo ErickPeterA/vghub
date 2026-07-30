@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 type FieldType = "text" | "textarea" | "select";
@@ -863,7 +864,9 @@ function pickItemValue(item: Record<string, unknown>, preferredKeys: string[]) {
     .map(([, value]) => stringFromUnknown(value))
     .filter(
       (value) =>
-        value && !["sim", "nao", "não"].includes(normalizeLookup(value)) && !isInternalOptionValue(value),
+        value &&
+        !["sim", "nao", "não"].includes(normalizeLookup(value)) &&
+        !isInternalOptionValue(value),
     );
   return values.sort((a, b) => b.length - a.length)[0] ?? "";
 }
@@ -899,7 +902,10 @@ function isNonTitleValue(value: string) {
   );
 }
 
-function fieldsForDynamicSource(fields: BaseFieldRow[], source: PerformanceQuestion["dynamicSource"]) {
+function fieldsForDynamicSource(
+  fields: BaseFieldRow[],
+  source: PerformanceQuestion["dynamicSource"],
+) {
   const sectionNames: Record<NonNullable<PerformanceQuestion["dynamicSource"]>, string[]> = {
     activities: ["atividades"],
     indicators: ["indicadores"],
@@ -1033,7 +1039,11 @@ function dynamicItemTitle(
     "descrição",
   ]);
   return (
-    pickItemValueFromExactLabel(item, sourceFields, titleLabels[question.dynamicSource ?? ""] ?? []) ||
+    pickItemValueFromExactLabel(
+      item,
+      sourceFields,
+      titleLabels[question.dynamicSource ?? ""] ?? [],
+    ) ||
     pickItemValueFromExactKey(item, titleKeys[question.dynamicSource ?? ""] ?? []) ||
     titleFromFields ||
     pickItemValue(item, [
@@ -1054,8 +1064,8 @@ function buildReviewQuestions(
   dc: DcRow,
   reviewType: ReviewType,
   fields: BaseFieldRow[] = [],
-) {
-  const activeQuestions = (configQuestions ?? [])
+): PerformanceQuestion[] {
+  const activeQuestions: PerformanceQuestion[] = (configQuestions ?? [])
     .filter((question) => question.active ?? true)
     .map((question) => ({ ...question, source: "config" as const }));
   if (reviewType !== "performance") return activeQuestions;
@@ -1063,25 +1073,25 @@ function buildReviewQuestions(
   return activeQuestions.flatMap((question) => {
     if (!question.dynamicSource) return [question];
     const items = dynamicItemsForQuestion(dc, question);
-    return items
-      .map((item, index) => {
-        const title = dynamicItemTitle(question, item, fields);
-        if (!title) return null;
-        return {
-          ...question,
-          id: `${question.id}_${index + 1}`,
-          source: "job_description" as const,
-          groupId: `${question.dynamicSource}_${index + 1}`,
-          groupTitle: title,
-          helpText: question.helpText,
-        };
-      })
-      .filter((question): question is PerformanceQuestion => Boolean(question));
+    return items.reduce<PerformanceQuestion[]>((questions, item, index) => {
+      const title = dynamicItemTitle(question, item, fields);
+      if (!title) return questions;
+      questions.push({
+        ...question,
+        id: `${question.id}_${index + 1}`,
+        source: "job_description" as const,
+        groupId: `${question.dynamicSource}_${index + 1}`,
+        groupTitle: title,
+        helpText: question.helpText,
+      });
+      return questions;
+    }, []);
   });
 }
 
 function displayQuestionGroupTitle(question: PerformanceQuestion) {
-  if (question.groupTitle && !isInternalOptionValue(question.groupTitle)) return question.groupTitle;
+  if (question.groupTitle && !isInternalOptionValue(question.groupTitle))
+    return question.groupTitle;
   const sourceLabel: Record<string, string> = {
     activities: "Atividade",
     indicators: "Indicador",
@@ -1330,7 +1340,7 @@ export function PerformanceComparisonPage({
       .eq("id", review.id);
     if (error) return toast.error(error.message);
     if (review.employee_id) {
-      await (supabase as any)
+      await supabase
         .from("project_employees")
         .update({
           last_performance_review_date: review.due_date ?? new Date().toISOString().slice(0, 10),
@@ -1502,7 +1512,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
       .eq("project_id", projectId)
       .maybeSingle();
     if (data) {
-      const cfg = data as ConfigRow;
+      const cfg = toConfigRow(data);
       setConfigId(cfg.id);
       setQuestions((cfg.questions_schema ?? []).map((q) => ({ ...q, active: q.active ?? true })));
       setIsActive(cfg.is_active);
@@ -1747,7 +1757,7 @@ export function PerformancePeriodConfigPanel({
       return;
     }
 
-    let rows = ((data ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    let rows = toConfigRows(data);
     const missingTypes = (["experience", "performance"] as ReviewType[]).filter(
       (type) => !rows.some((config) => (config.review_type ?? "experience") === type),
     );
@@ -1774,7 +1784,7 @@ export function PerformancePeriodConfigPanel({
           ? refreshedQuery.eq("project_id", projectId)
           : refreshedQuery.is("project_id", null);
         const { data: refreshed } = await refreshedQuery;
-        rows = ((refreshed ?? []) as ConfigRow[]).map(normalizeConfigRow);
+        rows = toConfigRows(refreshed);
       }
     }
 
@@ -1818,9 +1828,9 @@ export function PerformancePeriodConfigPanel({
         name: modelName.trim(),
         period_days: selectedConfig.period_days ?? EXPERIENCE_LIMIT_DAYS,
         review_type: selectedConfig.review_type ?? "experience",
-        questions_schema: questions,
+        questions_schema: toJson(questions),
         is_active: isActive,
-      } as any)
+      })
       .eq("id", selectedConfig.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -2095,6 +2105,22 @@ function normalizeConfigRow(config: ConfigRow): ConfigRow {
   };
 }
 
+function toConfigRow(row: unknown): ConfigRow {
+  return normalizeConfigRow(row as ConfigRow);
+}
+
+function toConfigRows(rows: unknown): ConfigRow[] {
+  return ((rows ?? []) as ConfigRow[]).map(normalizeConfigRow);
+}
+
+function toReviewRows(rows: unknown): ReviewRow[] {
+  return (rows ?? []) as ReviewRow[];
+}
+
+function toJson(value: unknown): Json {
+  return value as Json;
+}
+
 function periodLabel(config: ConfigRow) {
   const normalized = normalizeConfigRow(config);
   return normalized.name?.trim() || reviewTypeLabel(normalized.review_type ?? "experience");
@@ -2235,44 +2261,43 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       { data: dcs },
       { data: cfgs },
       { data: fields },
-    ] =
-      await Promise.all([
-        supabase
-          .from("performance_reviews")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("due_date", { ascending: true }),
-        supabase
-          .from("project_positions")
-          .select("id,nome,parent_id")
-          .eq("project_id", projectId)
-          .eq("status", "active")
-          .order("display_order"),
-        (supabase as any)
-          .from("project_employees")
-          .select(
-            "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
-          )
-          .eq("project_id", projectId)
-          .order("nome"),
-        supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
-        supabase
-          .from("performance_review_configs")
-          .select("*")
-          .eq("project_id", projectId)
-          .eq("is_active", true)
-          .order("period_days", { ascending: true }),
-        supabase
-          .from("base_fields")
-          .select("field_key,label,section,base_options(label,value,is_active)")
-          .eq("project_id", projectId)
-          .eq("is_active", true),
-      ]);
-    setReviews((revs ?? []) as ReviewRow[]);
+    ] = await Promise.all([
+      supabase
+        .from("performance_reviews")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("project_positions")
+        .select("id,nome,parent_id")
+        .eq("project_id", projectId)
+        .eq("status", "active")
+        .order("display_order"),
+      supabase
+        .from("project_employees")
+        .select(
+          "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
+        )
+        .eq("project_id", projectId)
+        .order("nome"),
+      supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
+      supabase
+        .from("performance_review_configs")
+        .select("*")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("period_days", { ascending: true }),
+      supabase
+        .from("base_fields")
+        .select("field_key,label,section,base_options(label,value,is_active)")
+        .eq("project_id", projectId)
+        .eq("is_active", true),
+    ]);
+    setReviews(toReviewRows(revs));
     setPositions((pos ?? []) as PositionRow[]);
     setEmployees((emps ?? []) as PerfEmployeeRow[]);
     setDescriptions((dcs ?? []) as DcRow[]);
-    setConfigs(((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow));
+    setConfigs(toConfigRows(cfgs));
     setBaseFields((fields ?? []) as BaseFieldRow[]);
     setLoading(false);
   }, [projectId]);
@@ -2391,16 +2416,21 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           period_days: item.periodDays,
           due_date: item.dueDate,
           review_type: item.reviewType,
-          job_description_snapshot: item.description,
-          activities_snapshot: [],
-          questions_snapshot: questions,
+          job_description_snapshot: toJson(item.description),
+          activities_snapshot: toJson([]),
+          questions_snapshot: toJson(questions),
           created_by: user?.id ?? null,
         })
         .select("id")
         .single();
       if (error || !review) return toast.error(error?.message ?? "Nao foi possivel criar.");
       const { error: partErr } = await supabase.from("performance_review_participants").insert([
-        { review_id: review.id, project_id: projectId, participant_type: "collaborator", expires_at },
+        {
+          review_id: review.id,
+          project_id: projectId,
+          participant_type: "collaborator",
+          expires_at,
+        },
         { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
       ]);
       if (partErr) return toast.error(partErr.message);
@@ -2590,7 +2620,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         .eq("project_id", projectId)
         .eq("status", "active")
         .order("display_order"),
-      (supabase as any)
+      supabase
         .from("project_employees")
         .select(
           "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
@@ -2610,12 +2640,12 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         .eq("project_id", projectId)
         .eq("is_active", true),
     ]);
-    setReviews((revs ?? []) as ReviewRow[]);
+    setReviews(toReviewRows(revs));
     setParticipants((parts ?? []) as ParticipantRow[]);
     setPositions((pos ?? []) as PositionRow[]);
     setEmployees((emps ?? []) as PerfEmployeeRow[]);
     setDescriptions((dcs ?? []) as DcRow[]);
-    const rows = ((cfgs ?? []) as ConfigRow[]).map(normalizeConfigRow);
+    const rows = toConfigRows(cfgs);
     setConfigs(rows);
     setBaseFields((fields ?? []) as BaseFieldRow[]);
     setConfigId((current) => current || rows[0]?.id || "");
@@ -2700,62 +2730,68 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
 
   const createReview = async () => {
     try {
-    if (!name.trim()) return toast.error("Informe o nome da avaliação.");
-    if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
-    if (!selectedEmployeeIsBelowLeader)
-      return toast.error("Selecione um colaborador que responda diretamente para este lider.");
-    if (!selectedDc)
-      return toast.error("Este colaborador não possui descrição de cargo vinculada.");
-    if (!selectedConfig || !selectedConfig.is_active)
-      return toast.error("Selecione um modelo ativo antes de criar.");
-    const employeePosition = positions.find((p) => p.id === employeePositionId);
-    const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
-    if (!employeePosition || !leaderPosition) return toast.error("Colaborador ou líder inválido.");
+      if (!name.trim()) return toast.error("Informe o nome da avaliação.");
+      if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
+      if (!selectedEmployeeIsBelowLeader)
+        return toast.error("Selecione um colaborador que responda diretamente para este lider.");
+      if (!selectedDc)
+        return toast.error("Este colaborador não possui descrição de cargo vinculada.");
+      if (!selectedConfig || !selectedConfig.is_active)
+        return toast.error("Selecione um modelo ativo antes de criar.");
+      const employeePosition = positions.find((p) => p.id === employeePositionId);
+      const leaderPosition = positions.find((p) => p.id === selectedLeader.position_id);
+      if (!employeePosition || !leaderPosition)
+        return toast.error("Colaborador ou líder inválido.");
 
-    const questions = buildReviewQuestions(
-      selectedConfig.questions_schema ?? [],
-      selectedDc,
-      formReviewType,
-      baseFields,
-    );
-    const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      const questions = buildReviewQuestions(
+        selectedConfig.questions_schema ?? [],
+        selectedDc,
+        formReviewType,
+        baseFields,
+      );
+      const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: review, error } = await supabase
-      .from("performance_reviews")
-      .insert({
-        project_id: projectId,
-        config_id: selectedConfig.id,
-        employee_id: selectedEmployee.id,
-        name: name.trim(),
-        employee_position_id: employeePositionId,
-        leader_position_id: selectedLeader.position_id,
-        job_description_id: selectedDc.id,
-        employee_name: selectedEmployee.nome,
-        leader_name: selectedLeader.nome,
-        job_title: selectedDc.cargo || employeePosition.nome,
-        period_name: reviewPeriodLabel(reviewPeriodDays, formReviewType),
-        period_days: reviewPeriodDays,
-        due_date: expectedReviewDate,
-        review_type: formReviewType,
-        job_description_snapshot: selectedDc,
-        activities_snapshot: [],
-        questions_snapshot: questions,
-        created_by: user?.id ?? null,
-      })
-      .select("id")
-      .single();
-    if (error || !review) return toast.error(error?.message ?? "Não foi possível criar.");
+      const { data: review, error } = await supabase
+        .from("performance_reviews")
+        .insert({
+          project_id: projectId,
+          config_id: selectedConfig.id,
+          employee_id: selectedEmployee.id,
+          name: name.trim(),
+          employee_position_id: employeePositionId,
+          leader_position_id: selectedLeader.position_id,
+          job_description_id: selectedDc.id,
+          employee_name: selectedEmployee.nome,
+          leader_name: selectedLeader.nome,
+          job_title: selectedDc.cargo || employeePosition.nome,
+          period_name: reviewPeriodLabel(reviewPeriodDays, formReviewType),
+          period_days: reviewPeriodDays,
+          due_date: expectedReviewDate,
+          review_type: formReviewType,
+          job_description_snapshot: toJson(selectedDc),
+          activities_snapshot: toJson([]),
+          questions_snapshot: toJson(questions),
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (error || !review) return toast.error(error?.message ?? "Não foi possível criar.");
 
-    const { error: partErr } = await supabase.from("performance_review_participants").insert([
-      { review_id: review.id, project_id: projectId, participant_type: "collaborator", expires_at },
-      { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
-    ]);
-    if (partErr) return toast.error(partErr.message);
-    setName("");
-    setEmployeeId("");
-    setLeaderEmployeeId("");
-    toast.success("Avaliação criada");
-    await load();
+      const { error: partErr } = await supabase.from("performance_review_participants").insert([
+        {
+          review_id: review.id,
+          project_id: projectId,
+          participant_type: "collaborator",
+          expires_at,
+        },
+        { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
+      ]);
+      if (partErr) return toast.error(partErr.message);
+      setName("");
+      setEmployeeId("");
+      setLeaderEmployeeId("");
+      toast.success("Avaliação criada");
+      await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nao foi possivel criar.");
     }
@@ -2770,7 +2806,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       if (participant.status === "not_sent") {
         await supabase
           .from("performance_review_participants")
-          .update({ status: "sent", sent_at: new Date().toISOString() } as any)
+          .update({ status: "sent", sent_at: new Date().toISOString() })
           .eq("id", participant.id);
       }
       toast.success("Link copiado");
