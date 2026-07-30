@@ -4,13 +4,14 @@ import {
   BarChart3,
   ClipboardCheck,
   ClipboardList,
-  Database,
   FileText,
   GitFork,
   History,
+  Layers,
   Network,
   Settings,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +72,7 @@ export function ProjectSidebar({
   }, [projectId, user]);
 
   const isLider = !isAdmin && projectRole !== null && LIDER_ROLES.has(projectRole);
+  const canManageProjectModels = isAdmin || projectRole === "gp" || projectRole === "admin";
 
   const allItems = [
     {
@@ -110,12 +112,16 @@ export function ProjectSidebar({
       icon: Network,
       label: "Áreas",
     },
-    {
-      to: "/projetos/$projectId/base",
-      href: `/projetos/${projectId}/base`,
-      icon: Database,
-      label: "Base do Projeto",
-    },
+    ...(canManageProjectModels
+      ? [
+          {
+            to: "/projetos/$projectId/base",
+            href: `/projetos/${projectId}/base`,
+            icon: Layers,
+            label: "Configuração de Modelos",
+          },
+        ]
+      : []),
     {
       to: "/projetos/$projectId/andamento",
       href: `/projetos/${projectId}/andamento`,
@@ -138,7 +144,7 @@ export function ProjectSidebar({
           },
         ]
       : []),
-  ] as Array<{ to: string; href: string; icon: typeof Database; label: string; badge?: number }>;
+  ] as Array<{ to: string; href: string; icon: LucideIcon; label: string; badge?: number }>;
 
   const items = isLider
     ? allItems.filter(
@@ -146,7 +152,6 @@ export function ProjectSidebar({
           i.href.endsWith("/descricao-cargo") ||
           i.label === "Organograma" ||
           i.label === "Funcionarios" ||
-          i.label === "Base do Projeto" ||
           i.label === "Andamento",
       )
     : allItems;

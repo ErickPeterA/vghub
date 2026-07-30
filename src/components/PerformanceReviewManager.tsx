@@ -1105,7 +1105,7 @@ function displayQuestionGroupTitle(question: PerformanceQuestion) {
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
   const { user, isAdmin } = useCurrentUser();
-  const [tab, setTab] = useState<"reviews" | "schedule" | "config">("reviews");
+  const [tab, setTab] = useState<"reviews" | "schedule">("reviews");
   const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
@@ -1158,11 +1158,6 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
                 Agenda
               </TabButton>
             )}
-            {canManage && (
-              <TabButton active={tab === "config"} onClick={() => setTab("config")}>
-                Modelos
-              </TabButton>
-            )}
           </div>
         </div>
 
@@ -1171,8 +1166,6 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
             <div className="rounded-xl border border-dashed border-[#042558]/20 p-8 text-center text-sm text-[#042558]/50">
               Apenas GP e administradores podem criar e comparar avaliacoes.
             </div>
-          ) : tab === "config" ? (
-            <PerformancePeriodConfigPanel projectId={projectId} />
           ) : tab === "schedule" ? (
             <PerformanceAgendaPanel projectId={projectId} />
           ) : (

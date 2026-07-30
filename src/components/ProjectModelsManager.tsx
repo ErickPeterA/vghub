@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ClipboardCheck, FileText, Layers } from "lucide-react";
+import { ClipboardCheck, ClipboardList, FileText, Layers } from "lucide-react";
+import { ActivityConfigManager } from "@/components/ActivityConfigManager";
 import { BaseManager } from "@/components/BaseManager";
 import { PerformancePeriodConfigPanel } from "@/components/PerformanceReviewManager";
 
 type ModelBlock =
   | { key: "job_description"; label: string; description: string; icon: typeof FileText }
+  | { key: "activities"; label: string; description: string; icon: typeof ClipboardList }
   | {
       key: "experience";
       label: string;
@@ -28,6 +30,12 @@ const blocks: ModelBlock[] = [
     icon: FileText,
   },
   {
+    key: "activities",
+    label: "Modelo de atividades",
+    description: "Cabecalho e perguntas usados nos links de coleta de atividades.",
+    icon: ClipboardList,
+  },
+  {
     key: "experience",
     label: "Modelo de experiencia",
     description: "Perguntas usadas nas avaliacoes de 30, 45 e 90 dias.",
@@ -44,7 +52,8 @@ const blocks: ModelBlock[] = [
 ];
 
 export function ProjectModelsManager({ projectId = null }: { projectId?: string | null }) {
-  const [selected, setSelected] = useState<ModelBlock>(blocks[0]);
+  const availableBlocks = projectId ? blocks : blocks.filter((block) => block.key !== "activities");
+  const [selected, setSelected] = useState<ModelBlock>(availableBlocks[0]);
 
   const selectedReviewType = "reviewType" in selected ? selected.reviewType : null;
   const isGlobal = projectId === null;
@@ -60,8 +69,9 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             Configurar modelos
           </h1>
           <p className="mt-1 text-sm text-[#042558]/60">
-            Defina os modelos que entram como base para as descricoes de cargo e avaliacoes de todos
-            os projetos.
+            {isGlobal
+              ? "Defina os modelos que entram como base para as descricoes de cargo e avaliacoes de todos os projetos."
+              : "Centralize os modelos de descricao de cargo, atividades, experiencia e desempenho deste projeto."}
           </p>
         </div>
 
@@ -70,8 +80,8 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             <Layers className="h-4 w-4" />
             Blocos de modelos
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {blocks.map((block) => {
+          <div className="grid gap-3 md:grid-cols-4">
+            {availableBlocks.map((block) => {
               const active = selected.key === block.key;
               const Icon = block.icon;
               return (
@@ -113,6 +123,10 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             }
             embedded
           />
+        ) : selected.key === "activities" && projectId ? (
+          <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
+            <ActivityConfigManager projectId={projectId} />
+          </div>
         ) : (
           <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
             <PerformancePeriodConfigPanel

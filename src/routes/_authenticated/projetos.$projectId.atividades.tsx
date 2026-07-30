@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ActivityConfigManager } from "@/components/ActivityConfigManager";
 import { ActivityCompilationPanel, ActivityLinksPanel } from "@/components/ActivityLinksPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -12,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/ativid
 function AtividadesPage() {
   const { projectId } = Route.useParams();
   const { user, isAdmin } = useCurrentUser();
-  const [tab, setTab] = useState<"config" | "links" | "compilation">("links");
+  const [tab, setTab] = useState<"links" | "compilation">("links");
   const [unreviewed, setUnreviewed] = useState(0);
   const [canManage, setCanManage] = useState(false);
 
@@ -52,8 +51,7 @@ function AtividadesPage() {
               Coleta de atividades
             </h1>
             <p className="mt-1 text-sm text-[#042558]/60">
-              Configure o formulário, preencha o cabeçalho, gere links para colaboradores e receba
-              as respostas.
+              Preencha o cabeçalho, gere links para colaboradores e receba as respostas.
             </p>
           </div>
         </div>
@@ -69,11 +67,6 @@ function AtividadesPage() {
               )}
             </TabBtn>
             {canManage && (
-              <TabBtn active={tab === "config"} onClick={() => setTab("config")}>
-                Configuração
-              </TabBtn>
-            )}
-            {canManage && (
               <TabBtn active={tab === "compilation"} onClick={() => setTab("compilation")}>
                 Concluídos
               </TabBtn>
@@ -85,10 +78,8 @@ function AtividadesPage() {
           <div className="rounded-2xl bg-white/40 p-6">
             {!canManage ? (
               <div className="rounded-xl border border-dashed border-[#042558]/20 p-8 text-center text-sm text-[#042558]/50">
-                Apenas GP e administradores podem configurar atividades e gerar links.
+                Apenas GP e administradores podem gerar links de atividades.
               </div>
-            ) : tab === "config" ? (
-              <ActivityConfigManager projectId={projectId} />
             ) : tab === "compilation" ? (
               <ActivityCompilationPanel projectId={projectId} />
             ) : (
