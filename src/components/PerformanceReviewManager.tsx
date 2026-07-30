@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Copy,
   Eye,
@@ -2234,16 +2236,77 @@ function SelectOptionsEditor({
   );
 }
 
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+const MONTH_LABELS = [
+  "Janeiro",
+  "Fevereiro",
+  "Marco",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+type AgendaState = "done" | "late" | "sent" | "upcoming";
+
+const AGENDA_STATE_DOT: Record<AgendaState, string> = {
+  done: "bg-[#042558]/25",
+  late: "bg-red-500",
+  sent: "bg-emerald-500",
+  upcoming: "bg-[#042558]",
+};
+const AGENDA_STATE_BADGE: Record<AgendaState, string> = {
+  done: "bg-[#042558]/5 text-[#042558]/50",
+  late: "bg-red-50 text-red-700",
+  sent: "bg-emerald-50 text-emerald-700",
+  upcoming: "bg-[#042558]/10 text-[#042558]",
+};
+const AGENDA_STATE_LABEL: Record<AgendaState, string> = {
+  done: "Concluida",
+  late: "Atrasada",
+  sent: "Link enviado",
+  upcoming: "Link nao enviado",
+};
+
+type AgendaEntry = AgendaItem & {
+  state: AgendaState;
+  linkSent: boolean;
+  token: string | null;
+  areaName: string;
+  sectorName: string;
+};
+
+function toLocalDateKey(date: Date) {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   const { user } = useCurrentUser();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
+  const [participants, setParticipants] = useState<ParticipantRow[]>([]);
+  const [areas, setAreas] = useState<Array<{ id: string; nome: string }>>([]);
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [employees, setEmployees] = useState<PerfEmployeeRow[]>([]);
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [baseFields, setBaseFields] = useState<BaseFieldRow[]>([]);
   const [query, setQuery] = useState("");
+  const [leaderFilter, setLeaderFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | ReviewType>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | AgendaState>("all");
   const [loading, setLoading] = useState(true);
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2254,6 +2317,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       { data: dcs },
       { data: cfgs },
       { data: fields },
+      { data: parts },
+      { data: areaRows },
     ] = await Promise.all([
       supabase
         .from("performance_reviews")
@@ -2285,6 +2350,11 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         .select("field_key,label,section,base_options(label,value,is_active)")
         .eq("project_id", projectId)
         .eq("is_active", true),
+      supabase
+        .from("performance_review_participants")
+        .select("id,review_id,participant_type,token,status,expires_at,sent_at,submitted_at")
+        .eq("project_id", projectId),
+      supabase.from("project_areas").select("id,nome").eq("project_id", projectId),
     ]);
     setReviews(toReviewRows(revs));
     setPositions((pos ?? []) as PositionRow[]);
@@ -2292,6 +2362,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
     setDescriptions((dcs ?? []) as DcRow[]);
     setConfigs(toConfigRows(cfgs));
     setBaseFields((fields ?? []) as BaseFieldRow[]);
+    setParticipants((parts ?? []) as ParticipantRow[]);
+    setAreas((areaRows ?? []) as Array<{ id: string; nome: string }>);
     setLoading(false);
   }, [projectId]);
 
@@ -2299,7 +2371,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
     void load();
   }, [load]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalDateKey(new Date());
+
   const agendaItems = useMemo<AgendaItem[]>(() => {
     return employees
       .flatMap((employee) => {
@@ -2340,7 +2413,6 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           };
         });
       })
-      .filter((item) => !item.existingReview || item.existingReview.status !== "finalized")
       .sort(
         (a, b) =>
           a.dueDate.localeCompare(b.dueDate) ||
@@ -2348,31 +2420,120 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       );
   }, [configs, descriptions, employees, positions, reviews, today]);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const groupedAgenda = useMemo(() => {
-    const filtered = normalizedQuery
-      ? agendaItems.filter((item) => {
-          const text = [
-            item.employee.nome,
-            item.employeePosition?.nome,
-            item.leader?.nome,
-            reviewPeriodLabel(item.periodDays, item.reviewType),
-            reviewTypeLabel(item.reviewType),
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return text.includes(normalizedQuery);
-        })
-      : agendaItems;
-    const byEmployee = new Map<string, AgendaItem[]>();
-    filtered.forEach((item) => {
-      byEmployee.set(item.employee.id, [...(byEmployee.get(item.employee.id) ?? []), item]);
+  const entries = useMemo<AgendaEntry[]>(() => {
+    const areaById = new Map(areas.map((area) => [area.id, area.nome]));
+    return agendaItems.map((item) => {
+      const reviewParticipants = item.existingReview
+        ? participants.filter((part) => part.review_id === item.existingReview?.id)
+        : [];
+      const collaborator =
+        reviewParticipants.find((part) => part.participant_type === "collaborator") ??
+        reviewParticipants[0] ??
+        null;
+      const linkSent = reviewParticipants.some(
+        (part) => Boolean(part.sent_at) || part.status !== "not_sent",
+      );
+      const isFinalized = item.existingReview?.status === "finalized";
+      const state: AgendaState = isFinalized
+        ? "done"
+        : item.dueDate < today && !linkSent
+          ? "late"
+          : linkSent
+            ? "sent"
+            : "upcoming";
+      return {
+        ...item,
+        state,
+        linkSent,
+        token: collaborator?.token ?? null,
+        areaName: areaById.get(item.employee.area_id ?? "") ?? "",
+        sectorName: areaById.get(item.employee.sector_id ?? "") ?? "",
+      };
     });
-    return Array.from(byEmployee.values()).sort((a, b) =>
-      a[0].employee.nome.localeCompare(b[0].employee.nome, "pt-BR"),
-    );
-  }, [agendaItems, normalizedQuery]);
+  }, [agendaItems, areas, participants, today]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      if (leaderFilter !== "all" && (entry.leader?.id ?? "none") !== leaderFilter) return false;
+      if (typeFilter !== "all" && entry.reviewType !== typeFilter) return false;
+      if (statusFilter !== "all" && entry.state !== statusFilter) return false;
+      if (!normalizedQuery) return true;
+      return [
+        entry.employee.nome,
+        entry.employeePosition?.nome,
+        entry.leader?.nome,
+        entry.areaName,
+        reviewTypeLabel(entry.reviewType),
+        reviewPeriodLabel(entry.periodDays, entry.reviewType),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    });
+  }, [entries, leaderFilter, normalizedQuery, statusFilter, typeFilter]);
+
+  const byDate = useMemo(() => {
+    const map = new Map<string, AgendaEntry[]>();
+    filteredEntries.forEach((entry) => {
+      map.set(entry.dueDate, [...(map.get(entry.dueDate) ?? []), entry]);
+    });
+    return map;
+  }, [filteredEntries]);
+
+  const monthKey = `${monthCursor.getFullYear()}-${`${monthCursor.getMonth() + 1}`.padStart(2, "0")}`;
+  const monthEntries = filteredEntries.filter((entry) => entry.dueDate.startsWith(monthKey));
+  const monthNotSent = monthEntries.filter((entry) => entry.state === "upcoming").length;
+  const monthLate = monthEntries.filter((entry) => entry.state === "late").length;
+
+  const weeks = useMemo(() => {
+    const firstDay = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+    const start = new Date(firstDay);
+    start.setDate(1 - firstDay.getDay());
+    const cells: Date[] = [];
+    for (let index = 0; index < 42; index += 1) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      cells.push(date);
+    }
+    const rows: Date[][] = [];
+    for (let index = 0; index < cells.length; index += 7) rows.push(cells.slice(index, index + 7));
+    return rows.filter((row) => row.some((date) => date.getMonth() === monthCursor.getMonth()));
+  }, [monthCursor]);
+
+  const leaderOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    entries.forEach((entry) => {
+      if (entry.leader) map.set(entry.leader.id, entry.leader.nome);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
+  }, [entries]);
+
+  const selectedEntries = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
+
+  const markLinkSent = async (entry: AgendaEntry) => {
+    if (!entry.existingReview) return;
+    await supabase
+      .from("performance_review_participants")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("review_id", entry.existingReview.id)
+      .eq("status", "not_sent");
+    await load();
+  };
+
+  const copyLink = async (entry: AgendaEntry) => {
+    if (!entry.token) return toast.error("Link indisponivel para esta avaliacao.");
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/avaliacao-desempenho/preencher/${entry.token}`,
+      );
+      toast.success("Link copiado");
+      await markLinkSent(entry);
+    } catch {
+      toast.error("Nao foi possivel copiar o link.");
+    }
+  };
 
   const createAgendaReview = async (item: AgendaItem) => {
     try {
@@ -2442,22 +2603,92 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             Agenda de avaliacoes
           </h2>
           <p className="mt-1 text-xs text-[#042558]/50">
-            Organizada por pessoa. Ate 90 dias entra como experiencia; depois disso entra como
-            desempenho.
+            {monthEntries.length} previstas · {monthNotSent} links nao enviados · {monthLate}{" "}
+            atrasadas
           </p>
         </div>
-        <span className="w-fit rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-          {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length}{" "}
-          notificacao(oes)
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setMonthCursor(
+                (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+              )
+            }
+            className="rounded-lg border border-[#042558]/15 p-2 text-[#042558] hover:bg-[#042558]/5"
+            aria-label="Mes anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-[9rem] text-center text-sm font-semibold text-[#042558]">
+            {MONTH_LABELS[monthCursor.getMonth()]} {monthCursor.getFullYear()}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setMonthCursor(
+                (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+              )
+            }
+            className="rounded-lg border border-[#042558]/15 p-2 text-[#042558] hover:bg-[#042558]/5"
+            aria-label="Proximo mes"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+              setSelectedDate(toLocalDateKey(now));
+            }}
+            className="rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+          >
+            Hoje
+          </button>
+        </div>
       </div>
 
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        className={inputClass}
-        placeholder="Pesquisar pessoa, cargo, lider ou modelo"
-      />
+      <div className="grid gap-2 md:grid-cols-4">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className={inputClass}
+          placeholder="Pesquisar pessoa, cargo ou lider"
+        />
+        <select
+          value={leaderFilter}
+          onChange={(event) => setLeaderFilter(event.target.value)}
+          className={inputClass}
+        >
+          <option value="all">Todos os lideres</option>
+          {leaderOptions.map(([id, nome]) => (
+            <option key={id} value={id}>
+              {nome}
+            </option>
+          ))}
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(event) => setTypeFilter(event.target.value as "all" | ReviewType)}
+          className={inputClass}
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="experience">Experiencia</option>
+          <option value="performance">Desempenho</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as "all" | AgendaState)}
+          className={inputClass}
+        >
+          <option value="all">Todos os status</option>
+          <option value="upcoming">Links nao enviados</option>
+          <option value="sent">Links enviados</option>
+          <option value="late">Somente atrasadas</option>
+          <option value="done">Concluidas</option>
+        </select>
+      </div>
 
       {loading ? (
         <div className="rounded-xl border border-[#042558]/10 bg-white/60 p-8 text-center text-sm text-[#042558]/45">
@@ -2467,105 +2698,160 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-8 text-center text-sm text-[#042558]/45">
           Nenhum modelo ativo. Ative os modelos que devem entrar na agenda.
         </div>
-      ) : groupedAgenda.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-8 text-center text-sm text-[#042558]/45">
-          Nenhuma pessoa encontrada na agenda.
-        </div>
       ) : (
-        <div className="space-y-3">
-          {groupedAgenda.map((items) => {
-            const employee = items[0].employee;
-            const position = items[0].employeePosition;
-            const dueCount = items.filter(
-              (item) => item.daysUntil <= 0 && !item.existingReview,
-            ).length;
-            return (
-              <article
-                key={employee.id}
-                className="rounded-xl border border-[#042558]/10 bg-white p-4"
-              >
-                <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-[#042558]">{employee.nome}</h3>
-                    <p className="text-xs text-[#042558]/50">
-                      {position?.nome ?? "sem cargo"} · {reviewTypeLabel(items[0].reviewType)} ·
-                      base:{" "}
-                      {formatDateOnly(
-                        employee.last_performance_review_date || employee.admission_date,
-                      )}
-                      {employee.last_performance_review_date
-                        ? " (ultima avaliacao)"
-                        : " (admissao)"}
-                    </p>
-                  </div>
-                  {dueCount > 0 && (
-                    <span className="w-fit rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                      {dueCount} pendente(s)
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="rounded-xl border border-[#042558]/10 bg-white p-3">
+            <div className="grid grid-cols-7 gap-1 pb-2">
+              {WEEKDAY_LABELS.map((label) => (
+                <div
+                  key={label}
+                  className="text-center text-[11px] font-semibold uppercase tracking-wide text-[#042558]/40"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {weeks.flat().map((date) => {
+                const key = toLocalDateKey(date);
+                const dayEntries = byDate.get(key) ?? [];
+                const inMonth = date.getMonth() === monthCursor.getMonth();
+                const isToday = key === today;
+                const isSelected = key === selectedDate;
+                const dominant: AgendaState | null = dayEntries.length
+                  ? (["late", "upcoming", "sent", "done"] as AgendaState[]).find((state) =>
+                      dayEntries.some((entry) => entry.state === state),
+                    ) ?? null
+                  : null;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSelectedDate(key)}
+                    title={
+                      dayEntries.length
+                        ? dayEntries
+                            .map(
+                              (entry) =>
+                                `${entry.employee.nome} - ${reviewTypeLabel(entry.reviewType)}`,
+                            )
+                            .join("\n")
+                        : undefined
+                    }
+                    className={`flex h-24 flex-col rounded-lg border p-2 text-left transition ${
+                      isSelected
+                        ? "border-[#042558] bg-[#042558]/5"
+                        : "border-[#042558]/10 hover:bg-[#042558]/[0.03]"
+                    } ${inMonth ? "" : "opacity-40"}`}
+                  >
+                    <span
+                      className={`text-xs font-semibold ${
+                        isToday
+                          ? "flex h-5 w-5 items-center justify-center rounded-full bg-[#042558] text-white"
+                          : "text-[#042558]/70"
+                      }`}
+                    >
+                      {date.getDate()}
                     </span>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  {items.map((item) => {
-                    const isDue = item.daysUntil <= 0 && !item.existingReview;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`flex flex-col gap-3 rounded-lg border px-3 py-2 md:flex-row md:items-center md:justify-between ${
-                          isDue
-                            ? "border-amber-300 bg-amber-50"
-                            : "border-[#042558]/10 bg-[#042558]/[0.02]"
-                        }`}
+                    {dayEntries.length > 0 && dominant && (
+                      <span
+                        className={`mt-auto inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${AGENDA_STATE_BADGE[dominant]}`}
                       >
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-[#042558]">
-                              {reviewTypeLabel(item.reviewType)} ·{" "}
-                              {reviewPeriodLabel(item.periodDays, item.reviewType)}
-                            </span>
-                            {item.existingReview ? (
-                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                                Avaliacao criada
-                              </span>
-                            ) : isDue ? (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                                {item.daysUntil === 0
-                                  ? "Vence hoje"
-                                  : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-[#042558]/5 px-2 py-0.5 text-xs text-[#042558]/55">
-                                Em {item.daysUntil} dia(s)
-                              </span>
-                            )}
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${AGENDA_STATE_DOT[dominant]}`}
+                        />
+                        {dayEntries.length}{" "}
+                        {dayEntries.length === 1 ? "avaliacao" : "avaliacoes"}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <aside className="rounded-xl border border-[#042558]/10 bg-white p-4">
+            {!selectedDate ? (
+              <p className="text-sm text-[#042558]/45">
+                Selecione um dia no calendario para ver as avaliacoes previstas.
+              </p>
+            ) : (
+              <>
+                <h3 className="text-sm font-semibold text-[#042558]">
+                  {formatDateOnly(selectedDate)}
+                </h3>
+                <p className="mt-1 text-xs text-[#042558]/50">
+                  {selectedEntries.length} avaliacao(oes) prevista(s)
+                </p>
+                {selectedEntries.length === 0 ? (
+                  <p className="mt-4 rounded-lg border border-dashed border-[#042558]/15 p-4 text-center text-xs text-[#042558]/45">
+                    Nenhuma avaliacao prevista para esta data.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {selectedEntries.map((entry) => (
+                      <article
+                        key={entry.id}
+                        className="rounded-lg border border-[#042558]/10 bg-[#042558]/[0.02] p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-[#042558]">
+                              {entry.employee.nome}
+                            </p>
+                            <p className="text-[11px] text-[#042558]/50">
+                              {[entry.employeePosition?.nome, entry.areaName]
+                                .filter(Boolean)
+                                .join(" · ") || "sem cargo"}
+                            </p>
                           </div>
-                          <p className="mt-1 text-xs text-[#042558]/50">
-                            Prevista para {formatDateOnly(item.dueDate)} · Lider:{" "}
-                            {item.leader?.nome ?? "sem lider cadastrado"}
-                          </p>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${AGENDA_STATE_BADGE[entry.state]}`}
+                          >
+                            {AGENDA_STATE_LABEL[entry.state]}
+                          </span>
                         </div>
-                        {item.existingReview ? (
-                          <a
-                            href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${item.existingReview.id}`}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
-                          >
-                            <SplitSquareVertical className="h-4 w-4" /> Abrir
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => createAgendaReview(item)}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
-                          >
-                            <Plus className="h-4 w-4" /> Gerar
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-            );
-          })}
+                        <p className="mt-2 text-xs text-[#042558]/70">
+                          {reviewTypeLabel(entry.reviewType)} ·{" "}
+                          {reviewPeriodLabel(entry.periodDays, entry.reviewType)}
+                        </p>
+                        <p className="text-[11px] text-[#042558]/50">
+                          Lider responsavel: {entry.leader?.nome ?? "sem lider cadastrado"}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {entry.existingReview ? (
+                            <>
+                              <a
+                                href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${entry.existingReview.id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[#042558]/20 px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5"
+                              >
+                                <SplitSquareVertical className="h-3.5 w-3.5" /> Abrir avaliacao
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => copyLink(entry)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-2.5 py-1.5 text-xs font-medium text-white"
+                              >
+                                <Copy className="h-3.5 w-3.5" /> Copiar link
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => createAgendaReview(entry)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-2.5 py-1.5 text-xs font-medium text-white"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Gerar avaliacao
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </aside>
         </div>
       )}
     </section>
