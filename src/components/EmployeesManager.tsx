@@ -228,7 +228,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
 
     if (error) return toast.error(error.message);
 
-    toast.success("Funcionario cadastrado");
+    toast.success("Colaborador cadastrado");
     setForm(emptyForm);
     await load();
     nameRef.current?.focus();
@@ -249,7 +249,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 Projeto
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-                Funcionarios
+                Colaboradores
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-[#042558]/55">
                 Cadastre pessoas vinculadas aos cargos do organograma e aos setores do projeto.
@@ -261,7 +261,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
               className="bg-[#042558] text-white hover:bg-[#042558]/90"
             >
               <UserPlus className="h-4 w-4" />
-              Cadastrar funcionario
+              Cadastrar colaborador
             </Button>
           </div>
         </div>
@@ -270,7 +270,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-                Lista de funcionarios
+                Lista de colaboradores
               </h2>
               <p className="mt-1 text-xs text-[#042558]/50">
                 Os cargos vem do organograma. Os setores aparecem conforme a area escolhida.
@@ -286,13 +286,13 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           {loading ? (
             <div className="flex h-44 items-center justify-center rounded-xl border border-[#042558]/10 bg-white/50 text-sm text-[#042558]/55">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Carregando funcionarios...
+              Carregando colaboradores...
             </div>
           ) : employees.length === 0 ? (
             <div className="flex h-56 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/15 bg-white/50 p-8 text-center">
               <Users className="mb-3 h-10 w-10 text-[#042558]/20" />
               <p className="text-sm font-medium text-[#042558]/60">
-                Nenhum funcionario cadastrado.
+                Nenhum colaborador cadastrado.
               </p>
               <p className="mt-1 text-xs text-[#042558]/40">
                 Abra o formulario acima para criar o primeiro registro.
@@ -476,7 +476,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   leaderOptions.length === 0 &&
                   ancestorPositionIds.length > 0 && (
                     <p className="mt-1 text-xs text-[#042558]/45">
-                      Cargos acima encontrados, mas sem funcionarios cadastrados neles:{" "}
+                      Cargos acima encontrados, mas sem colaboradores cadastrados neles:{" "}
                       {ancestorPositionIds
                         .map((positionId) => positionsById.get(positionId)?.nome)
                         .filter(Boolean)

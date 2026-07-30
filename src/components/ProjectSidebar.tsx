@@ -101,10 +101,10 @@ export function ProjectSidebar({
       label: "Organograma",
     },
     {
-      to: "/projetos/$projectId/funcionarios",
-      href: `/projetos/${projectId}/funcionarios`,
+      to: "/projetos/$projectId/colaboradores",
+      href: `/projetos/${projectId}/colaboradores`,
       icon: Users,
-      label: "Funcionarios",
+      label: "Colaboradores",
     },
     {
       to: "/projetos/$projectId/areas",
@@ -151,7 +151,7 @@ export function ProjectSidebar({
         (i) =>
           i.href.endsWith("/descricao-cargo") ||
           i.label === "Organograma" ||
-          i.label === "Funcionarios" ||
+          i.label === "Colaboradores" ||
           i.label === "Andamento",
       )
     : allItems;

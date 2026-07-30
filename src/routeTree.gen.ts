@@ -31,9 +31,9 @@ import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/pub
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
 import { Route as AuthenticatedProjetosProjectIdOrganogramaRouteImport } from './routes/_authenticated/projetos.$projectId.organograma'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
-import { Route as AuthenticatedProjetosProjectIdFuncionariosRouteImport } from './routes/_authenticated/projetos.$projectId.funcionarios'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
 import { Route as AuthenticatedProjetosProjectIdConfiguracoesRouteImport } from './routes/_authenticated/projetos.$projectId.configuracoes'
+import { Route as AuthenticatedProjetosProjectIdColaboradoresRouteImport } from './routes/_authenticated/projetos.$projectId.colaboradores'
 import { Route as AuthenticatedProjetosProjectIdBaseRouteImport } from './routes/_authenticated/projetos.$projectId.base'
 import { Route as AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteImport } from './routes/_authenticated/projetos.$projectId.avaliacao-desempenho'
 import { Route as AuthenticatedProjetosProjectIdAtividadesRouteImport } from './routes/_authenticated/projetos.$projectId.atividades'
@@ -172,12 +172,6 @@ const AuthenticatedProjetosProjectIdHistoricoRoute =
     path: '/historico',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
-const AuthenticatedProjetosProjectIdFuncionariosRoute =
-  AuthenticatedProjetosProjectIdFuncionariosRouteImport.update({
-    id: '/funcionarios',
-    path: '/funcionarios',
-    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
-  } as any)
 const AuthenticatedProjetosProjectIdDescricaoCargoRoute =
   AuthenticatedProjetosProjectIdDescricaoCargoRouteImport.update({
     id: '/descricao-cargo',
@@ -188,6 +182,12 @@ const AuthenticatedProjetosProjectIdConfiguracoesRoute =
   AuthenticatedProjetosProjectIdConfiguracoesRouteImport.update({
     id: '/configuracoes',
     path: '/configuracoes',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdColaboradoresRoute =
+  AuthenticatedProjetosProjectIdColaboradoresRouteImport.update({
+    id: '/colaboradores',
+    path: '/colaboradores',
     getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
 const AuthenticatedProjetosProjectIdBaseRoute =
@@ -272,9 +272,9 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
+  '/projetos/$projectId/colaboradores': typeof AuthenticatedProjetosProjectIdColaboradoresRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
-  '/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -305,8 +305,8 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
+  '/projetos/$projectId/colaboradores': typeof AuthenticatedProjetosProjectIdColaboradoresRoute
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
-  '/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -342,9 +342,9 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/atividades': typeof AuthenticatedProjetosProjectIdAtividadesRoute
   '/_authenticated/projetos/$projectId/avaliacao-desempenho': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   '/_authenticated/projetos/$projectId/base': typeof AuthenticatedProjetosProjectIdBaseRoute
+  '/_authenticated/projetos/$projectId/colaboradores': typeof AuthenticatedProjetosProjectIdColaboradoresRoute
   '/_authenticated/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
-  '/_authenticated/projetos/$projectId/funcionarios': typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/_authenticated/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
@@ -380,9 +380,9 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/atividades'
     | '/projetos/$projectId/avaliacao-desempenho'
     | '/projetos/$projectId/base'
+    | '/projetos/$projectId/colaboradores'
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/descricao-cargo'
-    | '/projetos/$projectId/funcionarios'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -413,8 +413,8 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/atividades'
     | '/projetos/$projectId/avaliacao-desempenho'
     | '/projetos/$projectId/base'
+    | '/projetos/$projectId/colaboradores'
     | '/projetos/$projectId/configuracoes'
-    | '/projetos/$projectId/funcionarios'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -449,9 +449,9 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/atividades'
     | '/_authenticated/projetos/$projectId/avaliacao-desempenho'
     | '/_authenticated/projetos/$projectId/base'
+    | '/_authenticated/projetos/$projectId/colaboradores'
     | '/_authenticated/projetos/$projectId/configuracoes'
     | '/_authenticated/projetos/$projectId/descricao-cargo'
-    | '/_authenticated/projetos/$projectId/funcionarios'
     | '/_authenticated/projetos/$projectId/historico'
     | '/_authenticated/projetos/$projectId/organograma'
     | '/api/public/activity-draft/$token'
@@ -638,13 +638,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdHistoricoRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
-    '/_authenticated/projetos/$projectId/funcionarios': {
-      id: '/_authenticated/projetos/$projectId/funcionarios'
-      path: '/funcionarios'
-      fullPath: '/projetos/$projectId/funcionarios'
-      preLoaderRoute: typeof AuthenticatedProjetosProjectIdFuncionariosRouteImport
-      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
-    }
     '/_authenticated/projetos/$projectId/descricao-cargo': {
       id: '/_authenticated/projetos/$projectId/descricao-cargo'
       path: '/descricao-cargo'
@@ -657,6 +650,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/projetos/$projectId/configuracoes'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
+    }
+    '/_authenticated/projetos/$projectId/colaboradores': {
+      id: '/_authenticated/projetos/$projectId/colaboradores'
+      path: '/colaboradores'
+      fullPath: '/projetos/$projectId/colaboradores'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdColaboradoresRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
     '/_authenticated/projetos/$projectId/base': {
@@ -774,9 +774,9 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdAtividadesRoute: typeof AuthenticatedProjetosProjectIdAtividadesRoute
   AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRoute: typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren
   AuthenticatedProjetosProjectIdBaseRoute: typeof AuthenticatedProjetosProjectIdBaseRoute
+  AuthenticatedProjetosProjectIdColaboradoresRoute: typeof AuthenticatedProjetosProjectIdColaboradoresRoute
   AuthenticatedProjetosProjectIdConfiguracoesRoute: typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
-  AuthenticatedProjetosProjectIdFuncionariosRoute: typeof AuthenticatedProjetosProjectIdFuncionariosRoute
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
   AuthenticatedProjetosProjectIdOrganogramaRoute: typeof AuthenticatedProjetosProjectIdOrganogramaRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
@@ -794,12 +794,12 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdAvaliacaoDesempenhoRouteWithChildren,
     AuthenticatedProjetosProjectIdBaseRoute:
       AuthenticatedProjetosProjectIdBaseRoute,
+    AuthenticatedProjetosProjectIdColaboradoresRoute:
+      AuthenticatedProjetosProjectIdColaboradoresRoute,
     AuthenticatedProjetosProjectIdConfiguracoesRoute:
       AuthenticatedProjetosProjectIdConfiguracoesRoute,
     AuthenticatedProjetosProjectIdDescricaoCargoRoute:
       AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren,
-    AuthenticatedProjetosProjectIdFuncionariosRoute:
-      AuthenticatedProjetosProjectIdFuncionariosRoute,
     AuthenticatedProjetosProjectIdHistoricoRoute:
       AuthenticatedProjetosProjectIdHistoricoRoute,
     AuthenticatedProjetosProjectIdOrganogramaRoute:
@@ -887,3 +887,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

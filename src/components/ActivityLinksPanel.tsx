@@ -298,7 +298,7 @@ export function ActivityLinksPanel({
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-            Funcionários do projeto ({employees.length})
+            Colaboradores do projeto ({employees.length})
           </h3>
           <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
         </div>
@@ -310,7 +310,7 @@ export function ActivityLinksPanel({
           <div className="py-6 text-center text-sm text-[#042558]/60">Carregando...</div>
         ) : employees.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-[#042558]/15 p-6 text-center text-sm text-[#042558]/40">
-            Nenhum funcionário cadastrado. Cadastre-os na aba Funcionários.
+            Nenhum colaborador cadastrado. Cadastre-os na aba Colaboradores.
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-[#042558]/10">

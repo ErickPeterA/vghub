@@ -9,6 +9,7 @@ import {
 type FormData = {
   ok: true;
   reviewName: string;
+  reviewType?: "experience" | "performance";
   participantType: "collaborator" | "leader";
   employeeName: string;
   leaderName: string;
@@ -170,7 +171,7 @@ function PublicPerformanceForm() {
       <div className="mx-auto max-w-3xl overflow-hidden rounded-xl bg-white shadow-lg shadow-[#042558]/10">
         <div className="bg-[#042558] px-8 py-6">
           <p className="text-xs font-medium uppercase tracking-wider text-white/60">
-            Avaliação de Desempenho
+            {reviewTypeTitle(form?.reviewType)}
           </p>
           <h1 className="text-2xl font-bold text-white">{form?.reviewName ?? "Preenchimento"}</h1>
           {form && (
@@ -708,4 +709,8 @@ function formatHeaderDateTime(value?: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+function reviewTypeTitle(reviewType?: FormData["reviewType"]) {
+  return reviewType === "experience" ? "Avaliação de Experiência" : "Avaliação de Desempenho";
 }

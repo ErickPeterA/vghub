@@ -2611,9 +2611,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <button
             type="button"
             onClick={() =>
-              setMonthCursor(
-                (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
-              )
+              setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
             }
             className="rounded-lg border border-[#042558]/15 p-2 text-[#042558] hover:bg-[#042558]/5"
             aria-label="Mes anterior"
@@ -2626,9 +2624,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <button
             type="button"
             onClick={() =>
-              setMonthCursor(
-                (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
-              )
+              setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
             }
             className="rounded-lg border border-[#042558]/15 p-2 text-[#042558] hover:bg-[#042558]/5"
             aria-label="Proximo mes"
@@ -2719,9 +2715,9 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                 const isToday = key === today;
                 const isSelected = key === selectedDate;
                 const dominant: AgendaState | null = dayEntries.length
-                  ? (["late", "upcoming", "sent", "done"] as AgendaState[]).find((state) =>
+                  ? ((["late", "upcoming", "sent", "done"] as AgendaState[]).find((state) =>
                       dayEntries.some((entry) => entry.state === state),
-                    ) ?? null
+                    ) ?? null)
                   : null;
                 return (
                   <button
@@ -2760,8 +2756,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${AGENDA_STATE_DOT[dominant]}`}
                         />
-                        {dayEntries.length}{" "}
-                        {dayEntries.length === 1 ? "avaliacao" : "avaliacoes"}
+                        {dayEntries.length} {dayEntries.length === 1 ? "avaliacao" : "avaliacoes"}
                       </span>
                     )}
                   </button>

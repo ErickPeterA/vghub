@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { EmployeesManager } from "@/components/EmployeesManager";
 
-export const Route = createFileRoute("/_authenticated/projetos/$projectId/funcionarios")({
+export const Route = createFileRoute("/_authenticated/projetos/$projectId/colaboradores")({
   component: EmployeesPage,
 });
 

@@ -325,7 +325,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         const { data: review } = await supabaseAdmin
           .from("performance_reviews")
           .select(
-            "id,project_id,name,status,employee_id,employee_position_id,leader_position_id,employee_name,leader_name,job_title,job_description_snapshot,questions_snapshot,created_at",
+            "id,project_id,name,status,review_type,employee_id,employee_position_id,leader_position_id,employee_name,leader_name,job_title,job_description_snapshot,questions_snapshot,created_at",
           )
           .eq("id", participant.review_id)
           .maybeSingle();
@@ -434,6 +434,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         return Response.json({
           ok: true,
           reviewName: review.name,
+          reviewType: review.review_type ?? "performance",
           participantType: participant.participant_type,
           employeeName: review.employee_name,
           leaderName: review.leader_name,
