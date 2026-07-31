@@ -30,7 +30,7 @@ export function FieldCommentButton({
   versionId: string | null;
   canAdd: boolean;
   canDecide?: boolean;
-  onChange?: () => void;
+  onChange?: () => void | Promise<void>;
 }) {
   const { user } = useCurrentUser();
   const [open, setOpen] = useState(false);
@@ -79,7 +79,7 @@ export function FieldCommentButton({
     }
     toast.success(decision === "approved" ? "ComentÃ¡rio aprovado" : "ComentÃ¡rio reprovado");
     await load();
-    onChange?.();
+    await onChange?.();
   };
 
   useEffect(() => {
@@ -103,10 +103,12 @@ export function FieldCommentButton({
     }
     setText("");
     await load();
-    onChange?.();
+    await onChange?.();
   };
 
   const count = comments.length;
+  const pendingCount = comments.filter((comment) => comment.decision === "pending").length;
+  const hasPending = pendingCount > 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -114,11 +116,23 @@ export function FieldCommentButton({
         <button
           type="button"
           form="field-comment-trigger"
-          className={`inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] transition ${count > 0 ? "border-amber-300 bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-secondary"}`}
+          className={`relative inline-flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[11px] transition ${
+            hasPending
+              ? "border-amber-400 bg-amber-100 text-amber-800 shadow-sm ring-1 ring-amber-200"
+              : count > 0
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-border text-muted-foreground hover:bg-secondary"
+          }`}
           title="Comentários"
         >
           <MessageSquare className="h-3 w-3" />
-          {count > 0 && <span className="font-semibold">{count}</span>}
+          {hasPending ? (
+            <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-white">
+              {pendingCount}
+            </span>
+          ) : (
+            count > 0 && <span className="ml-1 font-semibold">{count}</span>
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="end">
@@ -130,7 +144,14 @@ export function FieldCommentButton({
             <p className="text-xs italic text-muted-foreground">Sem comentários.</p>
           )}
           {comments.map((c) => (
-            <div key={c.id} className="rounded-md border border-border bg-background p-2 text-xs">
+            <div
+              key={c.id}
+              className={`rounded-md border p-2 text-xs ${
+                c.decision === "pending"
+                  ? "border-amber-300 bg-amber-50/80"
+                  : "border-border bg-background"
+              }`}
+            >
               <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
                 <span className="font-medium">{authors[c.author_id] ?? "—"}</span>
                 <span>{new Date(c.created_at).toLocaleString("pt-BR")}</span>

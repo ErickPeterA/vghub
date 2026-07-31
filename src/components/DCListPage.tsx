@@ -9,6 +9,7 @@ import {
   Users,
   Clock,
   GitFork,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,7 @@ type Row = {
   created_by: string;
   created_at: string;
   etapa: Stage;
+  pending_comment_count: number;
 };
 type Area = { id: string; nome: string; cor: string | null; parent_id: string | null };
 type Profile = { id: string; nome: string };
@@ -72,7 +74,31 @@ export function DCListPage({ projectId }: { projectId: string }) {
           supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle(),
         ]);
       if (error) throw error;
-      setRows((dcs as Row[]) ?? []);
+      const dcRows = ((dcs ?? []) as Omit<Row, "pending_comment_count">[]).map((row) => ({
+        ...row,
+        pending_comment_count: 0,
+      }));
+      if (dcRows.length > 0) {
+        const { data: pendingComments } = await supabase
+          .from("field_comments")
+          .select("job_description_id")
+          .in(
+            "job_description_id",
+            dcRows.map((row) => row.id),
+          )
+          .eq("decision", "pending");
+        const pendingByDc = new Map<string, number>();
+        (pendingComments ?? []).forEach((comment) => {
+          pendingByDc.set(
+            comment.job_description_id,
+            (pendingByDc.get(comment.job_description_id) ?? 0) + 1,
+          );
+        });
+        dcRows.forEach((row) => {
+          row.pending_comment_count = pendingByDc.get(row.id) ?? 0;
+        });
+      }
+      setRows(dcRows);
       setAreas((ars ?? []) as Area[]);
       setProfiles((profs ?? []) as Profile[]);
       if (user) setIsResponsavel(proj?.responsavel_id === user.id);
@@ -232,18 +258,31 @@ export function DCListPage({ projectId }: { projectId: string }) {
                         const canApprove =
                           row.etapa === "em_aprovacao" && canDecideApproval && !isOnlyLider;
                         const setorInfo = getSetorInfo(row);
+                        const hasPendingComments = row.pending_comment_count > 0;
 
                         return (
                           <article
                             key={row.id}
-                            className="group rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm transition-all hover:border-[#042558]/30 hover:shadow-md"
+                            className={`group relative overflow-hidden rounded-xl border p-4 shadow-sm transition-all hover:shadow-md ${
+                              hasPendingComments
+                                ? "border-amber-300 bg-amber-50/80 ring-1 ring-amber-200 hover:border-amber-400"
+                                : "border-[#042558]/10 bg-white hover:border-[#042558]/30"
+                            }`}
                           >
+                            {hasPendingComments && (
+                              <span
+                                className="absolute right-3 top-3 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white shadow-sm"
+                                title={`${row.pending_comment_count} comentario(s) pendente(s)`}
+                              >
+                                {row.pending_comment_count}
+                              </span>
+                            )}
                             <Link
                               to="/projetos/$projectId/descricao-cargo/$dcId"
                               params={{ projectId, dcId: row.id }}
                               className="block"
                             >
-                              <h3 className="text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80">
+                              <h3 className={`text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80 ${hasPendingComments ? "pr-8" : ""}`}>
                                 {row.cargo || "(sem cargo)"}
                               </h3>
                             </Link>
@@ -266,21 +305,27 @@ export function DCListPage({ projectId }: { projectId: string }) {
                               </p>
                             )}
 
-                            <div className="mt-3 flex items-center justify-between border-t border-[#042558]/10 pt-3">
-                              <div className="flex items-center gap-2">
+                            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#042558]/10 pt-3">
+                              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                                {hasPendingComments && (
+                                  <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                    <MessageSquare className="h-3 w-3" />
+                                    Revisar
+                                  </span>
+                                )}
                                 {setorInfo && (
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex min-w-0 items-center gap-1.5">
                                     <span
-                                      className="h-2.5 w-2.5 rounded-full"
+                                      className="h-2.5 w-2.5 shrink-0 rounded-full"
                                       style={{ background: setorInfo.cor }}
                                     />
-                                    <span className="text-[10px] font-medium text-[#042558]/60">
+                                    <span className="truncate text-[10px] font-medium text-[#042558]/60">
                                       {setorInfo.nome}
                                     </span>
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-0.5">
+                              <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
                                 {hasFullControl && stageIdx > 0 && (
                                   <button
                                     onClick={() => moveStage(row, STAGES[stageIdx - 1].key)}
@@ -311,7 +356,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                 {canApprove && (
                                   <button
                                     onClick={() => moveStage(row, "concluido")}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl"
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl"
                                   >
                                     <Check className="h-3.5 w-3.5" /> Aprovar
                                   </button>

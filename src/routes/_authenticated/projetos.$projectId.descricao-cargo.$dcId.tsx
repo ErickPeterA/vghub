@@ -13,7 +13,10 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/descri
   component: EditDC,
 });
 
-type DCRow = DescricaoCargo & { etapa?: "em_criacao" | "em_aprovacao" | "concluido" };
+type DCRow = DescricaoCargo & {
+  created_by?: string;
+  etapa?: "em_criacao" | "em_aprovacao" | "concluido";
+};
 type VersionRow = {
   id: string;
   version_number: number;
@@ -91,6 +94,24 @@ function EditDC() {
     setVersions((data ?? []) as VersionRow[]);
   };
 
+  const loadCurrent = async () => {
+    const { data, error } = await supabase
+      .from("descricoes_cargo")
+      .select("*")
+      .eq("id", dcId)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("NÃ£o encontrado");
+      navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
+      return;
+    }
+    const next = fromSnapshot(data) as DCRow;
+    if (next.organization_position_id) {
+      next.superior_imediato = await getOrgSuperiorName(projectId, next.organization_position_id);
+    }
+    setCurrent({ ...next, etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
+  };
+
   useEffect(() => {
     void supabase
       .from("descricoes_cargo")
@@ -140,7 +161,8 @@ function EditDC() {
     isAdmin || projectRole === "gp" || projectRole === "admin" || isLider;
   const canDecideComment = isAdmin || projectRole === "gp" || projectRole === "admin";
   const hasFullControl = canDecideComment || isResponsavel;
-  const canEditDraft = isLider && !hasFullControl && current?.etapa === "em_criacao";
+  const canEditDraft =
+    isLider && !hasFullControl && current?.etapa === "em_criacao" && current.created_by === user?.id;
   const readOnly = (!canEditDraft && isLider && !hasFullControl) || viewingVersionId !== null;
 
   const currentVersion = versions.length > 0 ? versions[versions.length - 1] : null;
@@ -153,6 +175,10 @@ function EditDC() {
   }, [viewingVersion, current]);
 
   const versionIdForComments = viewingVersion?.id ?? currentVersion?.id ?? null;
+
+  const handleCommentChange = async () => {
+    await Promise.all([loadCurrent(), loadVersions()]);
+  };
 
   const onSubmit = async (dc: DescricaoCargo) => {
     if (readOnly) return;
@@ -297,7 +323,7 @@ function EditDC() {
           versionId: versionIdForComments,
           canAddComment: (isLider || canDecideComment) && !viewingVersionId,
           canDecideComment: canDecideComment,
-          onCommentDecision: loadVersions,
+          onCommentDecision: handleCommentChange,
         }}
         footerExtra={
           showApprovalActions ? (

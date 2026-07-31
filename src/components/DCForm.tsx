@@ -243,7 +243,7 @@ export function DCForm({
     versionId: string | null;
     canAddComment: boolean;
     canDecideComment?: boolean;
-    onCommentDecision?: () => void;
+    onCommentDecision?: () => void | Promise<void>;
   };
   headerExtra?: React.ReactNode;
   footerExtra?: React.ReactNode;
