@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ClipboardCheck, ClipboardList, FileText, Layers } from "lucide-react";
+import { ClipboardCheck, ClipboardList, FileText, Layers, Scale, SlidersHorizontal } from "lucide-react";
 import { ActivityConfigManager } from "@/components/ActivityConfigManager";
 import { BaseManager } from "@/components/BaseManager";
+import { CriterionScoringConfig, EvaluationWeightsConfig } from "@/components/EvaluationScoringConfig";
 import { PerformancePeriodConfigPanel } from "@/components/PerformanceReviewManager";
 
 type ModelBlock =
@@ -20,7 +21,9 @@ type ModelBlock =
       description: string;
       icon: typeof ClipboardCheck;
       reviewType: "performance";
-    };
+    }
+  | { key: "weights"; label: string; description: string; icon: typeof Scale }
+  | { key: "scoring"; label: string; description: string; icon: typeof SlidersHorizontal };
 
 const blocks: ModelBlock[] = [
   {
@@ -49,10 +52,24 @@ const blocks: ModelBlock[] = [
     icon: ClipboardCheck,
     reviewType: "performance",
   },
+  {
+    key: "weights",
+    label: "Pesos da Avaliação",
+    description: "Distribuição percentual dos critérios para cada tipo de carreira.",
+    icon: Scale,
+  },
+  {
+    key: "scoring",
+    label: "Pontuação dos Critérios",
+    description: "Notas percentuais aplicadas a cada situação de resposta.",
+    icon: SlidersHorizontal,
+  },
 ];
 
 export function ProjectModelsManager({ projectId = null }: { projectId?: string | null }) {
-  const availableBlocks = projectId ? blocks : blocks.filter((block) => block.key !== "activities");
+  const availableBlocks = projectId
+    ? blocks
+    : blocks.filter((block) => !["activities", "weights", "scoring"].includes(block.key));
   const [selected, setSelected] = useState<ModelBlock>(availableBlocks[0]);
 
   const selectedReviewType = "reviewType" in selected ? selected.reviewType : null;
@@ -66,12 +83,12 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             Configuracao
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-            Configurar modelos
+            Configurações
           </h1>
           <p className="mt-1 text-sm text-[#042558]/60">
             {isGlobal
               ? "Defina os modelos que entram como base para as descricoes de cargo e avaliacoes de todos os projetos."
-              : "Centralize os modelos de descricao de cargo, atividades, experiencia e desempenho deste projeto."}
+              : "Centralize os modelos e as regras de cálculo das avaliações deste projeto."}
           </p>
         </div>
 
@@ -80,7 +97,7 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
             <Layers className="h-4 w-4" />
             Blocos de modelos
           </div>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {availableBlocks.map((block) => {
               const active = selected.key === block.key;
               const Icon = block.icon;
@@ -126,6 +143,14 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
         ) : selected.key === "activities" && projectId ? (
           <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
             <ActivityConfigManager projectId={projectId} />
+          </div>
+        ) : selected.key === "weights" && projectId ? (
+          <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
+            <EvaluationWeightsConfig projectId={projectId} />
+          </div>
+        ) : selected.key === "scoring" && projectId ? (
+          <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
+            <CriterionScoringConfig projectId={projectId} />
           </div>
         ) : (
           <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
