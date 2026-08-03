@@ -156,7 +156,7 @@ export function AppSidebar() {
                       >
                         <Link to="/gerenciamento/bases">
                           <Database className="h-4 w-4" strokeWidth={1.5} />
-                          <span>Configurações</span>
+                          <span>Configurar Modelos</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
