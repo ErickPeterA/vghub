@@ -276,7 +276,7 @@ function PublicPerformanceForm() {
                     onClick={goNext}
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-6 py-3 text-sm font-medium text-white hover:bg-[#042558]/90"
                   >
-                    Prosseguir
+                    Avançar
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
@@ -421,7 +421,13 @@ function questionOptions(
 
 type QuestionBlock =
   | { kind: "question"; id: string; question: PerformanceQuestion }
-  | { kind: "group"; id: string; title: string; questions: PerformanceQuestion[] };
+  | {
+      kind: "group";
+      id: string;
+      title: string;
+      description?: string;
+      questions: PerformanceQuestion[];
+    };
 
 function buildQuestionBlocks(questions: PerformanceQuestion[]) {
   const blocks: QuestionBlock[] = [];
@@ -437,12 +443,16 @@ function buildQuestionBlocks(questions: PerformanceQuestion[]) {
     );
     if (existing) {
       existing.questions.push(question);
+      if (!existing.description && question.groupDescription?.trim()) {
+        existing.description = question.groupDescription.trim();
+      }
       return;
     }
     blocks.push({
       kind: "group",
       id: groupId,
       title: displayGroupTitle(question, blocks.length),
+      description: question.groupDescription?.trim() || undefined,
       questions: [question],
     });
   });
@@ -484,7 +494,7 @@ function SectionStep({
       </div>
       {questions.length === 0 ? (
         <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Clique em prosseguir para continuar a avaliação.
+          Clique em avançar para continuar a avaliação. 
         </p>
       ) : (
         blocks.map((block) =>
@@ -493,6 +503,11 @@ function SectionStep({
               <p className="mb-3 whitespace-pre-wrap text-sm font-semibold text-gray-800">
                 {block.title}
               </p>
+              {block.description && (
+                <p className="mb-4 whitespace-pre-wrap rounded-lg border border-[#042558]/10 bg-white px-3 py-2 text-sm leading-relaxed text-gray-600">
+                  {block.description}
+                </p>
+              )}
               <div className="grid gap-3 md:grid-cols-2">
                 {block.questions.map((question) => (
                   <QuestionField

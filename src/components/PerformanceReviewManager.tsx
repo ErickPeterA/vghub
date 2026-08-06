@@ -18,6 +18,15 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -42,8 +51,11 @@ export type PerformanceQuestion = {
   sectionTitle?: string;
   groupId?: string;
   groupTitle?: string;
+  groupDescription?: string;
   dynamicSource?: "activities" | "indicators" | "culture_skills" | "role_skills" | "behavior";
   dynamicRole?: "efficiency" | "efficacy" | "result" | "reach" | "fit" | "rating";
+  requirementValue?: string;
+  requirementLabel?: string;
 };
 
 type PositionRow = { id: string; nome: string; parent_id: string | null };
@@ -53,6 +65,8 @@ type DcRow = {
   organization_position_id: string | null;
   cargo: string | null;
   superior_imediato: string | null;
+  instrucao?: Array<Record<string, unknown>> | null;
+  experiencia?: Array<Record<string, unknown>> | null;
   atividades: Array<Record<string, unknown>> | null;
   indicadores?: Array<Record<string, unknown>> | null;
   habilidades_cargo?: Array<Record<string, unknown>> | null;
@@ -115,10 +129,45 @@ type ReviewRow = {
   review_type?: ReviewType | null;
   activities_snapshot: PerformanceQuestion[];
   questions_snapshot: PerformanceQuestion[];
+  job_description_snapshot?: Record<string, unknown> | null;
+  evaluation_weights_snapshot?: Record<string, unknown>;
+  criterion_scoring_snapshot?: Record<string, unknown>;
+  management_opinion?: string | null;
+  score_summary_snapshot?: Record<string, unknown>;
   status: ReviewStatus;
   finalized_by: string | null;
   finalized_at: string | null;
   created_at: string;
+};
+type EvaluationWeightConfigRow = {
+  career_key: string;
+  career_label: string;
+  weights: Record<string, number> | null;
+};
+type CriterionScoringConfigRow = {
+  criterion_key: string;
+  scoring_schema: unknown;
+};
+type CriterionScoreSummary = {
+  key: string;
+  label: string;
+  weight: number;
+  matches: number;
+  compared: number;
+  scored: number;
+  collaboratorAverage: number | null;
+  leaderAverage: number | null;
+  collaboratorPoints: number | null;
+  leaderPoints: number | null;
+  requirementLabel: string | null;
+};
+type ComparisonScoreSummary = {
+  careerLabel: string | null;
+  totalWeight: number;
+  matchPercent: number | null;
+  collaboratorFinalScore: number;
+  leaderFinalScore: number;
+  criteria: CriterionScoreSummary[];
 };
 type CommentRow = {
   id: string;
@@ -847,10 +896,110 @@ function normalizeLookup(value: string) {
     .trim();
 }
 
+function evaluationCareerKey(value: string) {
+  const normalized = normalizeLookup(value)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized || "geral";
+}
+
 function stringFromUnknown(value: unknown) {
   if (typeof value === "string") return value.trim();
   if (typeof value === "number") return String(value);
   return "";
+}
+
+function stringsFromUnknown(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(stringsFromUnknown);
+  const stringValue = stringFromUnknown(value);
+  return stringValue ? [stringValue] : [];
+}
+
+function looksLikeTechnicalValue(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    !normalized ||
+    /^[a-z0-9]+(?:_[a-z0-9]+)+_\d{10,}$/.test(normalized) ||
+    /^\d+(?:_\d+)+_\d{10,}$/.test(normalized) ||
+    /_\d{10,}$/.test(normalized)
+  );
+}
+
+function careerValueFromDescription(description: DcRow | null | undefined) {
+  const dynamicValues =
+    description?.dynamic_values && typeof description.dynamic_values === "object"
+      ? (description.dynamic_values as Record<string, unknown>)
+      : {};
+  return (
+    stringFromUnknown(description?.tipo_carreira) ||
+    stringFromUnknown(dynamicValues.tipo_carreira) ||
+    "Geral"
+  );
+}
+
+function buildEvaluationConfigSnapshot(
+  description: DcRow | null | undefined,
+  weights: EvaluationWeightConfigRow[],
+  scoring: CriterionScoringConfigRow[],
+) {
+  const careerValue = careerValueFromDescription(description);
+  const key = evaluationCareerKey(careerValue);
+  const selectedWeights =
+    weights.find((item) => item.career_key === key) ??
+    weights.find((item) => item.career_label === careerValue) ??
+    weights.find((item) => item.career_key === "geral") ??
+    (weights.length === 1 ? weights[0] : null) ??
+    null;
+
+  return {
+    evaluationWeights: selectedWeights
+      ? {
+          careerKey: selectedWeights.career_key,
+          careerLabel: selectedWeights.career_label,
+          weights: selectedWeights.weights ?? {},
+        }
+      : {},
+    criterionScoring: scoring.reduce(
+      (acc, row) => ({ ...acc, [row.criterion_key]: row.scoring_schema ?? [] }),
+      {} as Record<string, unknown>,
+    ),
+  };
+}
+
+function hasWeightSnapshot(snapshot: Record<string, unknown> | undefined) {
+  return Boolean(
+    snapshot?.weights &&
+      typeof snapshot.weights === "object" &&
+      Object.keys(snapshot.weights as Record<string, unknown>).length > 0,
+  );
+}
+
+function hasScoringSnapshot(snapshot: Record<string, unknown> | undefined) {
+  return Object.values(snapshot ?? {}).some((value) => Array.isArray(value) && value.length > 0);
+}
+
+function reviewWithEvaluationConfigFallback(
+  review: ReviewRow,
+  weightConfigs: EvaluationWeightConfigRow[],
+  scoringConfigs: CriterionScoringConfigRow[],
+) {
+  if (hasWeightSnapshot(review.evaluation_weights_snapshot) && hasScoringSnapshot(review.criterion_scoring_snapshot)) {
+    return review;
+  }
+  const snapshots = buildEvaluationConfigSnapshot(
+    (review.job_description_snapshot as DcRow | null | undefined) ?? null,
+    weightConfigs,
+    scoringConfigs,
+  );
+  return {
+    ...review,
+    evaluation_weights_snapshot: hasWeightSnapshot(review.evaluation_weights_snapshot)
+      ? review.evaluation_weights_snapshot
+      : snapshots.evaluationWeights,
+    criterion_scoring_snapshot: hasScoringSnapshot(review.criterion_scoring_snapshot)
+      ? review.criterion_scoring_snapshot
+      : snapshots.criterionScoring,
+  };
 }
 
 function pickItemValue(item: Record<string, unknown>, preferredKeys: string[]) {
@@ -875,6 +1024,7 @@ function pickItemValue(item: Record<string, unknown>, preferredKeys: string[]) {
 
 function isInternalOptionValue(value: string) {
   const normalized = normalizeLookup(value);
+  if (looksLikeTechnicalValue(value)) return true;
   return (
     /^(sim|nao|não)_\d+$/.test(normalized) ||
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
@@ -929,6 +1079,12 @@ function optionLabelForValue(field: BaseFieldRow, value: string) {
   );
 }
 
+function displayValuesForField(field: BaseFieldRow, value: unknown) {
+  return stringsFromUnknown(value)
+    .map((item) => optionLabelForValue(field, item))
+    .filter((item) => item && !isInternalOptionValue(item));
+}
+
 function pickItemValueFromFields(
   item: Record<string, unknown>,
   fields: BaseFieldRow[],
@@ -947,9 +1103,7 @@ function pickItemValueFromFields(
     );
   });
   if (!field) return "";
-  const value = stringFromUnknown(item[field.field_key]);
-  if (!value || isInternalOptionValue(value)) return "";
-  return optionLabelForValue(field, value);
+  return displayValuesForField(field, item[field.field_key]).join(" | ");
 }
 
 function pickItemValueFromExactLabel(
@@ -960,9 +1114,9 @@ function pickItemValueFromExactLabel(
   const expected = labels.map(normalizeLookup);
   const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
   if (!field) return "";
-  const value = stringFromUnknown(item[field.field_key]);
-  if (!value || isNonTitleValue(value)) return "";
-  return optionLabelForValue(field, value);
+  return displayValuesForField(field, item[field.field_key])
+    .filter((value) => !isNonTitleValue(value))
+    .join(" | ");
 }
 
 function pickItemValueFromExactKey(item: Record<string, unknown>, names: string[]) {
@@ -1061,6 +1215,99 @@ function dynamicItemTitle(
   );
 }
 
+function uniqueCleanValues(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function fieldsForStaticCriterion(fields: BaseFieldRow[], criterionKey: string) {
+  const sectionTerms =
+    criterionKey === "instruction"
+      ? ["instrucao", "instru", "escolaridade", "formacao"]
+      : ["experiencia"];
+  return fields.filter((field) =>
+    sectionTerms.some((term) => normalizeLookup(field.section).includes(term)),
+  );
+}
+
+function requirementValueForStaticCriterion(
+  dc: DcRow,
+  criterionKey: string,
+  fields: BaseFieldRow[] = [],
+) {
+  const items =
+    criterionKey === "instruction"
+      ? asRecordArray(dc.instrucao)
+      : criterionKey === "experience"
+        ? asRecordArray(dc.experiencia)
+        : [];
+  const sectionFields = fieldsForStaticCriterion(fields, criterionKey);
+  const strictInclude =
+    criterionKey === "instruction"
+      ? [
+          "escolaridade",
+          "formacao",
+          "formacao_minima",
+          "minimo",
+          "requisito",
+          "pre_requisito",
+          "exigido",
+          "necessario",
+        ]
+      : [
+          "experiencia",
+          "tempo",
+          "anos",
+          "minimo",
+          "requisito",
+          "pre_requisito",
+          "exigido",
+          "necessario",
+        ];
+  const fallbackInclude =
+    criterionKey === "instruction"
+      ? ["escolaridade", "formacao", "minimo", "requisito", "pre_requisito", "exigido", "necessario"]
+      : ["experiencia", "tempo", "anos", "minimo", "requisito", "pre_requisito", "exigido", "necessario"];
+  const values = items.flatMap((item) => {
+    const byFields = valuesByFieldTerms(item, sectionFields, strictInclude);
+    if (byFields.length) return byFields;
+    return valuesByKeyTerms(item, fallbackInclude).filter((value) => !isInternalOptionValue(value));
+  });
+  return uniqueCleanValues(values).join(" | ");
+}
+
+function requirementValueForDynamicItem(
+  question: PerformanceQuestion,
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[] = [],
+) {
+  if (!question.dynamicSource) return "";
+  const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
+  const include = ["nivel", "minimo", "requisito", "pre_requisito", "exigido", "esperado", "necessario"];
+  const exclude = ["atividade", "indicador", "habilidade", "postura", "comportamento", "descricao", "nome"];
+  const values =
+    valuesByFieldTerms(item, sourceFields, include, exclude).length > 0
+      ? valuesByFieldTerms(item, sourceFields, include, exclude)
+      : valuesByKeyTerms(item, include, exclude).filter((value) => !isInternalOptionValue(value));
+  return uniqueCleanValues(values).join(" | ");
+}
+
+function withRequirementFromDescription(
+  question: PerformanceQuestion,
+  dc: DcRow,
+  fields: BaseFieldRow[] = [],
+) {
+  const criterionKey = criterionKeyForQuestion(question);
+  if (criterionKey !== "instruction" && criterionKey !== "experience") return question;
+  const requirementValue = requirementValueForStaticCriterion(dc, criterionKey, fields);
+  return requirementValue
+    ? {
+        ...question,
+        requirementValue,
+        requirementLabel: "Requisito da descricao de cargo",
+      }
+    : question;
+}
+
 function buildReviewQuestions(
   configQuestions: PerformanceQuestion[],
   dc: DcRow,
@@ -1069,7 +1316,9 @@ function buildReviewQuestions(
 ): PerformanceQuestion[] {
   const activeQuestions: PerformanceQuestion[] = (configQuestions ?? [])
     .filter((question) => question.active ?? true)
-    .map((question) => ({ ...question, source: "config" as const }));
+    .map((question) =>
+      withRequirementFromDescription({ ...question, source: "config" as const }, dc, fields),
+    );
   if (reviewType !== "performance") return activeQuestions;
 
   return activeQuestions.flatMap((question) => {
@@ -1085,10 +1334,430 @@ function buildReviewQuestions(
         groupId: `${question.dynamicSource}_${index + 1}`,
         groupTitle: title,
         helpText: question.helpText,
+        requirementValue:
+          requirementValueForDynamicItem(question, item, fields) || question.requirementValue,
+        requirementLabel: "Requisito da descricao de cargo",
       });
       return questions;
     }, []);
   });
+}
+
+function asRecordArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    : [];
+}
+
+function valuesByKeyTerms(item: Record<string, unknown>, include: string[], exclude: string[] = []) {
+  const includeTerms = include.map(normalizeLookup);
+  const excludeTerms = exclude.map(normalizeLookup);
+  return Object.entries(item).flatMap(([key, value]) => {
+    const normalizedKey = normalizeLookup(key);
+    if (!includeTerms.some((term) => normalizedKey.includes(term))) return [];
+    if (excludeTerms.some((term) => normalizedKey.includes(term))) return [];
+    return stringsFromUnknown(value);
+  });
+}
+
+function valuesByFieldTerms(
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[],
+  include: string[],
+  exclude: string[] = [],
+) {
+  const includeTerms = include.map(normalizeLookup);
+  const excludeTerms = exclude.map(normalizeLookup);
+  return fields.flatMap((field) => {
+    const searchable = normalizeLookup(`${field.label} ${field.field_key}`);
+    if (!includeTerms.some((term) => searchable.includes(term))) return [];
+    if (excludeTerms.some((term) => searchable.includes(term))) return [];
+    return displayValuesForField(field, item[field.field_key]);
+  });
+}
+
+const SCORE_CRITERIA = [
+  { key: "instruction", label: "Instrução" },
+  { key: "experience", label: "Experiência" },
+  { key: "activities", label: "Atividades" },
+  { key: "indicators", label: "Indicadores" },
+  { key: "cultural_skills", label: "Habilidades Culturais" },
+  { key: "role_skills", label: "Habilidades do Cargo" },
+  { key: "behavior", label: "Postura e Comportamento" },
+];
+
+function criterionKeyForQuestion(question: PerformanceQuestion) {
+  if (question.dynamicSource === "activities") return "activities";
+  if (question.dynamicSource === "indicators") return "indicators";
+  if (question.dynamicSource === "culture_skills") return "cultural_skills";
+  if (question.dynamicSource === "role_skills") return "role_skills";
+  if (question.dynamicSource === "behavior") return "behavior";
+
+  const section = normalizeLookup(question.sectionTitle ?? "");
+  if (section.includes("instrucao")) return "instruction";
+  if (section.includes("experiencia")) return "experience";
+  if (section.includes("atividade")) return "activities";
+  if (section.includes("indicador")) return "indicators";
+  if (section.includes("cultura")) return "cultural_skills";
+  if (section.includes("cargo") && section.includes("habilidade")) return "role_skills";
+  if (section.includes("postura") || section.includes("comportamento")) return "behavior";
+  return null;
+}
+
+function numberFromUnknown(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function scoreRulesForCriterion(review: ReviewRow, criterionKey: string) {
+  const snapshot = review.criterion_scoring_snapshot ?? {};
+  const rules = Array.isArray(snapshot[criterionKey]) ? snapshot[criterionKey] : [];
+  return (rules as Array<Record<string, unknown>>).map((rule) => ({
+    id: stringFromUnknown(rule.id),
+    label: stringFromUnknown(rule.label),
+    score:
+      rule.score === null || rule.score === undefined ? null : numberFromUnknown(rule.score),
+    notApplicable: rule.notApplicable === true,
+  }));
+}
+
+function scoreFromAnswerText(answer: string) {
+  const normalized = normalizeLookup(answer);
+  if (!normalized || normalized.includes("nao se aplica") || normalized.includes("não se aplica")) {
+    return null;
+  }
+  if (
+    normalized.includes("destaco") ||
+    normalized.includes("domina") ||
+    normalized.includes("ensina") ||
+    normalized.includes("supero") ||
+    normalized.includes("otimo") ||
+    normalized.includes("ótimo") ||
+    normalized.includes("acima do esperado")
+  ) {
+    return 100;
+  }
+  if (
+    normalized.includes("utilizo") ||
+    normalized.includes("sem necessitar") ||
+    normalized.includes("sem necessidade") ||
+    normalized.includes("atinjo as metas") ||
+    normalized.includes("atinjo os resultados") ||
+    normalized.includes("bom") ||
+    normalized.includes("dentro do esperado")
+  ) {
+    return 80;
+  }
+  if (
+    normalized.includes("pouco") ||
+    normalized.includes("algumas vezes") ||
+    normalized.includes("mais que 80")
+  ) {
+    return 60;
+  }
+  if (
+    normalized.includes("muito") ||
+    normalized.includes("muitas vezes") ||
+    normalized.includes("menos que 80") ||
+    normalized.includes("regular") ||
+    normalized.includes("dificuldade")
+  ) {
+    return 40;
+  }
+  if (
+    normalized.includes("urgente") ||
+    normalized.includes("sempre necessita") ||
+    normalized.includes("nao atinjo") ||
+    normalized.includes("não atinjo") ||
+    normalized.includes("ruim") ||
+    normalized.includes("abaixo do esperado")
+  ) {
+    return 0;
+  }
+  return null;
+}
+
+function scoreFromQuestionOrder(answer: string, question: PerformanceQuestion) {
+  const options = Array.from(new Set([...(question.options ?? []), ...(question.leaderOptions ?? [])])).filter(
+    (option) => !normalizeLookup(option).includes("nao se aplica"),
+  );
+  const index = options.findIndex((option) => normalizeLookup(option) === normalizeLookup(answer));
+  if (index < 0) return null;
+  if (options.length <= 1) return 100;
+  const ascending = criterionKeyForQuestion(question) === "instruction" || criterionKeyForQuestion(question) === "experience";
+  const ratio = ascending ? index / (options.length - 1) : (options.length - 1 - index) / (options.length - 1);
+  return Math.round(ratio * 100);
+}
+
+function rankedIndex(value: string, options: string[]) {
+  const normalized = normalizeLookup(value).replace(/_/g, " ");
+  if (!normalized) return null;
+  const direct = options.findIndex((option) => normalizeLookup(option) === normalizeLookup(value));
+  if (direct >= 0) return direct;
+  const includes = options.findIndex((option) => {
+    const normalizedOption = normalizeLookup(option).replace(/_/g, " ");
+    return normalized.includes(normalizedOption) || normalizedOption.includes(normalized);
+  });
+  return includes >= 0 ? includes : null;
+}
+
+function educationRank(value: string) {
+  const normalized = normalizeLookup(value).replace(/_/g, " ");
+  const direct = rankedIndex(value, EDUCATION_LEVEL_OPTIONS);
+  if (direct !== null) return direct;
+  if (normalized.includes("pos") || normalized.includes("mba")) return 7;
+  if (normalized.includes("superior") && normalized.includes("incompleto")) return 5;
+  if (normalized.includes("superior") || normalized.includes("graduacao")) return 6;
+  if (normalized.includes("tecnico")) return 4;
+  if (normalized.includes("medio") && normalized.includes("incompleto")) return 2;
+  if (normalized.includes("medio")) return 3;
+  if (normalized.includes("fundamental") && normalized.includes("incompleto")) return 0;
+  if (normalized.includes("fundamental")) return 1;
+  return null;
+}
+
+function experienceRank(value: string) {
+  const normalized = normalizeLookup(value).replace(/_/g, " ");
+  const direct = rankedIndex(value, EXPERIENCE_YEARS_OPTIONS);
+  if (direct !== null) return direct;
+  if (normalized.includes("menos") && normalized.includes("1")) return 0;
+  const numbers = normalized.match(/\d+/g)?.map(Number).filter(Number.isFinite) ?? [];
+  if (!numbers.length) return null;
+  const max = Math.max(...numbers);
+  if (max >= 10) return 7;
+  if (max >= 6) return 6;
+  if (max >= 5) return 5;
+  if (max >= 4) return 4;
+  if (max >= 3) return 3;
+  if (max >= 2) return 2;
+  if (max >= 1) return 1;
+  return 0;
+}
+
+function requirementCandidatesFromSnapshot(review: ReviewRow, criterionKey: string) {
+  const snapshot = review.job_description_snapshot ?? {};
+  const values =
+    criterionKey === "instruction"
+      ? asRecordArray(snapshot.instrucao).flatMap((item) =>
+          valuesByKeyTerms(item, [
+            "escolaridade",
+            "formacao",
+            "minimo",
+            "requisito",
+            "pre_requisito",
+            "exigido",
+            "necessario",
+          ]),
+        )
+      : asRecordArray(snapshot.experiencia).flatMap((item) =>
+          valuesByKeyTerms(item, [
+            "experiencia",
+            "tempo",
+            "anos",
+            "minimo",
+            "requisito",
+            "pre_requisito",
+            "exigido",
+            "necessario",
+          ]),
+        );
+  return uniqueCleanValues(values.filter((value) => !isInternalOptionValue(value)));
+}
+
+function answerRankForCriterion(value: string, criterionKey: string) {
+  return criterionKey === "instruction" ? educationRank(value) : experienceRank(value);
+}
+
+function requirementRankForCriterion(values: string[], criterionKey: string) {
+  const ranks = values
+    .flatMap((value) => value.split("|"))
+    .map((value) => answerRankForCriterion(value, criterionKey))
+    .filter((rank): rank is number => rank !== null);
+  return ranks.length ? Math.max(...ranks) : null;
+}
+
+function scoreForRequirementDifference(
+  diff: number,
+  criterionKey: string,
+  rules: ReturnType<typeof scoreRulesForCriterion>,
+) {
+  const ruleId =
+    criterionKey === "instruction"
+      ? diff >= 2
+        ? "two_plus_above"
+        : diff === 1
+          ? "one_above"
+          : diff === 0
+            ? "minimum"
+            : diff === -1
+              ? "one_below"
+              : "two_plus_below"
+      : diff >= 3
+        ? "three_above"
+        : diff === 2
+          ? "two_above"
+          : diff === 1
+            ? "one_above"
+            : diff === 0
+              ? "minimum"
+              : diff === -1
+                ? "one_below"
+                : diff === -2
+                  ? "two_below"
+                  : "three_plus_below";
+  const rule = rules.find((item) => item.id === ruleId);
+  if (rule?.score !== null && rule?.score !== undefined) return rule.score;
+  const defaults: Record<string, number> = {
+    two_plus_above: 100,
+    one_above: criterionKey === "instruction" ? 90 : 87,
+    minimum: 80,
+    one_below: 64,
+    two_plus_below: 0,
+    three_above: 100,
+    two_above: 93,
+    two_below: 57,
+    three_plus_below: 0,
+  };
+  return defaults[ruleId] ?? 0;
+}
+
+function scoreAgainstJobRequirement(
+  answer: string,
+  rules: ReturnType<typeof scoreRulesForCriterion>,
+  question: PerformanceQuestion,
+  review: ReviewRow,
+) {
+  const criterionKey = criterionKeyForQuestion(question);
+  if (criterionKey !== "instruction" && criterionKey !== "experience") {
+    return scoreAnswer(answer, rules, question);
+  }
+  const answerRank = answerRankForCriterion(answer, criterionKey);
+  const requirementValues =
+    question.requirementValue?.trim()
+      ? [question.requirementValue]
+      : requirementCandidatesFromSnapshot(review, criterionKey);
+  const requirementRank = requirementRankForCriterion(requirementValues, criterionKey);
+  if (answerRank === null || requirementRank === null) return scoreAnswer(answer, rules, question);
+  return scoreForRequirementDifference(answerRank - requirementRank, criterionKey, rules);
+}
+
+function requirementLabelForCriterion(
+  review: ReviewRow,
+  question: PerformanceQuestion,
+  criterionKey: string,
+) {
+  if (question.requirementValue?.trim()) return question.requirementValue.trim();
+  if (criterionKey !== "instruction" && criterionKey !== "experience") return null;
+  return requirementCandidatesFromSnapshot(review, criterionKey).join(" | ") || null;
+}
+
+function scoreAnswer(
+  answer: string,
+  rules: ReturnType<typeof scoreRulesForCriterion>,
+  question: PerformanceQuestion,
+) {
+  if (!answer.trim()) return null;
+  const normalizedAnswer = normalizeLookup(answer);
+  const rule = rules.find((item) => {
+    const normalizedRule = normalizeLookup(item.label);
+    return (
+      normalizedRule === normalizedAnswer ||
+      normalizedRule.includes(normalizedAnswer) ||
+      normalizedAnswer.includes(normalizedRule)
+    );
+  });
+  if (rule?.notApplicable) return null;
+  if (rule?.score !== null && rule?.score !== undefined) return rule.score;
+  return scoreFromAnswerText(answer) ?? scoreFromQuestionOrder(answer, question);
+}
+
+function average(values: number[]) {
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function roundScore(value: number | null) {
+  return value === null ? null : Math.round(value * 100) / 100;
+}
+
+function buildComparisonScoreSummary(
+  review: ReviewRow,
+  questions: PerformanceQuestion[],
+  collaborator: ParticipantRow | null,
+  leader: ParticipantRow | null,
+): ComparisonScoreSummary {
+  const weightSnapshot = review.evaluation_weights_snapshot ?? {};
+  const weights =
+    weightSnapshot.weights && typeof weightSnapshot.weights === "object"
+      ? (weightSnapshot.weights as Record<string, unknown>)
+      : {};
+  const careerLabel = stringFromUnknown(weightSnapshot.careerLabel) || null;
+  let comparedTotal = 0;
+  let matchesTotal = 0;
+
+  const criteria = SCORE_CRITERIA.map((criterion) => {
+    const criterionQuestions = questions.filter(
+      (question) => criterionKeyForQuestion(question) === criterion.key,
+    );
+    const rules = scoreRulesForCriterion(review, criterion.key);
+    const collaboratorScores: number[] = [];
+    let compared = 0;
+    let matches = 0;
+    const requirementLabels = new Set<string>();
+
+    criterionQuestions.forEach((question) => {
+      const collaboratorAnswer = collaborator?.response_answers?.[question.id] ?? "";
+      const leaderAnswer = leader?.response_answers?.[question.id] ?? "";
+      const requirementLabel = requirementLabelForCriterion(review, question, criterion.key);
+      if (requirementLabel) requirementLabels.add(requirementLabel);
+      if (collaboratorAnswer.trim() && leaderAnswer.trim()) {
+        compared += 1;
+        comparedTotal += 1;
+        if (normalizeLookup(collaboratorAnswer) === normalizeLookup(leaderAnswer)) {
+          matches += 1;
+          matchesTotal += 1;
+        }
+      }
+
+      const collaboratorScore = scoreAgainstJobRequirement(
+        collaboratorAnswer,
+        rules,
+        question,
+        review,
+      );
+      if (collaboratorScore !== null) collaboratorScores.push(collaboratorScore);
+    });
+
+    const weight = numberFromUnknown(weights[criterion.key]);
+    const collaboratorAverage = average(collaboratorScores);
+    return {
+      key: criterion.key,
+      label: criterion.label,
+      weight,
+      matches,
+      compared,
+      scored: collaboratorScores.length,
+      collaboratorAverage: roundScore(collaboratorAverage),
+      leaderAverage: null,
+      collaboratorPoints: roundScore(
+        collaboratorAverage === null ? null : (weight * collaboratorAverage) / 100,
+      ),
+      leaderPoints: null,
+      requirementLabel: Array.from(requirementLabels).slice(0, 3).join(" | ") || null,
+    };
+  });
+
+  return {
+    careerLabel,
+    totalWeight: criteria.reduce((sum, criterion) => sum + criterion.weight, 0),
+    matchPercent:
+      comparedTotal > 0 ? Math.round((matchesTotal / comparedTotal) * 10000) / 100 : null,
+    collaboratorFinalScore: roundScore(
+      criteria.reduce((sum, criterion) => sum + (criterion.collaboratorPoints ?? 0), 0),
+    ) ?? 0,
+    leaderFinalScore: 0,
+    criteria,
+  };
 }
 
 function displayQuestionGroupTitle(question: PerformanceQuestion) {
@@ -1194,9 +1863,21 @@ export function PerformanceComparisonPage({
   const [authors, setAuthors] = useState<Record<string, string>>({});
   const [canManage, setCanManage] = useState(false);
   const [mobileSide, setMobileSide] = useState<ParticipantType>("collaborator");
+  const [opinionOpen, setOpinionOpen] = useState(false);
+  const [managementOpinion, setManagementOpinion] = useState("");
+  const [finalizing, setFinalizing] = useState(false);
+  const [weightConfigs, setWeightConfigs] = useState<EvaluationWeightConfigRow[]>([]);
+  const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
 
   const load = useCallback(async () => {
-    const [{ data: rev }, { data: parts }, { data: comm }, { data: hist }] = await Promise.all([
+    const [
+      { data: rev },
+      { data: parts },
+      { data: comm },
+      { data: hist },
+      { data: weightRows },
+      { data: scoringRows },
+    ] = await Promise.all([
       supabase
         .from("performance_reviews")
         .select("*")
@@ -1214,11 +1895,21 @@ export function PerformanceComparisonPage({
         .select("*")
         .eq("review_id", reviewId)
         .order("changed_at", { ascending: false }),
+      supabase
+        .from("evaluation_weight_configs")
+        .select("career_key,career_label,weights")
+        .eq("project_id", projectId),
+      supabase
+        .from("criterion_scoring_configs")
+        .select("criterion_key,scoring_schema")
+        .eq("project_id", projectId),
     ]);
     setReview((rev as ReviewRow | null) ?? null);
     setParticipants((parts ?? []) as ParticipantRow[]);
     setComments((comm ?? []) as CommentRow[]);
     setHistory((hist ?? []) as HistoryRow[]);
+    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
+    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
   }, [projectId, reviewId]);
 
   useEffect(() => {
@@ -1263,6 +1954,10 @@ export function PerformanceComparisonPage({
       });
   }, [comments, history]);
 
+  useEffect(() => {
+    setManagementOpinion(review?.management_opinion ?? "");
+  }, [review?.management_opinion]);
+
   if (!review) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -1273,8 +1968,10 @@ export function PerformanceComparisonPage({
 
   const collaborator = participants.find((p) => p.participant_type === "collaborator") ?? null;
   const leader = participants.find((p) => p.participant_type === "leader") ?? null;
-  const questions = allReviewQuestions(review);
+  const effectiveReview = reviewWithEvaluationConfigFallback(review, weightConfigs, scoringConfigs);
+  const questions = allReviewQuestions(effectiveReview);
   const locked = review.status === "finalized";
+  const scoreSummary = buildComparisonScoreSummary(effectiveReview, questions, collaborator, leader);
 
   const addComment = async (questionKey: string, content: string) => {
     if (!user || locked) return;
@@ -1347,6 +2044,57 @@ export function PerformanceComparisonPage({
     await load();
   };
 
+  const openFinalizeOpinion = () => {
+    if (
+      !collaborator ||
+      !leader ||
+      collaborator.status !== "answered" ||
+      leader.status !== "answered"
+    ) {
+      toast.error("A avaliação só pode ser finalizada depois das duas respostas.");
+      return;
+    }
+    setOpinionOpen(true);
+  };
+
+  const finalizeWithOpinion = async () => {
+    const opinion = managementOpinion.trim();
+    if (!opinion) {
+      toast.error("Preencha o parecer da Gestão de Pessoa.");
+      return;
+    }
+    setFinalizing(true);
+    const { error } = await supabase
+      .from("performance_reviews")
+      .update({
+        status: "finalized",
+        management_opinion: opinion,
+        score_summary_snapshot: toJson(scoreSummary),
+        evaluation_weights_snapshot: toJson(effectiveReview.evaluation_weights_snapshot ?? {}),
+        criterion_scoring_snapshot: toJson(effectiveReview.criterion_scoring_snapshot ?? {}),
+        finalized_by: user?.id ?? null,
+        finalized_at: new Date().toISOString(),
+      })
+      .eq("id", review.id);
+    if (error) {
+      setFinalizing(false);
+      return toast.error(error.message);
+    }
+    if (review.employee_id) {
+      await supabase
+        .from("project_employees")
+        .update({
+          last_performance_review_date: review.due_date ?? new Date().toISOString().slice(0, 10),
+        })
+        .eq("id", review.employee_id)
+        .eq("project_id", projectId);
+    }
+    setFinalizing(false);
+    setOpinionOpen(false);
+    toast.success("Avaliação finalizada");
+    await load();
+  };
+
   const reopen = async () => {
     if (!canManage || !confirm("Reabrir esta avaliação para alterações?")) return;
     const { error } = await supabase
@@ -1387,7 +2135,7 @@ export function PerformanceComparisonPage({
               </button>
             ) : (
               <button
-                onClick={finalize}
+                onClick={openFinalizeOpinion}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
               >
                 <CheckCircle2 className="h-4 w-4" /> Finalizar avaliação
@@ -1396,6 +2144,47 @@ export function PerformanceComparisonPage({
           </div>
         </div>
       </div>
+
+      <Dialog open={opinionOpen} onOpenChange={setOpinionOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border-[#042558]/10 p-0">
+          <div className="border-b border-[#042558]/10 px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-2xl text-[#042558]">
+                Parecer da Gestão de Pessoa
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Informe o parecer da GP antes de finalizar a avaliação.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="px-6 py-5">
+            <Textarea
+              value={managementOpinion}
+              onChange={(event) => setManagementOpinion(event.target.value)}
+              rows={10}
+              placeholder="Digite o parecer da avaliação..."
+              className="min-h-64 resize-y border-[#042558]/20 text-base text-[#042558] focus-visible:ring-[#042558]/30"
+            />
+          </div>
+          <DialogFooter className="border-t border-[#042558]/10 px-6 py-4">
+            <button
+              type="button"
+              onClick={() => setOpinionOpen(false)}
+              className="rounded-lg border border-[#042558]/15 px-4 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={finalizeWithOpinion}
+              disabled={finalizing || !managementOpinion.trim()}
+              className="rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {finalizing ? "Finalizando..." : "Finalizar parecer"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="mx-auto max-w-7xl px-4 py-4">
         <div className="mb-4 flex rounded-lg border border-[#042558]/15 p-1 md:hidden">
@@ -1417,6 +2206,8 @@ export function PerformanceComparisonPage({
           <span className="font-semibold">Modo de apresentação:</span> respostas alinhadas lado a
           lado, comentários por pergunta e histórico disponível quando houver alteração.
         </div>
+
+        {locked && <PerformanceScoreSummaryPanel review={review} summary={scoreSummary} />}
 
         <div className="space-y-4">
           {questions.map((question) => {
@@ -1490,6 +2281,238 @@ export function PerformanceComparisonPage({
         </div>
       </div>
     </main>
+  );
+}
+
+function formatSummaryNumber(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "sem dados";
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function percentBar(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+function LegacyPerformanceScoreSummaryPanel({
+  review,
+  summary,
+}: {
+  review: ReviewRow;
+  summary: ComparisonScoreSummary;
+}) {
+  const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
+  return (
+    <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-gradient-to-br from-white via-sky-50 to-emerald-50 p-5 shadow-lg shadow-[#042558]/10">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            Resumo de comparação
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-[#042558]">
+            Nota contra a descricao de cargo
+          </h2>
+          <p className="mt-1 text-sm text-[#042558]/60">
+            {summary.careerLabel ? `Carreira: ${summary.careerLabel} · ` : ""}
+            Pesos e pontuações congelados no momento da criação da avaliação.
+          </p>
+        </div>
+        <div className="grid min-w-full gap-3 sm:grid-cols-3 md:min-w-[560px]">
+          <MetricTile
+            tone="blue"
+            label="Nota final"
+            value={formatSummaryNumber(summary.collaboratorFinalScore)}
+          />
+          <MetricTile label="Referencia" value={formatSummaryNumber(summary.leaderFinalScore)} />
+          <MetricTile
+            label="Aderência"
+            value={
+              summary.matchPercent === null ? "sem dados" : `${formatSummaryNumber(summary.matchPercent)}%`
+            }
+          />
+        </div>
+      </div>
+
+      {review.management_opinion?.trim() && (
+        <div className="mt-5 rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            Parecer da Gestão de Pessoa
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
+            {review.management_opinion}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-3">
+        {summary.criteria.map((criterion) => {
+          const matchPercent =
+            criterion.compared > 0 ? Math.round((criterion.matches / criterion.compared) * 100) : null;
+          return (
+            <div key={criterion.key} className="rounded-xl border border-[#042558]/10 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="font-semibold text-[#042558]">{criterion.label}</h3>
+                  <p className="text-xs text-[#042558]/55">
+                    Peso {formatSummaryNumber(criterion.weight)}% · {criterion.scored} resposta(s)
+                    pontuada(s)
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-medium">
+                  <span className="rounded-full bg-[#042558]/10 px-2 py-1 text-[#042558]">
+                    Colab. {formatSummaryNumber(criterion.collaboratorAverage)}%
+                  </span>
+                  <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
+                    Líder {formatSummaryNumber(criterion.leaderAverage)}%
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+                    Aderência{" "}
+                    {matchPercent === null ? "sem dados" : `${formatSummaryNumber(matchPercent)}%`}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                <ScoreBar
+                  label={`Colaborador: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
+                  value={criterion.collaboratorAverage}
+                  color="bg-[#042558]"
+                />
+                <ScoreBar
+                  label={`Líder: ${formatSummaryNumber(criterion.leaderPoints)} pts`}
+                  value={criterion.leaderAverage}
+                  color="bg-emerald-500"
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PerformanceScoreSummaryPanel({
+  review,
+  summary,
+}: {
+  review: ReviewRow;
+  summary: ComparisonScoreSummary;
+}) {
+  const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
+
+  return (
+    <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-gradient-to-br from-white via-sky-50 to-emerald-50 p-5 shadow-lg shadow-[#042558]/10">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            Resumo de aderencia
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-[#042558]">
+            Nota contra a descricao de cargo
+          </h2>
+          <p className="mt-1 text-sm text-[#042558]/60">
+            {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
+            Compara as respostas validas com os requisitos do cargo e aplica os pesos configurados.
+          </p>
+        </div>
+        <div className="grid min-w-full gap-3 sm:grid-cols-2 md:min-w-[380px]">
+          <MetricTile
+            tone="blue"
+            label="Nota final"
+            value={formatSummaryNumber(summary.collaboratorFinalScore)}
+          />
+          <MetricTile label="Respostas validas" value={String(validAnswers)} />
+        </div>
+      </div>
+
+      {review.management_opinion?.trim() && (
+        <div className="mt-5 rounded-xl border border-[#042558]/10 bg-white/70 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            Parecer da Gestao de Pessoa
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
+            {review.management_opinion}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-3">
+        {summary.criteria.map((criterion) => {
+          return (
+            <div
+              key={criterion.key}
+              className="rounded-xl border border-[#042558]/10 bg-white/75 p-4"
+            >
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="font-semibold text-[#042558]">{criterion.label}</h3>
+                  <p className="text-xs text-[#042558]/55">
+                    Peso {formatSummaryNumber(criterion.weight)}% - {criterion.scored} resposta(s)
+                    valida(s) no calculo
+                  </p>
+                  {criterion.requirementLabel && (
+                    <p className="mt-1 text-xs text-[#042558]/55">
+                      Requisito: {criterion.requirementLabel}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-medium">
+                  <span className="rounded-full bg-[#042558]/10 px-2 py-1 text-[#042558]">
+                    Aderencia {formatSummaryNumber(criterion.collaboratorAverage)}%
+                  </span>
+                  <span className="rounded-full bg-sky-50 px-2 py-1 text-sky-700">
+                    Pontos {formatSummaryNumber(criterion.collaboratorPoints)}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3">
+                <ScoreBar
+                  label={`Nota do colaborador: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
+                  value={criterion.collaboratorAverage}
+                  color="bg-[#042558]"
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  tone = "green",
+}: {
+  label: string;
+  value: string;
+  tone?: "blue" | "green" | "purple";
+}) {
+  const toneClass = {
+    blue: "from-[#042558] to-sky-600 text-white shadow-[#042558]/20",
+    green: "from-emerald-500 to-teal-500 text-white shadow-emerald-500/20",
+    purple: "from-fuchsia-500 to-violet-600 text-white shadow-violet-500/20",
+  }[tone];
+  return (
+    <div className={`rounded-xl bg-gradient-to-br p-4 shadow-lg ${toneClass}`}>
+      <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{label}</p>
+      <p className="mt-2 text-4xl font-black tracking-normal text-white">{value}</p>
+    </div>
+  );
+}
+
+function ScoreBar({ label, value, color }: { label: string; value: number | null; color: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-[#042558]/60">
+        <span>{label}</span>
+        <span>{value === null ? "sem regra" : `${formatSummaryNumber(value)}%`}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${percentBar(value)}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -2297,6 +3320,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [baseFields, setBaseFields] = useState<BaseFieldRow[]>([]);
+  const [weightConfigs, setWeightConfigs] = useState<EvaluationWeightConfigRow[]>([]);
+  const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
   const [query, setQuery] = useState("");
   const [leaderFilter, setLeaderFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | ReviewType>("all");
@@ -2319,6 +3344,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       { data: fields },
       { data: parts },
       { data: areaRows },
+      { data: weightRows },
+      { data: scoringRows },
     ] = await Promise.all([
       supabase
         .from("performance_reviews")
@@ -2355,6 +3382,14 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         .select("id,review_id,participant_type,token,status,expires_at,sent_at,submitted_at")
         .eq("project_id", projectId),
       supabase.from("project_areas").select("id,nome").eq("project_id", projectId),
+      supabase
+        .from("evaluation_weight_configs")
+        .select("career_key,career_label,weights")
+        .eq("project_id", projectId),
+      supabase
+        .from("criterion_scoring_configs")
+        .select("criterion_key,scoring_schema")
+        .eq("project_id", projectId),
     ]);
     setReviews(toReviewRows(revs));
     setPositions((pos ?? []) as PositionRow[]);
@@ -2364,6 +3399,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
     setBaseFields((fields ?? []) as BaseFieldRow[]);
     setParticipants((parts ?? []) as ParticipantRow[]);
     setAreas((areaRows ?? []) as Array<{ id: string; nome: string }>);
+    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
+    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
     setLoading(false);
   }, [projectId]);
 
@@ -2551,6 +3588,11 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         item.reviewType,
         baseFields,
       );
+      const snapshots = buildEvaluationConfigSnapshot(
+        item.description,
+        weightConfigs,
+        scoringConfigs,
+      );
       const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
       const { data: review, error } = await supabase
@@ -2573,6 +3615,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           job_description_snapshot: toJson(item.description),
           activities_snapshot: toJson([]),
           questions_snapshot: toJson(questions),
+          evaluation_weights_snapshot: toJson(snapshots.evaluationWeights),
+          criterion_scoring_snapshot: toJson(snapshots.criterionScoring),
           created_by: user?.id ?? null,
         })
         .select("id")
@@ -2862,6 +3906,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [descriptions, setDescriptions] = useState<DcRow[]>([]);
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [baseFields, setBaseFields] = useState<BaseFieldRow[]>([]);
+  const [weightConfigs, setWeightConfigs] = useState<EvaluationWeightConfigRow[]>([]);
+  const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
   const [configId, setConfigId] = useState("");
   const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
@@ -2881,6 +3927,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       { data: dcs },
       { data: cfgs },
       { data: fields },
+      { data: weightRows },
+      { data: scoringRows },
     ] = await Promise.all([
       supabase
         .from("performance_reviews")
@@ -2913,6 +3961,14 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         .select("field_key,label,section,base_options(label,value,is_active)")
         .eq("project_id", projectId)
         .eq("is_active", true),
+      supabase
+        .from("evaluation_weight_configs")
+        .select("career_key,career_label,weights")
+        .eq("project_id", projectId),
+      supabase
+        .from("criterion_scoring_configs")
+        .select("criterion_key,scoring_schema")
+        .eq("project_id", projectId),
     ]);
     setReviews(toReviewRows(revs));
     setParticipants((parts ?? []) as ParticipantRow[]);
@@ -2922,6 +3978,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     const rows = toConfigRows(cfgs);
     setConfigs(rows);
     setBaseFields((fields ?? []) as BaseFieldRow[]);
+    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
+    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
     setConfigId((current) => current || rows[0]?.id || "");
   }, [projectId]);
 
@@ -3023,6 +4081,11 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         formReviewType,
         baseFields,
       );
+      const snapshots = buildEvaluationConfigSnapshot(
+        selectedDc,
+        weightConfigs,
+        scoringConfigs,
+      );
       const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
       const { data: review, error } = await supabase
@@ -3045,6 +4108,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           job_description_snapshot: toJson(selectedDc),
           activities_snapshot: toJson([]),
           questions_snapshot: toJson(questions),
+          evaluation_weights_snapshot: toJson(snapshots.evaluationWeights),
+          criterion_scoring_snapshot: toJson(snapshots.criterionScoring),
           created_by: user?.id ?? null,
         })
         .select("id")
@@ -3703,7 +4768,13 @@ export function allReviewQuestions(review: ReviewRow) {
 
 type PublicQuestionBlock =
   | { kind: "question"; id: string; question: PerformanceQuestion }
-  | { kind: "group"; id: string; title: string; questions: PerformanceQuestion[] };
+  | {
+      kind: "group";
+      id: string;
+      title: string;
+      description?: string;
+      questions: PerformanceQuestion[];
+    };
 
 function publicQuestionSections(questions: PerformanceQuestion[]) {
   const sections: Array<{ title: string; blocks: PublicQuestionBlock[] }> = [];
@@ -3729,11 +4800,15 @@ function publicQuestionSections(questions: PerformanceQuestion[]) {
     );
     if (existing) {
       existing.questions.push(question);
+      if (!existing.description && question.groupDescription?.trim()) {
+        existing.description = question.groupDescription.trim();
+      }
     } else {
       section.blocks.push({
         kind: "group",
         id: groupId,
         title: question.groupTitle ?? question.helpText ?? "Item",
+        description: question.groupDescription?.trim() || undefined,
         questions: [question],
       });
     }
@@ -3784,6 +4859,11 @@ export function PublicPerformanceFormFields({
                 <p className="mb-3 whitespace-pre-wrap text-sm font-semibold text-gray-800">
                   {displayGroupTitle(block)}
                 </p>
+                {block.description && (
+                  <p className="mb-4 whitespace-pre-wrap rounded-lg border border-[#042558]/10 bg-white px-3 py-2 text-sm leading-relaxed text-gray-600">
+                    {block.description}
+                  </p>
+                )}
                 <div className="grid gap-3 md:grid-cols-2">
                   {block.questions.map((question) => (
                     <label key={question.id} className="block">

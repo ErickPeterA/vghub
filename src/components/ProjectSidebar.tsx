@@ -118,7 +118,7 @@ export function ProjectSidebar({
             to: "/projetos/$projectId/base",
             href: `/projetos/${projectId}/base`,
             icon: Layers,
-            label: "Configuração de Modelos",
+            label: "Configurações",
           },
         ]
       : []),

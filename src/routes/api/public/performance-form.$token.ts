@@ -14,6 +14,7 @@ type PerformanceQuestion = {
   sectionTitle?: string;
   groupId?: string;
   groupTitle?: string;
+  groupDescription?: string;
   dynamicSource?: "activities" | "indicators" | "culture_skills" | "role_skills" | "behavior";
   dynamicRole?: "efficiency" | "efficacy" | "result" | "reach" | "fit" | "rating";
 };
@@ -23,7 +24,12 @@ type BaseFieldRow = {
   field_key: string;
   label: string;
   section: string;
-  base_options?: Array<{ label: string; value: string; is_active?: boolean | null }>;
+  base_options?: Array<{
+    label: string;
+    value: string;
+    description?: string | null;
+    is_active?: boolean | null;
+  }>;
 };
 
 function asRecord(value: unknown): JsonRecord {
@@ -113,6 +119,13 @@ function optionLabelForValue(field: BaseFieldRow, value: string) {
   );
 }
 
+function optionDescriptionForValue(field: BaseFieldRow, value: string) {
+  return (
+    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+      ?.description ?? ""
+  ).trim();
+}
+
 function pickItemValueFromFields(
   item: JsonRecord,
   fields: BaseFieldRow[],
@@ -130,8 +143,9 @@ function pickItemValueFromFields(
   });
   if (!field) return "";
   const value = stringFromUnknown(item[field.field_key]);
-  if (!value || isInternalOptionValue(value)) return "";
-  return optionLabelForValue(field, value);
+  const label = value ? optionLabelForValue(field, value) : "";
+  if (!label || isInternalOptionValue(label)) return "";
+  return label;
 }
 
 function pickItemValueFromExactField(item: JsonRecord, fields: BaseFieldRow[], names: string[]) {
@@ -143,8 +157,9 @@ function pickItemValueFromExactField(item: JsonRecord, fields: BaseFieldRow[], n
   });
   if (!field) return "";
   const value = stringFromUnknown(item[field.field_key]);
-  if (!value || isInternalOptionValue(value)) return "";
-  return optionLabelForValue(field, value);
+  const label = value ? optionLabelForValue(field, value) : "";
+  if (!label || isInternalOptionValue(label)) return "";
+  return label;
 }
 
 function pickItemValueFromExactLabel(item: JsonRecord, fields: BaseFieldRow[], labels: string[]) {
@@ -152,8 +167,9 @@ function pickItemValueFromExactLabel(item: JsonRecord, fields: BaseFieldRow[], l
   const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
   if (!field) return "";
   const value = stringFromUnknown(item[field.field_key]);
-  if (!value || isNonTitleValue(value)) return "";
-  return optionLabelForValue(field, value);
+  const label = value ? optionLabelForValue(field, value) : "";
+  if (!label || isNonTitleValue(label)) return "";
+  return label;
 }
 
 function pickItemValueFromExactKey(item: JsonRecord, names: string[]) {
@@ -280,6 +296,54 @@ function titleForQuestion(
   );
 }
 
+function descriptionForQuestion(
+  snapshot: JsonRecord,
+  fields: BaseFieldRow[],
+  question: PerformanceQuestion,
+) {
+  if (
+    question.dynamicSource !== "culture_skills" &&
+    question.dynamicSource !== "role_skills"
+  ) {
+    return question.groupDescription;
+  }
+  if (!question.groupId) return question.groupDescription;
+  const index = Number(question.groupId.match(/_(\d+)$/)?.[1] ?? "0") - 1;
+  const item = itemsForQuestion(snapshot, question)[index];
+  if (!item) return question.groupDescription;
+  const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
+  const expectedLabels =
+    question.dynamicSource === "culture_skills"
+      ? ["Habilidade cultural", "Habilidade", "CompetÃªncia", "Competencia"]
+      : [
+          "Habilidade do cargo",
+          "Habilidade especÃ­fica do cargo",
+          "Habilidade especifica do cargo",
+          "Habilidade",
+          "CompetÃªncia",
+          "Competencia",
+        ];
+  const expectedKeys =
+    question.dynamicSource === "culture_skills"
+      ? ["habilidade_cultural", "habilidade", "competencia"]
+      : ["habilidade_cargo", "habilidade_do_cargo", "habilidade", "competencia"];
+  const expected = [...expectedLabels, ...expectedKeys].map(normalizeLookup);
+  const field =
+    sourceFields.find((candidate) => {
+      const label = normalizeLookup(candidate.label);
+      const key = normalizeLookup(candidate.field_key);
+      return expected.includes(label) || expected.includes(key);
+    }) ??
+    sourceFields.find((candidate) => {
+      const searchable = `${normalizeLookup(candidate.label)} ${normalizeLookup(candidate.field_key)}`;
+      return searchable.includes("habilidade") || searchable.includes("competencia");
+    });
+  if (!field) return question.groupDescription;
+  const value = stringFromUnknown(item[field.field_key]);
+  if (!value) return question.groupDescription;
+  return optionDescriptionForValue(field, value) || question.groupDescription;
+}
+
 export const Route = createFileRoute("/api/public/performance-form/$token")({
   server: {
     handlers: {
@@ -361,7 +425,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         const snapshot = asRecord(reviewRow.job_description_snapshot);
         const { data: baseFields } = await supabaseAdmin
           .from("base_fields")
-          .select("field_key,label,section,base_options(label,value,is_active)")
+          .select("field_key,label,section,base_options(label,value,description,is_active)")
           .eq("project_id", review.project_id)
           .eq("is_active", true);
         const questions = [...((review.questions_snapshot as PerformanceQuestion[] | null) ?? [])]
@@ -369,6 +433,11 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           .map((question) => ({
             ...question,
             groupTitle: titleForQuestion(
+              snapshot,
+              (baseFields ?? []) as unknown as BaseFieldRow[],
+              question,
+            ),
+            groupDescription: descriptionForQuestion(
               snapshot,
               (baseFields ?? []) as unknown as BaseFieldRow[],
               question,
