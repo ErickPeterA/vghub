@@ -11,7 +11,10 @@ import {
   type DynamicField,
   type ProjectArea,
 } from "@/components/DynamicFields";
-import { FieldCommentButton } from "@/components/FieldCommentButton";
+import {
+  FieldCommentButton,
+  type FieldCommentDecisionEvent,
+} from "@/components/FieldCommentButton";
 
 const lbl = "text-xs font-medium uppercase tracking-wider text-muted-foreground";
 
@@ -230,6 +233,7 @@ export function DCForm({
   submitLabel = "Salvar",
   readOnly = false,
   commentTarget,
+  focusFieldKey,
   headerExtra,
   footerExtra,
 }: {
@@ -244,7 +248,9 @@ export function DCForm({
     canAddComment: boolean;
     canDecideComment?: boolean;
     onCommentDecision?: () => void | Promise<void>;
+    onFieldDecision?: (event: FieldCommentDecisionEvent) => void | Promise<void>;
   };
+  focusFieldKey?: string | null;
   headerExtra?: React.ReactNode;
   footerExtra?: React.ReactNode;
 }) {
@@ -258,6 +264,26 @@ export function DCForm({
     loading: loadingSectionSettings,
   } = useSectionLimits(projectId);
   const currentPlan = getCurrentUserPlan();
+
+  useEffect(() => {
+    if (!focusFieldKey || readOnly) return;
+    const timeout = window.setTimeout(() => {
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-dc-field-key]"),
+      ).find((element) => element.dataset.dcFieldKey === focusFieldKey);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("rounded-xl", "ring-2", "ring-amber-400", "ring-offset-2");
+      const control = target.querySelector<HTMLElement>(
+        "textarea, input, select, button[role='combobox'], [contenteditable='true']",
+      );
+      control?.focus({ preventScroll: true });
+      window.setTimeout(() => {
+        target.classList.remove("rounded-xl", "ring-2", "ring-amber-400", "ring-offset-2");
+      }, 2200);
+    }, 150);
+    return () => window.clearTimeout(timeout);
+  }, [focusFieldKey, readOnly]);
 
   // Todo bloco repetidor precisa ter pelo menos 1 item já preenchido na tela
   // por padrão (a mesma pergunta já aparece pronta, e o "+" adiciona mais
@@ -382,6 +408,7 @@ export function DCForm({
         canAdd={commentTarget.canAddComment}
         canDecide={commentTarget.canDecideComment}
         onChange={commentTarget.onCommentDecision}
+        onDecision={commentTarget.onFieldDecision}
       />
     );
   };
@@ -407,7 +434,11 @@ export function DCForm({
             renderedField.field_type === "textarea" ||
             renderedField.field_type === "competency_description";
           return (
-            <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
+            <div
+              key={field.id}
+              data-dc-field-key={field.field_key}
+              className={wideField ? "md:col-span-2" : ""}
+            >
               <SingleField
                 field={renderedField}
                 value={value}
@@ -467,7 +498,11 @@ export function DCForm({
                     field.field_type === "textarea" ||
                     field.field_type === "competency_description";
                   return (
-                    <div key={field.id} className={wideField ? "md:col-span-2" : ""}>
+                    <div
+                      key={field.id}
+                      data-dc-field-key={`${String(arrayKey)}[${i}].${field.field_key}`}
+                      className={wideField ? "md:col-span-2" : ""}
+                    >
                       <SingleField
                         field={field}
                         value={item[field.field_key]}

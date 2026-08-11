@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import {
+  performanceBlockCommentKey,
   validatePerformanceAnswers,
   type PerformanceQuestion,
 } from "@/components/PerformanceReviewManager";
@@ -182,7 +183,7 @@ function PublicPerformanceForm() {
           )}
         </div>
         <div className="p-8">
-          {form && <EvaluationHeader header={form.header} />}
+          {form && stepIndex === 0 && <EvaluationHeader header={form.header} />}
 
           {(state === "ready" || state === "submitting") && (
             <div className="mb-6 rounded-lg bg-gray-50 px-4 py-2 text-xs text-gray-500">
@@ -230,6 +231,7 @@ function PublicPerformanceForm() {
                 <SectionStep
                   title={currentStep.title}
                   questions={currentStep.questions}
+                  blockId={currentStep.id}
                   participantType={form.participantType}
                   answers={answers}
                   onChange={setAnswers}
@@ -239,6 +241,7 @@ function PublicPerformanceForm() {
                 <SectionStep
                   title={currentStep.title}
                   questions={currentStep.questions}
+                  blockId={currentStep.id}
                   participantType={form.participantType}
                   answers={answers}
                   onChange={setAnswers}
@@ -250,6 +253,7 @@ function PublicPerformanceForm() {
                   index={currentStep.activityIndex}
                   total={steps.filter((step) => step.kind === "activity").length}
                   questions={currentStep.questions}
+                  blockId={currentStep.id}
                   participantType={form.participantType}
                   answers={answers}
                   onChange={setAnswers}
@@ -316,10 +320,11 @@ function PublicPerformanceForm() {
 }
 
 type PerformanceStep =
-  | { kind: "intro"; title: string; questions: PerformanceQuestion[] }
-  | { kind: "section"; title: string; questions: PerformanceQuestion[] }
+  | { kind: "intro"; id: string; title: string; questions: PerformanceQuestion[] }
+  | { kind: "section"; id: string; title: string; questions: PerformanceQuestion[] }
   | {
       kind: "activity";
+      id: string;
       title: string;
       activityIndex: number;
       questions: PerformanceQuestion[];
@@ -336,9 +341,10 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
     groupMap.set(key, [...(groupMap.get(key) ?? []), question]);
   });
 
-  Array.from(groupMap.values()).forEach((groupQuestions, index) => {
+  Array.from(groupMap.entries()).forEach(([groupKey, groupQuestions], index) => {
     activityGroups.push({
       kind: "activity",
+      id: `activity:${groupKey}`,
       title: displayActivityTitle(groupQuestions[0], index),
       activityIndex: index + 1,
       questions: groupQuestions,
@@ -358,6 +364,7 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
   const sectionSteps = dynamicSections
     .map(({ source, title }) => ({
       kind: "section" as const,
+      id: `section:${source}`,
       title,
       questions: activeQuestions.filter((question) => question.dynamicSource === source),
     }))
@@ -366,6 +373,7 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
   return [
     {
       kind: "intro",
+      id: "intro",
       title: "Instrução e experiência",
       questions: introQuestions,
     },
@@ -476,12 +484,14 @@ function displayGroupTitle(question: PerformanceQuestion | undefined, index: num
 function SectionStep({
   title,
   questions,
+  blockId,
   participantType,
   answers,
   onChange,
 }: {
   title: string;
   questions: PerformanceQuestion[];
+  blockId: string;
   participantType: FormData["participantType"];
   answers: Record<string, string>;
   onChange: (answers: Record<string, string>) => void;
@@ -494,7 +504,7 @@ function SectionStep({
       </div>
       {questions.length === 0 ? (
         <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Clique em avançar para continuar a avaliação. 
+          Clique em avançar para continuar a avaliação.
         </p>
       ) : (
         blocks.map((block) =>
@@ -532,6 +542,11 @@ function SectionStep({
           ),
         )
       )}
+      <BlockCommentField
+        blockId={blockId}
+        value={answers[performanceBlockCommentKey(blockId)] ?? ""}
+        onChange={(value) => onChange({ ...answers, [performanceBlockCommentKey(blockId)]: value })}
+      />
     </section>
   );
 }
@@ -540,6 +555,7 @@ function ActivityStep({
   title,
   index,
   total,
+  blockId,
   questions,
   participantType,
   answers,
@@ -548,6 +564,7 @@ function ActivityStep({
   title: string;
   index: number;
   total: number;
+  blockId: string;
   questions: PerformanceQuestion[];
   participantType: FormData["participantType"];
   answers: Record<string, string>;
@@ -575,7 +592,40 @@ function ActivityStep({
           />
         ))}
       </div>
+      <BlockCommentField
+        blockId={blockId}
+        value={answers[performanceBlockCommentKey(blockId)] ?? ""}
+        onChange={(value) => onChange({ ...answers, [performanceBlockCommentKey(blockId)]: value })}
+      />
     </section>
+  );
+}
+
+function BlockCommentField({
+  blockId,
+  value,
+  onChange,
+}: {
+  blockId: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block rounded-xl border border-[#042558]/10 bg-white p-4">
+      <span className="mb-1 block text-sm font-semibold text-gray-700">
+        Observações sobre este bloco
+      </span>
+      <span className="mb-2 block text-xs text-gray-400">
+        Use este campo se quiser explicar alguma resposta ou registrar um ponto importante.
+      </span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={3}
+        data-block-id={blockId}
+        className="w-full resize-y rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20"
+      />
+    </label>
   );
 }
 

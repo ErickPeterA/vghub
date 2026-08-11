@@ -84,6 +84,7 @@ function EditDC() {
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null);
   const [openVersions, setOpenVersions] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
+  const [focusFieldKey, setFocusFieldKey] = useState<string | null>(null);
 
   const loadVersions = async () => {
     const { data } = await supabase
@@ -180,6 +181,12 @@ function EditDC() {
     await Promise.all([loadCurrent(), loadVersions()]);
   };
 
+  const handleFieldDecision = async ({ fieldKey }: { fieldKey: string }) => {
+    setViewingVersionId(null);
+    setFocusFieldKey(null);
+    window.setTimeout(() => setFocusFieldKey(fieldKey), 0);
+  };
+
   const onSubmit = async (dc: DescricaoCargo) => {
     if (readOnly) return;
     const { id: _omit, ...payload } = dc;
@@ -210,6 +217,24 @@ function EditDC() {
       entidadeId: dcId,
       detalhes: { cargo: dc.cargo },
     });
+    if (currentVersion?.id) {
+      const { data: versionId, error: versionError } = await supabase.rpc(
+        "finalize_resolved_dc_comments",
+        {
+          _dc_id: dcId,
+          _version_id: currentVersion.id,
+        },
+      );
+      if (versionError) {
+        toast.error(versionError.message);
+        return;
+      }
+      if (versionId) {
+        await loadVersions();
+        toast.success("Nova versão gerada com os comentários resolvidos");
+        return;
+      }
+    }
     toast.success("Atualizado");
   };
 
@@ -318,12 +343,14 @@ function EditDC() {
         onSubmit={onSubmit}
         submitLabel="Salvar alterações"
         readOnly={readOnly}
+        focusFieldKey={focusFieldKey}
         commentTarget={{
           dcId,
           versionId: versionIdForComments,
           canAddComment: (isLider || canDecideComment) && !viewingVersionId,
           canDecideComment: canDecideComment,
           onCommentDecision: handleCommentChange,
+          onFieldDecision: handleFieldDecision,
         }}
         footerExtra={
           showApprovalActions ? (

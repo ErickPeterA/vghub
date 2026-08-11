@@ -17,6 +17,12 @@ type Comment = {
   approved_version_id: string | null;
 };
 
+export type FieldCommentDecisionEvent = {
+  fieldKey: string;
+  commentId: string;
+  decision: "approved" | "rejected";
+};
+
 export function FieldCommentButton({
   dcId,
   fieldKey,
@@ -24,6 +30,7 @@ export function FieldCommentButton({
   canAdd,
   canDecide = false,
   onChange,
+  onDecision,
 }: {
   dcId: string;
   fieldKey: string;
@@ -31,6 +38,7 @@ export function FieldCommentButton({
   canAdd: boolean;
   canDecide?: boolean;
   onChange?: () => void | Promise<void>;
+  onDecision?: (event: FieldCommentDecisionEvent) => void | Promise<void>;
 }) {
   const { user } = useCurrentUser();
   const [open, setOpen] = useState(false);
@@ -80,6 +88,10 @@ export function FieldCommentButton({
     toast.success(decision === "approved" ? "ComentÃ¡rio aprovado" : "ComentÃ¡rio reprovado");
     await load();
     await onChange?.();
+    if (decision === "approved") {
+      setOpen(false);
+      await onDecision?.({ fieldKey, commentId, decision });
+    }
   };
 
   useEffect(() => {

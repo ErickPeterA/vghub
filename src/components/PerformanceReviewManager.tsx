@@ -17,6 +17,13 @@ import {
   SplitSquareVertical,
   X,
 } from "lucide-react";
+import {
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -168,6 +175,18 @@ type ComparisonScoreSummary = {
   collaboratorFinalScore: number;
   leaderFinalScore: number;
   criteria: CriterionScoreSummary[];
+};
+type LowPerformanceAnswer = {
+  id: string;
+  criterionKey: string;
+  criterionLabel: string;
+  blockTitle: string;
+  questionLabel: string;
+  answer: string;
+  score: number;
+  weight: number;
+  points: number;
+  requirementLabel: string | null;
 };
 type CommentRow = {
   id: string;
@@ -849,6 +868,7 @@ const uid = () =>
     : Math.random().toString(36).slice(2);
 const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/70 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
+export const performanceBlockCommentKey = (blockId: string) => `__block_comment:${blockId}`;
 const EXPERIENCE_REVIEW_PERIOD_OPTIONS = [
   { days: 30, label: "30 dias" },
   { days: 45, label: "45 dias" },
@@ -1760,6 +1780,50 @@ function buildComparisonScoreSummary(
   };
 }
 
+function buildLowPerformanceAnswers(
+  review: ReviewRow,
+  questions: PerformanceQuestion[],
+  collaborator: ParticipantRow | null,
+  summary: ComparisonScoreSummary,
+) {
+  if (!collaborator || collaborator.status !== "answered") return [];
+  return questions
+    .filter((question) => question.active ?? true)
+    .flatMap((question): LowPerformanceAnswer[] => {
+      const answer = collaborator.response_answers?.[question.id]?.trim() ?? "";
+      if (!answer) return [];
+      const criterionKey = criterionKeyForQuestion(question);
+      if (!criterionKey) return [];
+      const score = scoreAgainstJobRequirement(
+        answer,
+        scoreRulesForCriterion(review, criterionKey),
+        question,
+        review,
+      );
+      if (score === null || score >= 80) return [];
+      const criterion = summary.criteria.find((item) => item.key === criterionKey);
+      const weight = criterion?.weight ?? 0;
+      const blockTitle = question.groupId
+        ? displayQuestionGroupTitle(question)
+        : question.sectionTitle || question.helpText || "Geral";
+      return [
+        {
+          id: question.id,
+          criterionKey,
+          criterionLabel: criterion?.label ?? question.sectionTitle ?? "Critério",
+          blockTitle,
+          questionLabel: displayQuestionLabel(question, collaborator.participant_type),
+          answer,
+          score: roundScore(score) ?? score,
+          weight,
+          points: roundScore((weight * score) / 100) ?? 0,
+          requirementLabel: requirementLabelForCriterion(review, question, criterionKey),
+        },
+      ];
+    })
+    .sort((a, b) => a.score - b.score || b.weight - a.weight);
+}
+
 function displayQuestionGroupTitle(question: PerformanceQuestion) {
   if (question.groupTitle && !isInternalOptionValue(question.groupTitle))
     return question.groupTitle;
@@ -1772,6 +1836,68 @@ function displayQuestionGroupTitle(question: PerformanceQuestion) {
   };
   const suffix = question.groupId?.match(/_(\d+)$/)?.[1];
   return `${sourceLabel[question.dynamicSource ?? ""] ?? "Item"}${suffix ? ` ${suffix}` : ""}`;
+}
+
+type PerformanceComparisonBlock = {
+  id: string;
+  title: string;
+  eyebrow: string;
+  questions: PerformanceQuestion[];
+};
+
+function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
+  const activeQuestions = questions.filter((question) => question.active ?? true);
+  const blocks: PerformanceComparisonBlock[] = [];
+  const introQuestions = activeQuestions.filter((question) => !question.dynamicSource);
+  if (introQuestions.length) {
+    blocks.push({
+      id: "intro",
+      title: introQuestions[0]?.sectionTitle || "Instrução e experiência",
+      eyebrow: "Bloco",
+      questions: introQuestions,
+    });
+  }
+
+  const activityMap = new Map<string, PerformanceQuestion[]>();
+  activeQuestions
+    .filter((question) => question.dynamicSource === "activities" && Boolean(question.groupId))
+    .forEach((question) => {
+      const key = `${question.sectionTitle ?? ""}:${question.groupId}`;
+      activityMap.set(key, [...(activityMap.get(key) ?? []), question]);
+    });
+  Array.from(activityMap.entries()).forEach(([groupKey, groupQuestions], index) => {
+    blocks.push({
+      id: `activity:${groupKey}`,
+      title: displayQuestionGroupTitle(groupQuestions[0]),
+      eyebrow: `Atividade ${index + 1}`,
+      questions: groupQuestions,
+    });
+  });
+
+  const dynamicSections: Array<{
+    source: NonNullable<PerformanceQuestion["dynamicSource"]>;
+    title: string;
+  }> = [
+    { source: "indicators", title: "Indicadores" },
+    { source: "culture_skills", title: "Habilidade cultural" },
+    { source: "role_skills", title: "Habilidade específica do cargo" },
+    { source: "behavior", title: "Postura e comportamento" },
+  ];
+
+  dynamicSections.forEach(({ source, title }) => {
+    const sectionQuestions = activeQuestions.filter(
+      (question) => question.dynamicSource === source,
+    );
+    if (!sectionQuestions.length) return;
+    blocks.push({
+      id: `section:${source}`,
+      title,
+      eyebrow: "Bloco",
+      questions: sectionQuestions,
+    });
+  });
+
+  return blocks;
 }
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
@@ -1970,8 +2096,14 @@ export function PerformanceComparisonPage({
   const leader = participants.find((p) => p.participant_type === "leader") ?? null;
   const effectiveReview = reviewWithEvaluationConfigFallback(review, weightConfigs, scoringConfigs);
   const questions = allReviewQuestions(effectiveReview);
+  const comparisonBlocks = buildPerformanceComparisonBlocks(questions);
   const locked = review.status === "finalized";
-  const scoreSummary = buildComparisonScoreSummary(effectiveReview, questions, collaborator, leader);
+  const scoreSummary = buildComparisonScoreSummary(
+    effectiveReview,
+    questions,
+    collaborator,
+    leader,
+  );
 
   const addComment = async (questionKey: string, content: string) => {
     if (!user || locked) return;
@@ -2093,6 +2225,7 @@ export function PerformanceComparisonPage({
     setOpinionOpen(false);
     toast.success("Avaliação finalizada");
     await load();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const reopen = async () => {
@@ -2204,80 +2337,110 @@ export function PerformanceComparisonPage({
 
         <div className="mb-4 rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4 text-sm">
           <span className="font-semibold">Modo de apresentação:</span> respostas alinhadas lado a
-          lado, comentários por pergunta e histórico disponível quando houver alteração.
+          lado, observações por bloco, comentários por pergunta e histórico disponível quando houver
+          alteração.
         </div>
 
-        {locked && <PerformanceScoreSummaryPanel review={review} summary={scoreSummary} />}
+        {locked && (
+          <PerformanceScoreSummaryPanel
+            review={effectiveReview}
+            summary={scoreSummary}
+            questions={questions}
+            collaborator={collaborator}
+          />
+        )}
 
         <div className="space-y-4">
-          {questions.map((question) => {
-            const leftAnswer = collaborator?.response_answers?.[question.id] ?? "";
-            const rightAnswer = leader?.response_answers?.[question.id] ?? "";
-            const different =
-              question.type === "select" && leftAnswer && rightAnswer && leftAnswer !== rightAnswer;
-            return (
-              <section
-                key={question.id}
-                className={`rounded-xl border p-4 ${different ? "border-red-300 bg-red-50/80" : "border-[#042558]/10 bg-white"}`}
-              >
-                <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                      {question.sectionTitle ?? "Pergunta"}
-                    </p>
-                    {question.groupId && (
-                      <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
-                        {displayQuestionGroupTitle(question)}
-                      </p>
-                    )}
-                    <h2 className="text-base font-semibold">{question.label}</h2>
-                    {question.leaderLabel?.trim() && question.leaderLabel !== question.label && (
-                      <p className="mt-1 text-sm text-[#042558]/55">
-                        Líder: {question.leaderLabel}
-                      </p>
-                    )}
-                  </div>
-                  <CommentBox
-                    questionKey={question.id}
-                    comments={comments.filter((c) => c.question_key === question.id)}
-                    authors={authors}
-                    disabled={locked}
-                    onAdd={addComment}
-                  />
-                </div>
-                <div className="hidden grid-cols-[1fr_1px_1fr] gap-4 md:grid">
-                  <AnswerCell
-                    title="Colaborador"
-                    participant={collaborator}
-                    question={question}
-                    canEdit={canManage && !locked}
-                    onChange={updateAnswer}
-                  />
-                  <div className="bg-[#042558]/15" />
-                  <AnswerCell
-                    title="Líder"
-                    participant={leader}
-                    question={question}
-                    canEdit={canManage && !locked}
-                    onChange={updateAnswer}
-                  />
-                </div>
-                <div className="md:hidden">
-                  <AnswerCell
-                    title={mobileSide === "collaborator" ? "Colaborador" : "Líder"}
-                    participant={mobileSide === "collaborator" ? collaborator : leader}
-                    question={question}
-                    canEdit={canManage && !locked}
-                    onChange={updateAnswer}
-                  />
-                </div>
-                <HistoryList
-                  history={history.filter((h) => h.question_key === question.id)}
-                  authors={authors}
-                />
-              </section>
-            );
-          })}
+          {comparisonBlocks.map((block) => (
+            <section key={block.id} className="rounded-xl border border-[#042558]/10 bg-white p-4">
+              <div className="mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+                  {block.eyebrow}
+                </p>
+                <h2 className="mt-1 whitespace-pre-wrap text-lg font-semibold">{block.title}</h2>
+              </div>
+              <BlockObservationComparison
+                blockId={block.id}
+                collaborator={collaborator}
+                leader={leader}
+                mobileSide={mobileSide}
+              />
+              <div className="space-y-3">
+                {block.questions.map((question) => {
+                  const leftAnswer = collaborator?.response_answers?.[question.id] ?? "";
+                  const rightAnswer = leader?.response_answers?.[question.id] ?? "";
+                  const different =
+                    question.type === "select" &&
+                    leftAnswer &&
+                    rightAnswer &&
+                    leftAnswer !== rightAnswer;
+                  return (
+                    <article
+                      key={question.id}
+                      className={`rounded-lg border p-3 ${different ? "border-red-300 bg-red-50/80" : "border-[#042558]/10 bg-white"}`}
+                    >
+                      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+                            {question.sectionTitle ?? "Pergunta"}
+                          </p>
+                          {question.groupId && (
+                            <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
+                              {displayQuestionGroupTitle(question)}
+                            </p>
+                          )}
+                          <h3 className="text-base font-semibold">{question.label}</h3>
+                          {question.leaderLabel?.trim() &&
+                            question.leaderLabel !== question.label && (
+                              <p className="mt-1 text-sm text-[#042558]/55">
+                                Líder: {question.leaderLabel}
+                              </p>
+                            )}
+                        </div>
+                        <CommentBox
+                          questionKey={question.id}
+                          comments={comments.filter((c) => c.question_key === question.id)}
+                          authors={authors}
+                          disabled={locked}
+                          onAdd={addComment}
+                        />
+                      </div>
+                      <div className="hidden grid-cols-[1fr_1px_1fr] gap-4 md:grid">
+                        <AnswerCell
+                          title="Colaborador"
+                          participant={collaborator}
+                          question={question}
+                          canEdit={canManage && !locked}
+                          onChange={updateAnswer}
+                        />
+                        <div className="bg-[#042558]/15" />
+                        <AnswerCell
+                          title="Líder"
+                          participant={leader}
+                          question={question}
+                          canEdit={canManage && !locked}
+                          onChange={updateAnswer}
+                        />
+                      </div>
+                      <div className="md:hidden">
+                        <AnswerCell
+                          title={mobileSide === "collaborator" ? "Colaborador" : "Líder"}
+                          participant={mobileSide === "collaborator" ? collaborator : leader}
+                          question={question}
+                          canEdit={canManage && !locked}
+                          onChange={updateAnswer}
+                        />
+                      </div>
+                      <HistoryList
+                        history={history.filter((h) => h.question_key === question.id)}
+                        authors={authors}
+                      />
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
     </main>
@@ -2394,11 +2557,26 @@ function LegacyPerformanceScoreSummaryPanel({
 function PerformanceScoreSummaryPanel({
   review,
   summary,
+  questions,
+  collaborator,
 }: {
   review: ReviewRow;
   summary: ComparisonScoreSummary;
+  questions: PerformanceQuestion[];
+  collaborator: ParticipantRow | null;
 }) {
   const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
+
+  if (review.review_type === "performance") {
+    return (
+      <PerformanceFinalVisualizationPanel
+        review={review}
+        summary={summary}
+        questions={questions}
+        collaborator={collaborator}
+      />
+    );
+  }
 
   return (
     <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-gradient-to-br from-white via-sky-50 to-emerald-50 p-5 shadow-lg shadow-[#042558]/10">
@@ -2477,6 +2655,191 @@ function PerformanceScoreSummaryPanel({
         })}
       </div>
     </section>
+  );
+}
+
+function PerformanceFinalVisualizationPanel({
+  review,
+  summary,
+  questions,
+  collaborator,
+}: {
+  review: ReviewRow;
+  summary: ComparisonScoreSummary;
+  questions: PerformanceQuestion[];
+  collaborator: ParticipantRow | null;
+}) {
+  const lowAnswers = buildLowPerformanceAnswers(review, questions, collaborator, summary);
+  const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
+  const chartColors = ["#dc2626", "#ea580c", "#d97706", "#ca8a04", "#0891b2", "#7c3aed"];
+  const chartData = lowAnswers.map((item, index) => ({
+    name:
+      item.questionLabel.length > 34
+        ? `${item.questionLabel.slice(0, 31).trim()}...`
+        : item.questionLabel,
+    score: item.score,
+    fill: chartColors[index % chartColors.length],
+  }));
+
+  return (
+    <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-white shadow-lg shadow-[#042558]/10">
+      <div className="border-b border-[#042558]/10 bg-[#042558] px-5 py-4 text-white">
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+          Visualização final de desempenho
+        </p>
+        <div className="mt-1 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Resultado da avaliação</h2>
+            <p className="mt-1 text-sm text-white/70">
+              {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
+              Itens abaixo de 80% destacados para análise da GP.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <ResultPill label="Nota final" value={formatSummaryNumber(summary.collaboratorFinalScore)} />
+            <ResultPill label="Abaixo de 80%" value={String(lowAnswers.length)} />
+            <ResultPill label="Respostas válidas" value={String(validAnswers)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(320px,0.9fr)_1.1fr]">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
+          <div className="relative h-80 w-full max-w-lg">
+            {chartData.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart
+                    data={chartData}
+                    innerRadius="28%"
+                    outerRadius="95%"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                    <RadialBar dataKey="score" cornerRadius={8} background={{ fill: "#dbe3ef" }} />
+                    <RechartsTooltip
+                      formatter={(value) => [`${formatSummaryNumber(Number(value))}%`, "Nota"]}
+                    />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-full bg-white/95 px-5 py-4 text-center shadow-lg shadow-[#042558]/10">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+                      Nota final
+                    </p>
+                    <p className="text-4xl font-black text-[#042558]">
+                      {formatSummaryNumber(summary.collaboratorFinalScore)}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700/60">
+                  Sem alertas
+                </p>
+                <p className="mt-2 text-5xl font-black text-emerald-700">
+                  {formatSummaryNumber(summary.collaboratorFinalScore)}
+                </p>
+                <p className="mt-2 max-w-56 text-sm text-emerald-800/70">
+                  Nenhuma resposta pontuada abaixo de 80%.
+                </p>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-center text-xs text-[#042558]/55">
+            Cada arco representa uma resposta com nota abaixo de 80%.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {review.management_opinion?.trim() && (
+            <div className="rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+                Parecer da Gestão de Pessoa
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
+                {review.management_opinion}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+                  Abaixo do esperado
+                </p>
+                <h3 className="text-lg font-bold text-[#042558]">
+                  Respostas abaixo de 80%
+                </h3>
+              </div>
+              <span className="text-sm font-medium text-[#042558]/55">
+                {lowAnswers.length} item(ns)
+              </span>
+            </div>
+
+            {lowAnswers.length === 0 ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
+                Não há respostas abaixo de 80% para listar.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lowAnswers.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-xl border border-red-200 bg-red-50/70 p-4"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-red-700/60">
+                          {item.criterionLabel} - {item.blockTitle}
+                        </p>
+                        <h4 className="mt-1 font-semibold text-[#042558]">{item.questionLabel}</h4>
+                        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-[#042558]">
+                          {item.answer}
+                        </p>
+                        {item.requirementLabel && (
+                          <p className="mt-2 text-xs text-[#042558]/55">
+                            Requisito: {item.requirementLabel}
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid min-w-44 grid-cols-3 gap-2 text-center md:grid-cols-1">
+                        <SmallMetric label="Nota" value={`${formatSummaryNumber(item.score)}%`} />
+                        <SmallMetric label="Peso" value={`${formatSummaryNumber(item.weight)}%`} />
+                        <SmallMetric label="Pontos" value={formatSummaryNumber(item.points)} />
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ResultPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white/10 px-4 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{label}</p>
+      <p className="text-xl font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function SmallMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white px-3 py-2 shadow-sm shadow-[#042558]/5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#042558]/45">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-[#042558]">{value}</p>
+    </div>
   );
 }
 
@@ -4541,6 +4904,55 @@ function ParticipantCard({
           /avaliacao-desempenho/preencher/{participant.token}
         </p>
       )}
+    </div>
+  );
+}
+
+function BlockObservationComparison({
+  blockId,
+  collaborator,
+  leader,
+  mobileSide,
+}: {
+  blockId: string;
+  collaborator: ParticipantRow | null;
+  leader: ParticipantRow | null;
+  mobileSide: ParticipantType;
+}) {
+  const questionKey = performanceBlockCommentKey(blockId);
+  const collaboratorComment = collaborator?.response_answers?.[questionKey]?.trim() ?? "";
+  const leaderComment = leader?.response_answers?.[questionKey]?.trim() ?? "";
+  if (!collaboratorComment && !leaderComment) return null;
+
+  return (
+    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-900/60">
+        Observações do bloco
+      </p>
+      <div className="hidden grid-cols-[1fr_1px_1fr] gap-4 md:grid">
+        <BlockObservationCell title="Colaborador" value={collaboratorComment} />
+        <div className="bg-amber-200" />
+        <BlockObservationCell title="Líder" value={leaderComment} />
+      </div>
+      <div className="md:hidden">
+        <BlockObservationCell
+          title={mobileSide === "collaborator" ? "Colaborador" : "Líder"}
+          value={mobileSide === "collaborator" ? collaboratorComment : leaderComment}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BlockObservationCell({ title, value }: { title: string; value: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-900/50">
+        {title}
+      </p>
+      <p className="min-h-[38px] whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-[#042558]">
+        {value || <span className="italic text-[#042558]/40">sem observação</span>}
+      </p>
     </div>
   );
 }
