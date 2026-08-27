@@ -175,12 +175,6 @@ function PublicPerformanceForm() {
             {reviewTypeTitle(form?.reviewType)}
           </p>
           <h1 className="text-2xl font-bold text-white">{form?.reviewName ?? "Preenchimento"}</h1>
-          {form && (
-            <p className="mt-1 text-sm text-white/70">
-              {form.participantType === "collaborator" ? "Autoavaliação" : "Avaliação do líder"} ·{" "}
-              {form.employeeName} · {form.jobTitle}
-            </p>
-          )}
         </div>
         <div className="p-8">
           {form && stepIndex === 0 && <EvaluationHeader header={form.header} />}
@@ -724,27 +718,16 @@ function QuestionInput({
 function EvaluationHeader({ header }: { header?: FormData["header"] }) {
   if (!header) return null;
   const fields = [
-    ["Nomenclatura do Cargo", header.positionName],
-    ["Tipo de Carreira do Cargo", header.careerType],
-    ["Área/Setor do Cargo", header.areaSector],
-    ["Cargo do Superior Imediato", header.leaderPositionName],
-    ["Nome do colaborador", header.employeeName],
+    ["Área/Setor", header.areaSector],
+    ["Nomenclatura do cargo", header.positionName],
     ["Nome do superior imediato", header.leaderName],
-    ["Data de Admissão", formatHeaderDate(header.admissionDate)],
+    ["Nome do cargo do superior imediato", header.leaderPositionName],
+    ["Data de admissão", formatHeaderDate(header.admissionDate)],
+    ["Data máxima de preenchimento", formatHeaderDateTime(header.expiresAt)],
   ];
 
   return (
     <section className="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-white">
-      <div className="grid gap-px bg-gray-200 md:grid-cols-2">
-        <HeaderItem
-          label="Data de Envio da Avaliação"
-          value={formatHeaderDateTime(header.sentAt)}
-        />
-        <HeaderItem
-          label="Data Máxima de preenchimento"
-          value={formatHeaderDateTime(header.expiresAt)}
-        />
-      </div>
       <div className="grid gap-px bg-gray-200 md:grid-cols-2">
         {fields.map(([label, value]) => (
           <HeaderItem key={label} label={label ?? ""} value={value} />

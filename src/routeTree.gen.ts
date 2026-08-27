@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PamTokenRouteImport } from './routes/pam.$token'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
 import { Route as AvaliacaoDesempenhoPreencherTokenRouteImport } from './routes/avaliacao-desempenho.preencher.$token'
@@ -26,9 +27,13 @@ import { Route as AuthenticatedGerenciamentoUsuariosIndexRouteImport } from './r
 import { Route as ApiPublicPerformanceResponseTokenRouteImport } from './routes/api/public/performance-response.$token'
 import { Route as ApiPublicPerformanceFormTokenRouteImport } from './routes/api/public/performance-form.$token'
 import { Route as ApiPublicPerformanceDraftTokenRouteImport } from './routes/api/public/performance-draft.$token'
+import { Route as ApiPublicPamTokenRouteImport } from './routes/api/public/pam.$token'
+import { Route as ApiPublicPamDraftTokenRouteImport } from './routes/api/public/pam-draft.$token'
+import { Route as ApiPublicPamCompleteTokenRouteImport } from './routes/api/public/pam-complete.$token'
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
+import { Route as AuthenticatedProjetosProjectIdPamRouteImport } from './routes/_authenticated/projetos.$projectId.pam'
 import { Route as AuthenticatedProjetosProjectIdOrganogramaRouteImport } from './routes/_authenticated/projetos.$projectId.organograma'
 import { Route as AuthenticatedProjetosProjectIdHistoricoRouteImport } from './routes/_authenticated/projetos.$projectId.historico'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo'
@@ -57,6 +62,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PamTokenRoute = PamTokenRouteImport.update({
+  id: '/pam/$token',
+  path: '/pam/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
@@ -142,6 +152,22 @@ const ApiPublicPerformanceDraftTokenRoute =
     path: '/api/public/performance-draft/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPamTokenRoute = ApiPublicPamTokenRouteImport.update({
+  id: '/api/public/pam/$token',
+  path: '/api/public/pam/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPamDraftTokenRoute = ApiPublicPamDraftTokenRouteImport.update({
+  id: '/api/public/pam-draft/$token',
+  path: '/api/public/pam-draft/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPamCompleteTokenRoute =
+  ApiPublicPamCompleteTokenRouteImport.update({
+    id: '/api/public/pam-complete/$token',
+    path: '/api/public/pam-complete/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicActivityResponseTokenRoute =
   ApiPublicActivityResponseTokenRouteImport.update({
     id: '/api/public/activity-response/$token',
@@ -159,6 +185,12 @@ const ApiPublicActivityDraftTokenRoute =
     id: '/api/public/activity-draft/$token',
     path: '/api/public/activity-draft/$token',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedProjetosProjectIdPamRoute =
+  AuthenticatedProjetosProjectIdPamRouteImport.update({
+    id: '/pam',
+    path: '/pam',
+    getParentRoute: () => AuthenticatedProjetosProjectIdRoute,
   } as any)
 const AuthenticatedProjetosProjectIdOrganogramaRoute =
   AuthenticatedProjetosProjectIdOrganogramaRouteImport.update({
@@ -258,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/pam/$token': typeof PamTokenRoute
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
   '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
@@ -277,9 +310,13 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
+  '/projetos/$projectId/pam': typeof AuthenticatedProjetosProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
+  '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
   '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
@@ -293,6 +330,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/pam/$token': typeof PamTokenRoute
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
   '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
@@ -309,9 +347,13 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/configuracoes': typeof AuthenticatedProjetosProjectIdConfiguracoesRoute
   '/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
+  '/projetos/$projectId/pam': typeof AuthenticatedProjetosProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
+  '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
   '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
@@ -328,6 +370,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRouteWithChildren
+  '/pam/$token': typeof PamTokenRoute
   '/_authenticated/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
   '/_authenticated/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/_authenticated/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
@@ -347,9 +390,13 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   '/_authenticated/projetos/$projectId/historico': typeof AuthenticatedProjetosProjectIdHistoricoRoute
   '/_authenticated/projetos/$projectId/organograma': typeof AuthenticatedProjetosProjectIdOrganogramaRoute
+  '/_authenticated/projetos/$projectId/pam': typeof AuthenticatedProjetosProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
+  '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
+  '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
   '/api/public/performance-response/$token': typeof ApiPublicPerformanceResponseTokenRoute
@@ -366,6 +413,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/projetos'
+    | '/pam/$token'
     | '/gerenciamento/atrelar'
     | '/gerenciamento/bases'
     | '/gerenciamento/usuarios'
@@ -385,9 +433,13 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
+    | '/projetos/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/pam-complete/$token'
+    | '/api/public/pam-draft/$token'
+    | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
     | '/api/public/performance-response/$token'
@@ -401,6 +453,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/pam/$token'
     | '/gerenciamento/atrelar'
     | '/gerenciamento/bases'
     | '/projetos/novo'
@@ -417,9 +470,13 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/configuracoes'
     | '/projetos/$projectId/historico'
     | '/projetos/$projectId/organograma'
+    | '/projetos/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/pam-complete/$token'
+    | '/api/public/pam-draft/$token'
+    | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
     | '/api/public/performance-response/$token'
@@ -435,6 +492,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/projetos'
+    | '/pam/$token'
     | '/_authenticated/gerenciamento/atrelar'
     | '/_authenticated/gerenciamento/bases'
     | '/_authenticated/gerenciamento/usuarios'
@@ -454,9 +512,13 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/descricao-cargo'
     | '/_authenticated/projetos/$projectId/historico'
     | '/_authenticated/projetos/$projectId/organograma'
+    | '/_authenticated/projetos/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
+    | '/api/public/pam-complete/$token'
+    | '/api/public/pam-draft/$token'
+    | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
     | '/api/public/performance-response/$token'
@@ -472,11 +534,15 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PamTokenRoute: typeof PamTokenRoute
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
   AvaliacaoDesempenhoPreencherTokenRoute: typeof AvaliacaoDesempenhoPreencherTokenRoute
   ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
+  ApiPublicPamCompleteTokenRoute: typeof ApiPublicPamCompleteTokenRoute
+  ApiPublicPamDraftTokenRoute: typeof ApiPublicPamDraftTokenRoute
+  ApiPublicPamTokenRoute: typeof ApiPublicPamTokenRoute
   ApiPublicPerformanceDraftTokenRoute: typeof ApiPublicPerformanceDraftTokenRoute
   ApiPublicPerformanceFormTokenRoute: typeof ApiPublicPerformanceFormTokenRoute
   ApiPublicPerformanceResponseTokenRoute: typeof ApiPublicPerformanceResponseTokenRoute
@@ -503,6 +569,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pam/$token': {
+      id: '/pam/$token'
+      path: '/pam/$token'
+      fullPath: '/pam/$token'
+      preLoaderRoute: typeof PamTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projetos': {
@@ -603,6 +676,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPerformanceDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/pam/$token': {
+      id: '/api/public/pam/$token'
+      path: '/api/public/pam/$token'
+      fullPath: '/api/public/pam/$token'
+      preLoaderRoute: typeof ApiPublicPamTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pam-draft/$token': {
+      id: '/api/public/pam-draft/$token'
+      path: '/api/public/pam-draft/$token'
+      fullPath: '/api/public/pam-draft/$token'
+      preLoaderRoute: typeof ApiPublicPamDraftTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pam-complete/$token': {
+      id: '/api/public/pam-complete/$token'
+      path: '/api/public/pam-complete/$token'
+      fullPath: '/api/public/pam-complete/$token'
+      preLoaderRoute: typeof ApiPublicPamCompleteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/activity-response/$token': {
       id: '/api/public/activity-response/$token'
       path: '/api/public/activity-response/$token'
@@ -623,6 +717,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/activity-draft/$token'
       preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/projetos/$projectId/pam': {
+      id: '/_authenticated/projetos/$projectId/pam'
+      path: '/pam'
+      fullPath: '/projetos/$projectId/pam'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdPamRouteImport
+      parentRoute: typeof AuthenticatedProjetosProjectIdRoute
     }
     '/_authenticated/projetos/$projectId/organograma': {
       id: '/_authenticated/projetos/$projectId/organograma'
@@ -779,6 +880,7 @@ interface AuthenticatedProjetosProjectIdRouteChildren {
   AuthenticatedProjetosProjectIdDescricaoCargoRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRouteWithChildren
   AuthenticatedProjetosProjectIdHistoricoRoute: typeof AuthenticatedProjetosProjectIdHistoricoRoute
   AuthenticatedProjetosProjectIdOrganogramaRoute: typeof AuthenticatedProjetosProjectIdOrganogramaRoute
+  AuthenticatedProjetosProjectIdPamRoute: typeof AuthenticatedProjetosProjectIdPamRoute
   AuthenticatedProjetosProjectIdIndexRoute: typeof AuthenticatedProjetosProjectIdIndexRoute
 }
 
@@ -804,6 +906,8 @@ const AuthenticatedProjetosProjectIdRouteChildren: AuthenticatedProjetosProjectI
       AuthenticatedProjetosProjectIdHistoricoRoute,
     AuthenticatedProjetosProjectIdOrganogramaRoute:
       AuthenticatedProjetosProjectIdOrganogramaRoute,
+    AuthenticatedProjetosProjectIdPamRoute:
+      AuthenticatedProjetosProjectIdPamRoute,
     AuthenticatedProjetosProjectIdIndexRoute:
       AuthenticatedProjetosProjectIdIndexRoute,
   }
@@ -873,12 +977,16 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  PamTokenRoute: PamTokenRoute,
   AtividadesPreencherTokenRoute: AtividadesPreencherTokenRoute,
   AvaliacaoDesempenhoPreencherTokenRoute:
     AvaliacaoDesempenhoPreencherTokenRoute,
   ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,
+  ApiPublicPamCompleteTokenRoute: ApiPublicPamCompleteTokenRoute,
+  ApiPublicPamDraftTokenRoute: ApiPublicPamDraftTokenRoute,
+  ApiPublicPamTokenRoute: ApiPublicPamTokenRoute,
   ApiPublicPerformanceDraftTokenRoute: ApiPublicPerformanceDraftTokenRoute,
   ApiPublicPerformanceFormTokenRoute: ApiPublicPerformanceFormTokenRoute,
   ApiPublicPerformanceResponseTokenRoute:

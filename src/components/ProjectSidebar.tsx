@@ -2,12 +2,14 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BarChart3,
+  ChevronDown,
   ClipboardCheck,
   ClipboardList,
   FileText,
   GitFork,
   History,
   Layers,
+  ListChecks,
   Network,
   Settings,
   Users,
@@ -25,6 +27,24 @@ const LIDER_ROLES = new Set([
   "lider_setor",
 ]);
 
+const SIDEBAR_GROUPS = [
+  "EMPRESA",
+  "PLANO DE CARREIRA",
+  "AVALIAÇÕES",
+  "GESTÃO DO PROJETO",
+  "CONFIGURAÇÕES",
+] as const;
+
+type SidebarGroup = (typeof SIDEBAR_GROUPS)[number];
+type SidebarItem = {
+  to: string;
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  group: SidebarGroup;
+  badge?: number;
+};
+
 export function ProjectSidebar({
   projectId,
   projectName,
@@ -40,6 +60,12 @@ export function ProjectSidebar({
   const { user } = useCurrentUser();
   const [unreviewed, setUnreviewed] = useState(0);
   const [projectRole, setProjectRole] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<SidebarGroup, boolean>>(() =>
+    SIDEBAR_GROUPS.reduce(
+      (acc, group) => ({ ...acc, [group]: true }),
+      {} as Record<SidebarGroup, boolean>,
+    ),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -76,41 +102,54 @@ export function ProjectSidebar({
 
   const allItems = [
     {
-      to: "/projetos/$projectId/descricao-cargo",
-      href: `/projetos/${projectId}/descricao-cargo`,
-      icon: FileText,
-      label: "Aprovações",
-    },
-    {
-      to: "/projetos/$projectId/atividades",
-      href: `/projetos/${projectId}/atividades`,
-      icon: ClipboardList,
-      label: "Atividades",
-      badge: unreviewed,
-    },
-    {
-      to: "/projetos/$projectId/avaliacao-desempenho",
-      href: `/projetos/${projectId}/avaliacao-desempenho`,
-      icon: ClipboardCheck,
-      label: "Avaliacoes",
-    },
-    {
-      to: "/projetos/$projectId/organograma",
-      href: `/projetos/${projectId}/organograma`,
-      icon: GitFork,
-      label: "Organograma",
+      to: "/projetos/$projectId/areas",
+      href: `/projetos/${projectId}/areas`,
+      icon: Network,
+      label: "Áreas e setores",
+      group: "EMPRESA",
     },
     {
       to: "/projetos/$projectId/colaboradores",
       href: `/projetos/${projectId}/colaboradores`,
       icon: Users,
       label: "Colaboradores",
+      group: "EMPRESA",
     },
     {
-      to: "/projetos/$projectId/areas",
-      href: `/projetos/${projectId}/areas`,
-      icon: Network,
-      label: "Áreas",
+      to: "/projetos/$projectId/organograma",
+      href: `/projetos/${projectId}/organograma`,
+      icon: GitFork,
+      label: "Organograma e descrição de cargo",
+      group: "PLANO DE CARREIRA",
+    },
+    {
+      to: "/projetos/$projectId/atividades",
+      href: `/projetos/${projectId}/atividades`,
+      icon: ClipboardList,
+      label: "Coleta de dados",
+      group: "PLANO DE CARREIRA",
+      badge: unreviewed,
+    },
+    {
+      to: "/projetos/$projectId/descricao-cargo",
+      href: `/projetos/${projectId}/descricao-cargo`,
+      icon: FileText,
+      label: "Aprovações",
+      group: "PLANO DE CARREIRA",
+    },
+    {
+      to: "/projetos/$projectId/avaliacao-desempenho",
+      href: `/projetos/${projectId}/avaliacao-desempenho`,
+      icon: ClipboardCheck,
+      label: "Avaliações",
+      group: "AVALIAÇÕES",
+    },
+    {
+      to: "/projetos/$projectId/pam",
+      href: `/projetos/${projectId}/pam`,
+      icon: ListChecks,
+      label: "PAM",
+      group: "AVALIAÇÕES",
     },
     ...(canManageProjectModels
       ? [
@@ -119,6 +158,7 @@ export function ProjectSidebar({
             href: `/projetos/${projectId}/base`,
             icon: Layers,
             label: "Configurações",
+            group: "CONFIGURAÇÕES" as const,
           },
         ]
       : []),
@@ -127,12 +167,14 @@ export function ProjectSidebar({
       href: `/projetos/${projectId}/andamento`,
       icon: BarChart3,
       label: "Andamento",
+      group: "GESTÃO DO PROJETO",
     },
     {
       to: "/projetos/$projectId/historico",
       href: `/projetos/${projectId}/historico`,
       icon: History,
       label: "Histórico",
+      group: "GESTÃO DO PROJETO",
     },
     ...(isAdmin
       ? [
@@ -141,20 +183,34 @@ export function ProjectSidebar({
             href: `/projetos/${projectId}/configuracoes`,
             icon: Settings,
             label: "Permissões",
+            group: "CONFIGURAÇÕES" as const,
           },
         ]
       : []),
-  ] as Array<{ to: string; href: string; icon: LucideIcon; label: string; badge?: number }>;
+  ] satisfies SidebarItem[];
 
   const items = isLider
     ? allItems.filter(
         (i) =>
           i.href.endsWith("/descricao-cargo") ||
-          i.label === "Organograma" ||
-          i.label === "Colaboradores" ||
-          i.label === "Andamento",
+          i.href.endsWith("/pam") ||
+          i.href.endsWith("/organograma") ||
+          i.href.endsWith("/colaboradores") ||
+          i.href.endsWith("/andamento"),
       )
     : allItems;
+
+  const groupedItems = SIDEBAR_GROUPS.map((group) => ({
+    group,
+    items: items.filter((item) => item.group === group),
+  })).filter((section) => section.items.length > 0);
+
+  const toggleGroup = (group: SidebarGroup) => {
+    setOpenGroups((current) => ({
+      ...current,
+      [group]: !current[group],
+    }));
+  };
 
   return (
     <aside
@@ -170,30 +226,51 @@ export function ProjectSidebar({
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Projeto</p>
         <h2 className="mt-1 font-display text-xl leading-tight">{projectName}</h2>
       </div>
-      <nav className="p-2">
-        {items.map((it) => {
-          const active = path === it.href || path.startsWith(it.href + "/");
-          return (
-            <Link
-              key={it.to}
-              to={it.to}
-              params={{ projectId }}
-              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
-                active
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-              }`}
+      <nav className="space-y-2 p-2">
+        {groupedItems.map((section) => (
+          <div key={section.group}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(section.group)}
+              aria-expanded={openGroups[section.group]}
+              className="mb-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition hover:bg-secondary/50 hover:text-foreground"
             >
-              <it.icon className="h-4 w-4" />
-              <span className="flex-1">{it.label}</span>
-              {it.badge && it.badge > 0 ? (
-                <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {it.badge}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  openGroups[section.group] ? "rotate-0" : "-rotate-90"
+                }`}
+              />
+              <span className="flex-1">{section.group}</span>
+            </button>
+            {openGroups[section.group] && (
+              <div className="space-y-1">
+                {section.items.map((it) => {
+                  const active = path === it.href || path.startsWith(it.href + "/");
+                  return (
+                    <Link
+                      key={it.to}
+                      to={it.to}
+                      params={{ projectId }}
+                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition ${
+                        active
+                          ? "bg-secondary text-foreground"
+                          : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                      }`}
+                    >
+                      <it.icon className="h-3.5 w-3.5" />
+                      <span className="flex-1">{it.label}</span>
+                      {it.badge && it.badge > 0 ? (
+                        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {it.badge}
+                        </span>
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
       </nav>
     </aside>
   );

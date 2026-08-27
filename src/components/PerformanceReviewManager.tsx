@@ -17,13 +17,6 @@ import {
   SplitSquareVertical,
   X,
 } from "lucide-react";
-import {
-  PolarAngleAxis,
-  RadialBar,
-  RadialBarChart,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-} from "recharts";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -176,17 +169,21 @@ type ComparisonScoreSummary = {
   leaderFinalScore: number;
   criteria: CriterionScoreSummary[];
 };
-type LowPerformanceAnswer = {
+type PerformanceBlockScoreItem = {
   id: string;
-  criterionKey: string;
   criterionLabel: string;
-  blockTitle: string;
+  contextLabel: string | null;
   questionLabel: string;
   answer: string;
   score: number;
-  weight: number;
-  points: number;
   requirementLabel: string | null;
+};
+type PerformanceBlockScore = {
+  id: string;
+  title: string;
+  eyebrow: string;
+  score: number;
+  items: PerformanceBlockScoreItem[];
 };
 type CommentRow = {
   id: string;
@@ -937,11 +934,12 @@ function stringsFromUnknown(value: unknown): string[] {
 
 function looksLikeTechnicalValue(value: string) {
   const normalized = normalizeLookup(value);
+  const compact = normalized.replace(/[\s-]+/g, "_");
   return (
     !normalized ||
-    /^[a-z0-9]+(?:_[a-z0-9]+)+_\d{10,}$/.test(normalized) ||
-    /^\d+(?:_\d+)+_\d{10,}$/.test(normalized) ||
-    /_\d{10,}$/.test(normalized)
+    /^[a-z0-9]+(?:_[a-z0-9]+)+_\d{10,}$/.test(compact) ||
+    /^\d+(?:_\d+)+_\d{10,}$/.test(compact) ||
+    /_\d{10,}$/.test(compact)
   );
 }
 
@@ -1780,50 +1778,6 @@ function buildComparisonScoreSummary(
   };
 }
 
-function buildLowPerformanceAnswers(
-  review: ReviewRow,
-  questions: PerformanceQuestion[],
-  collaborator: ParticipantRow | null,
-  summary: ComparisonScoreSummary,
-) {
-  if (!collaborator || collaborator.status !== "answered") return [];
-  return questions
-    .filter((question) => question.active ?? true)
-    .flatMap((question): LowPerformanceAnswer[] => {
-      const answer = collaborator.response_answers?.[question.id]?.trim() ?? "";
-      if (!answer) return [];
-      const criterionKey = criterionKeyForQuestion(question);
-      if (!criterionKey) return [];
-      const score = scoreAgainstJobRequirement(
-        answer,
-        scoreRulesForCriterion(review, criterionKey),
-        question,
-        review,
-      );
-      if (score === null || score >= 80) return [];
-      const criterion = summary.criteria.find((item) => item.key === criterionKey);
-      const weight = criterion?.weight ?? 0;
-      const blockTitle = question.groupId
-        ? displayQuestionGroupTitle(question)
-        : question.sectionTitle || question.helpText || "Geral";
-      return [
-        {
-          id: question.id,
-          criterionKey,
-          criterionLabel: criterion?.label ?? question.sectionTitle ?? "Critério",
-          blockTitle,
-          questionLabel: displayQuestionLabel(question, collaborator.participant_type),
-          answer,
-          score: roundScore(score) ?? score,
-          weight,
-          points: roundScore((weight * score) / 100) ?? 0,
-          requirementLabel: requirementLabelForCriterion(review, question, criterionKey),
-        },
-      ];
-    })
-    .sort((a, b) => a.score - b.score || b.weight - a.weight);
-}
-
 function displayQuestionGroupTitle(question: PerformanceQuestion) {
   if (question.groupTitle && !isInternalOptionValue(question.groupTitle))
     return question.groupTitle;
@@ -1858,21 +1812,17 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
     });
   }
 
-  const activityMap = new Map<string, PerformanceQuestion[]>();
-  activeQuestions
-    .filter((question) => question.dynamicSource === "activities" && Boolean(question.groupId))
-    .forEach((question) => {
-      const key = `${question.sectionTitle ?? ""}:${question.groupId}`;
-      activityMap.set(key, [...(activityMap.get(key) ?? []), question]);
-    });
-  Array.from(activityMap.entries()).forEach(([groupKey, groupQuestions], index) => {
+  const activityQuestions = activeQuestions.filter(
+    (question) => question.dynamicSource === "activities",
+  );
+  if (activityQuestions.length) {
     blocks.push({
-      id: `activity:${groupKey}`,
-      title: displayQuestionGroupTitle(groupQuestions[0]),
-      eyebrow: `Atividade ${index + 1}`,
-      questions: groupQuestions,
+      id: "section:activities",
+      title: "Atividades",
+      eyebrow: "Bloco",
+      questions: activityQuestions,
     });
-  });
+  }
 
   const dynamicSections: Array<{
     source: NonNullable<PerformanceQuestion["dynamicSource"]>;
@@ -1898,6 +1848,61 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   });
 
   return blocks;
+}
+
+function buildPerformanceBlockScores(
+  review: ReviewRow,
+  questions: PerformanceQuestion[],
+  collaborator: ParticipantRow | null,
+  summary: ComparisonScoreSummary,
+): PerformanceBlockScore[] {
+  if (!collaborator || collaborator.status !== "answered") return [];
+
+  return buildPerformanceComparisonBlocks(questions).flatMap((block) => {
+    const items = block.questions.flatMap((question): PerformanceBlockScoreItem[] => {
+      const answer = collaborator.response_answers?.[question.id]?.trim() ?? "";
+      if (!answer) return [];
+
+      const criterionKey = criterionKeyForQuestion(question);
+      if (!criterionKey) return [];
+
+      const score = scoreAgainstJobRequirement(
+        answer,
+        scoreRulesForCriterion(review, criterionKey),
+        question,
+        review,
+      );
+      if (score === null) return [];
+
+      const criterion = summary.criteria.find((item) => item.key === criterionKey);
+      return [
+        {
+          id: question.id,
+          criterionLabel: criterion?.label ?? question.sectionTitle ?? "Criterio",
+          contextLabel:
+            question.dynamicSource === "activities" && question.groupId
+              ? displayQuestionGroupTitle(question)
+              : null,
+          questionLabel: displayQuestionLabel(question, collaborator.participant_type),
+          answer,
+          score: roundScore(score) ?? score,
+          requirementLabel: requirementLabelForCriterion(review, question, criterionKey),
+        },
+      ];
+    });
+
+    if (!items.length) return [];
+
+    return [
+      {
+        id: block.id,
+        title: block.title,
+        eyebrow: block.eyebrow,
+        score: roundScore(average(items.map((item) => item.score))) ?? 0,
+        items,
+      },
+    ];
+  });
 }
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
@@ -2669,90 +2674,38 @@ function PerformanceFinalVisualizationPanel({
   questions: PerformanceQuestion[];
   collaborator: ParticipantRow | null;
 }) {
-  const lowAnswers = buildLowPerformanceAnswers(review, questions, collaborator, summary);
+  const blockScores = buildPerformanceBlockScores(review, questions, collaborator, summary);
+  const positiveBlocks = blockScores
+    .filter((block) => block.score >= 80)
+    .sort((a, b) => b.score - a.score);
+  const lowerBlocks = blockScores
+    .filter((block) => block.score < 80)
+    .sort((a, b) => a.score - b.score);
   const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
-  const chartColors = ["#dc2626", "#ea580c", "#d97706", "#ca8a04", "#0891b2", "#7c3aed"];
-  const chartData = lowAnswers.map((item, index) => ({
-    name:
-      item.questionLabel.length > 34
-        ? `${item.questionLabel.slice(0, 31).trim()}...`
-        : item.questionLabel,
-    score: item.score,
-    fill: chartColors[index % chartColors.length],
-  }));
 
   return (
     <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-white shadow-lg shadow-[#042558]/10">
-      <div className="border-b border-[#042558]/10 bg-[#042558] px-5 py-4 text-white">
+      <div className="border-b border-[#042558]/10 bg-[#042558] px-5 py-5 text-white">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
           Visualização final de desempenho
         </p>
-        <div className="mt-1 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">Resultado da avaliação</h2>
             <p className="mt-1 text-sm text-white/70">
               {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
-              Itens abaixo de 80% destacados para análise da GP.
+              Nota total tirada na avaliação.
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <ResultPill label="Nota final" value={formatSummaryNumber(summary.collaboratorFinalScore)} />
-            <ResultPill label="Abaixo de 80%" value={String(lowAnswers.length)} />
-            <ResultPill label="Respostas válidas" value={String(validAnswers)} />
+          <div className="grid min-w-full gap-2 sm:grid-cols-3 md:min-w-[520px]">
+            <ResultPill label="Nota total" value={formatSummaryNumber(summary.collaboratorFinalScore)} />
+            <ResultPill label="Notas positivas" value={String(positiveBlocks.length)} />
+            <ResultPill label="Menores que 80%" value={String(lowerBlocks.length)} />
           </div>
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(320px,0.9fr)_1.1fr]">
-        <div className="flex flex-col items-center justify-center rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
-          <div className="relative h-80 w-full max-w-lg">
-            {chartData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart
-                    data={chartData}
-                    innerRadius="28%"
-                    outerRadius="95%"
-                    startAngle={90}
-                    endAngle={-270}
-                  >
-                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                    <RadialBar dataKey="score" cornerRadius={8} background={{ fill: "#dbe3ef" }} />
-                    <RechartsTooltip
-                      formatter={(value) => [`${formatSummaryNumber(Number(value))}%`, "Nota"]}
-                    />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <div className="rounded-full bg-white/95 px-5 py-4 text-center shadow-lg shadow-[#042558]/10">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-                      Nota final
-                    </p>
-                    <p className="text-4xl font-black text-[#042558]">
-                      {formatSummaryNumber(summary.collaboratorFinalScore)}
-                    </p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700/60">
-                  Sem alertas
-                </p>
-                <p className="mt-2 text-5xl font-black text-emerald-700">
-                  {formatSummaryNumber(summary.collaboratorFinalScore)}
-                </p>
-                <p className="mt-2 max-w-56 text-sm text-emerald-800/70">
-                  Nenhuma resposta pontuada abaixo de 80%.
-                </p>
-              </div>
-            )}
-          </div>
-          <p className="mt-2 text-center text-xs text-[#042558]/55">
-            Cada arco representa uma resposta com nota abaixo de 80%.
-          </p>
-        </div>
-
+      <div className="space-y-5 p-5">
         <div className="space-y-4">
           {review.management_opinion?.trim() && (
             <div className="rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
@@ -2765,58 +2718,26 @@ function PerformanceFinalVisualizationPanel({
             </div>
           )}
 
-          <div>
-            <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-                  Abaixo do esperado
-                </p>
-                <h3 className="text-lg font-bold text-[#042558]">
-                  Respostas abaixo de 80%
-                </h3>
-              </div>
-              <span className="text-sm font-medium text-[#042558]/55">
-                {lowAnswers.length} item(ns)
-              </span>
-            </div>
-
-            {lowAnswers.length === 0 ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
-                Não há respostas abaixo de 80% para listar.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {lowAnswers.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-xl border border-red-200 bg-red-50/70 p-4"
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-red-700/60">
-                          {item.criterionLabel} - {item.blockTitle}
-                        </p>
-                        <h4 className="mt-1 font-semibold text-[#042558]">{item.questionLabel}</h4>
-                        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-[#042558]">
-                          {item.answer}
-                        </p>
-                        {item.requirementLabel && (
-                          <p className="mt-2 text-xs text-[#042558]/55">
-                            Requisito: {item.requirementLabel}
-                          </p>
-                        )}
-                      </div>
-                      <div className="grid min-w-44 grid-cols-3 gap-2 text-center md:grid-cols-1">
-                        <SmallMetric label="Nota" value={`${formatSummaryNumber(item.score)}%`} />
-                        <SmallMetric label="Peso" value={`${formatSummaryNumber(item.weight)}%`} />
-                        <SmallMetric label="Pontos" value={formatSummaryNumber(item.points)} />
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PerformanceBlockScoreList
+              title="Notas positivas"
+              count={positiveBlocks.length}
+              blocks={positiveBlocks}
+              tone="positive"
+              emptyMessage="Nenhum bloco com nota igual ou acima de 80%."
+            />
+            <PerformanceBlockScoreList
+              title="Menores que 80%"
+              count={lowerBlocks.length}
+              blocks={lowerBlocks}
+              tone="attention"
+              emptyMessage="Nenhum bloco com nota menor que 80%."
+            />
           </div>
+
+          <p className="text-xs font-medium text-[#042558]/50">
+            {validAnswers} resposta(s) valida(s) entraram no calculo.
+          </p>
         </div>
       </div>
     </section>
@@ -2840,6 +2761,116 @@ function SmallMetric({ label, value }: { label: string; value: string }) {
       </p>
       <p className="mt-1 text-sm font-black text-[#042558]">{value}</p>
     </div>
+  );
+}
+
+function PerformanceBlockScoreList({
+  title,
+  count,
+  blocks,
+  tone,
+  emptyMessage,
+}: {
+  title: string;
+  count: number;
+  blocks: PerformanceBlockScore[];
+  tone: "positive" | "attention";
+  emptyMessage: string;
+}) {
+  const toneClass =
+    tone === "positive"
+      ? "border-emerald-200 bg-emerald-50/45 text-emerald-800"
+      : "border-red-200 bg-red-50/45 text-red-800";
+
+  return (
+    <section className={`rounded-lg border p-4 ${toneClass}`}>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <h3 className="text-lg font-bold text-[#042558]">{title}</h3>
+        <span className="shrink-0 text-sm font-semibold">{count} bloco(s)</span>
+      </div>
+
+      {blocks.length === 0 ? (
+        <div className="rounded-lg border border-current/15 bg-white/75 p-4 text-sm">
+          {emptyMessage}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {blocks.map((block) => (
+            <PerformanceBlockScoreCard key={block.id} block={block} tone={tone} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PerformanceBlockScoreCard({
+  block,
+  tone,
+}: {
+  block: PerformanceBlockScore;
+  tone: "positive" | "attention";
+}) {
+  const color = tone === "positive" ? "bg-emerald-500" : "bg-red-500";
+  const chipClass =
+    tone === "positive" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
+
+  return (
+    <article className="rounded-lg border border-[#042558]/10 bg-white p-4 text-[#042558] shadow-sm shadow-[#042558]/5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            {block.eyebrow}
+          </p>
+          <h4 className="mt-1 font-bold leading-snug">{block.title}</h4>
+        </div>
+        <div className={`rounded-lg px-3 py-2 text-right ${chipClass}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-wider opacity-70">
+            Nota geral do bloco
+          </p>
+          <p className="text-2xl font-black">{formatSummaryNumber(block.score)}%</p>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <ScoreBar
+          label={`Nota do bloco: ${formatSummaryNumber(block.score)}%`}
+          value={block.score}
+          color={color}
+        />
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {block.items.map((item) => (
+          <div
+            key={`${block.id}:${item.id}`}
+            className="rounded-lg border border-[#042558]/10 bg-slate-50 p-3"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#042558]/45">
+                  {item.contextLabel
+                    ? `${item.criterionLabel} - ${item.contextLabel}`
+                    : item.criterionLabel}
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-snug">{item.questionLabel}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold ${chipClass}`}>
+                {formatSummaryNumber(item.score)}%
+              </span>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]/75">
+              {item.answer}
+            </p>
+            {item.requirementLabel && (
+              <p className="mt-2 text-xs text-[#042558]/55">
+                Requisito: {item.requirementLabel}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -3515,6 +3546,14 @@ function reviewPeriodLabel(days: number | null | undefined, type?: ReviewType | 
   return option?.label ?? (days ? `${days} dias` : "Periodo");
 }
 
+function automaticReviewName(
+  employeeName: string,
+  days: number | null | undefined,
+  type?: ReviewType | null,
+) {
+  return `${employeeName} - Avaliacao de ${reviewPeriodLabel(days, type).toLowerCase()}`;
+}
+
 function addDaysToDate(dateValue: string, days: number) {
   const date = new Date(`${dateValue}T00:00:00`);
   date.setDate(date.getDate() + days);
@@ -3964,7 +4003,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           project_id: projectId,
           config_id: item.config.id,
           employee_id: item.employee.id,
-          name: `${reviewTypeLabel(item.reviewType)} - ${item.employee.nome}`,
+          name: automaticReviewName(item.employee.nome, item.periodDays, item.reviewType),
           employee_position_id: item.employee.position_id,
           leader_position_id: item.leader.position_id,
           job_description_id: item.description.id,
@@ -4272,7 +4311,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [weightConfigs, setWeightConfigs] = useState<EvaluationWeightConfigRow[]>([]);
   const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
   const [configId, setConfigId] = useState("");
-  const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [leaderEmployeeId, setLeaderEmployeeId] = useState("");
   const [days, setDays] = useState(14);
@@ -4389,6 +4427,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     selectedEmployee && reviewPeriodDays
       ? addDaysToDate(getEmployeeBaseDate(selectedEmployee), reviewPeriodDays)
       : null;
+  const automaticNamePreview = selectedEmployee
+    ? automaticReviewName(selectedEmployee.nome, reviewPeriodDays, formReviewType)
+    : `Colaborador - Avaliacao de ${reviewPeriodLabel(reviewPeriodDays, formReviewType).toLowerCase()}`;
   const reviewCounts = reviews.reduce(
     (acc, review) => {
       acc[review.review_type ?? "experience"] += 1;
@@ -4425,7 +4466,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
 
   const createReview = async () => {
     try {
-      if (!name.trim()) return toast.error("Informe o nome da avaliação.");
       if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
       if (!selectedEmployeeIsBelowLeader)
         return toast.error("Selecione um colaborador que responda diretamente para este lider.");
@@ -4457,7 +4497,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           project_id: projectId,
           config_id: selectedConfig.id,
           employee_id: selectedEmployee.id,
-          name: name.trim(),
+          name: automaticReviewName(selectedEmployee.nome, reviewPeriodDays, formReviewType),
           employee_position_id: employeePositionId,
           leader_position_id: selectedLeader.position_id,
           job_description_id: selectedDc.id,
@@ -4489,7 +4529,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
       ]);
       if (partErr) return toast.error(partErr.message);
-      setName("");
       setEmployeeId("");
       setLeaderEmployeeId("");
       toast.success("Avaliação criada");
@@ -4657,18 +4696,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#042558]">
           Nova avaliacao
         </h2>
+        <p className="mb-4 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
+          Nome gerado: <span className="font-semibold">{automaticNamePreview}</span>
+        </p>
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Nome da avaliacao
-            </span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              placeholder="Ex: Avaliacao semestral"
-            />
-          </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
               Lider avaliador
@@ -4749,7 +4780,6 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
             >
               <option value={7}>7 dias</option>
               <option value={14}>14 dias</option>
-              <option value={30}>30 dias</option>
             </select>
           </label>
         </div>
@@ -4895,17 +4925,72 @@ function ParticipantCard({
           Respondido {new Date(participant.submitted_at).toLocaleString("pt-BR")}
         </p>
       )}
-      {participant && (
-        <p
-          className={`mt-2 break-all text-[11px] ${
-            answered ? "text-emerald-800/55" : "text-[#042558]/45"
-          }`}
-        >
-          /avaliacao-desempenho/preencher/{participant.token}
-        </p>
+      {participant && !answered && (
+        <LinkValidityBadge expiresAt={participant.expires_at} />
       )}
     </div>
   );
+}
+
+function LinkValidityBadge({ expiresAt }: { expiresAt?: string | null }) {
+  const validity = linkValidityInfo(expiresAt);
+  return (
+    <div className={`mt-3 rounded-lg border px-3 py-2 text-xs font-medium ${validity.className}`}>
+      <p>{validity.label}</p>
+      {validity.expiresLabel && <p className="mt-0.5 opacity-75">{validity.expiresLabel}</p>}
+    </div>
+  );
+}
+
+function linkValidityInfo(expiresAt?: string | null) {
+  if (!expiresAt) {
+    return {
+      label: "Validade nao informada",
+      expiresLabel: "",
+      className: "border-gray-200 bg-gray-50 text-gray-600",
+    };
+  }
+  const expires = new Date(expiresAt);
+  const diffMs = expires.getTime() - Date.now();
+  const expiresLabel = `Vence em ${expires.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  })}`;
+
+  if (diffMs <= 0) {
+    return {
+      label: "Link expirado",
+      expiresLabel: expiresLabel.replace("Vence em", "Expirou em"),
+      className: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+
+  const hours = Math.ceil(diffMs / (60 * 60 * 1000));
+  const days = Math.floor(hours / 24);
+  const remainingLabel =
+    hours < 24
+      ? `Faltam ${hours} hora(s)`
+      : `Faltam ${days} dia(s) e ${hours % 24} hora(s)`;
+
+  if (hours <= 24) {
+    return {
+      label: remainingLabel,
+      expiresLabel,
+      className: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+  if (hours <= 72) {
+    return {
+      label: remainingLabel,
+      expiresLabel,
+      className: "border-amber-200 bg-amber-50 text-amber-800",
+    };
+  }
+  return {
+    label: remainingLabel,
+    expiresLabel,
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  };
 }
 
 function BlockObservationComparison({
