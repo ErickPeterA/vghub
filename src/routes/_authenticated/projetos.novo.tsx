@@ -1,23 +1,26 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { createProjectAdmin } from "@/lib/admin.functions";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/projetos/novo")({
   component: NovoProjeto,
 });
 
+type AssignableUser = {
+  id: string;
+  nome: string;
+  email: string;
+};
+
 function NovoProjeto() {
   const { isAdmin, loading } = useCurrentUser();
   const navigate = useNavigate();
-  const createFn = useServerFn(createProjectAdmin);
   const [nome, setNome] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [responsavelId, setResponsavelId] = useState("");
-  const [users, setUsers] = useState<Array<{ id: string; nome: string }>>([]);
+  const [users, setUsers] = useState<AssignableUser[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -28,20 +31,25 @@ function NovoProjeto() {
   }, [isAdmin, loading, navigate]);
 
   useEffect(() => {
-    supabase
-      .from("profiles")
-      .select("id,nome")
-      .order("nome")
-      .then(({ data }) => setUsers(data ?? []));
-  }, []);
+    if (loading || !isAdmin) return;
+
+    apiJson<{ ok: boolean; users: AssignableUser[] }>("/api/users")
+      .then((payload) => setUsers(payload.users ?? []))
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar usuarios");
+      });
+  }, [isAdmin, loading]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const data = await createFn({ data: { nome, empresa, responsavelId } });
+      const payload = await apiJson<{ ok: boolean; project: { id: string } }>("/api/projects", {
+        method: "POST",
+        body: { nome, empresa, responsavelId },
+      });
       toast.success("Projeto criado");
-      navigate({ to: "/projetos/$projectId/areas", params: { projectId: data.id } });
+      navigate({ to: "/projetos/$projectId/areas", params: { projectId: payload.project.id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
     } finally {
@@ -59,13 +67,13 @@ function NovoProjeto() {
         <Field label="Empresa">
           <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inp} />
         </Field>
-        <Field label="Responsável">
+        <Field label="Responsavel">
           <select
             value={responsavelId}
             onChange={(e) => setResponsavelId(e.target.value)}
             className={inp}
           >
-            <option value="">— sem responsável —</option>
+            <option value="">-- sem responsavel --</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.nome}

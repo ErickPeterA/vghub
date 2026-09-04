@@ -12,7 +12,7 @@ import {
   FolderTree,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 
 type Area = {
   id: string;
@@ -52,15 +52,16 @@ export function AreasManager({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("project_areas")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("display_order")
-      .order("created_at");
-    if (error) toast.error(error.message);
-    setAreas((data ?? []) as Area[]);
-    setLoading(false);
+    try {
+      const payload = await apiJson<{ ok: boolean; areas: Area[] }>(
+        `/api/projects/${projectId}/areas`,
+      );
+      setAreas(payload.areas);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar areas");
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -74,10 +75,14 @@ export function AreasManager({ projectId }: { projectId: string }) {
     const nome = newAreaName.trim();
     if (!nome) return;
     const cor = pickColor(topLevel.length);
-    const { error } = await supabase
-      .from("project_areas")
-      .insert({ project_id: projectId, nome, cor, display_order: topLevel.length * 10 + 10 });
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/projects/${projectId}/areas`, {
+        method: "POST",
+        body: { nome, cor, displayOrder: topLevel.length * 10 + 10 },
+      });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao criar area");
+    }
     setNewAreaName("");
     void load();
   };
@@ -87,14 +92,19 @@ export function AreasManager({ projectId }: { projectId: string }) {
     if (!nome) return;
     const siblings = childrenOf(areaId);
     const parentArea = areas.find((a) => a.id === areaId);
-    const { error } = await supabase.from("project_areas").insert({
-      project_id: projectId,
-      parent_id: areaId,
-      nome,
-      cor: parentArea?.cor ?? null,
-      display_order: siblings.length * 10 + 10,
-    });
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/projects/${projectId}/areas`, {
+        method: "POST",
+        body: {
+          parentId: areaId,
+          nome,
+          cor: parentArea?.cor ?? null,
+          displayOrder: siblings.length * 10 + 10,
+        },
+      });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao criar setor");
+    }
     setNewSetorName((p) => ({ ...p, [areaId]: "" }));
     setExpanded((p) => ({ ...p, [areaId]: true }));
     void load();
@@ -106,8 +116,11 @@ export function AreasManager({ projectId }: { projectId: string }) {
       ? `Excluir a área "${a.nome}" e todos seus setores?`
       : `Excluir o setor "${a.nome}"?`;
     if (!confirm(msg)) return;
-    const { error } = await supabase.from("project_areas").delete().eq("id", a.id);
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/projects/${projectId}/areas/${a.id}`, { method: "DELETE" });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao excluir");
+    }
     void load();
   };
 
@@ -121,8 +134,14 @@ export function AreasManager({ projectId }: { projectId: string }) {
       setEditing(null);
       return;
     }
-    const { error } = await supabase.from("project_areas").update({ nome: novo }).eq("id", a.id);
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/projects/${projectId}/areas/${a.id}`, {
+        method: "PATCH",
+        body: { nome: novo },
+      });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao salvar");
+    }
     setEditing(null);
     void load();
   };

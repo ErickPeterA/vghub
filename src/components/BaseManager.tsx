@@ -29,9 +29,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { supabase } from "@/integrations/supabase/client";
 import { normalizeCoreFieldLabel, normalizeFieldDataSource } from "@/components/DynamicFields";
 import { DC_SECTIONS } from "@/lib/dc-sections";
+import { apiJson } from "@/lib/api";
 import { canAccessSection, getCurrentUserPlan, SECTION_PLAN_LABELS } from "@/lib/section-access";
 
 type FieldType =
@@ -66,6 +66,7 @@ type Field = {
   data_source: DataSource;
   base_options: Option[];
 };
+type SectionSetting = { id: string | null; section: string; max_items: number; is_enabled: boolean };
 
 const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
@@ -426,26 +427,21 @@ export function BaseManager({
   );
 
   const load = useCallback(async () => {
-    let query = supabase.from("base_fields").select("*,base_options(*)").order("display_order");
-    query = projectIdRef.current
-      ? query.eq("project_id", projectIdRef.current)
-      : query.is("project_id", null);
-    const { data, error } = await query;
-    if (error) toast.error(error.message);
-    setFields(((data ?? []) as Field[]).map(normalizeField));
+    const queryString = projectIdRef.current
+      ? `?projectId=${encodeURIComponent(projectIdRef.current)}`
+      : "";
+    const payload = await apiJson<{
+      ok: boolean;
+      fields: Field[];
+      sectionSettings: SectionSetting[];
+    }>(`/api/base${queryString}`);
+    setFields(payload.fields.map(normalizeField));
 
-    let limitsQuery = supabase
-      .from("base_section_settings")
-      .select("id,section,max_items,is_enabled");
-    limitsQuery = projectIdRef.current
-      ? limitsQuery.eq("project_id", projectIdRef.current)
-      : limitsQuery.is("project_id", null);
-    const { data: limitsData, error: limitsError } = await limitsQuery;
-    if (limitsError) toast.error(limitsError.message);
+    const limitsData = payload.sectionSettings;
     const limitsMap: Record<string, { id: string | null; max_items: number }> = {};
     const enabledMap: Record<string, { id: string | null; is_enabled: boolean }> = {};
     DC_SECTIONS.forEach((section) => {
-      const existing = (limitsData ?? []).find((row) => row.section === section.key);
+      const existing = limitsData.find((row) => row.section === section.key);
       limitsMap[section.key] = { id: existing?.id ?? null, max_items: existing?.max_items ?? 3 };
       enabledMap[section.key] = {
         id: existing?.id ?? null,
@@ -458,7 +454,11 @@ export function BaseManager({
 
   useEffect(() => {
     setLoading(true);
-    load().finally(() => setLoading(false));
+    load()
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar base");
+      })
+      .finally(() => setLoading(false));
   }, [projectId, load]);
 
   const patchLocal = useCallback(
@@ -479,9 +479,12 @@ export function BaseManager({
       ? { ...normalized, field_type: "single_select" as FieldType }
       : normalized;
     const { base_options: _options, ...payload } = savedField;
-    const { error } = await supabase.from("base_fields").update(payload).eq("id", field.id);
-    if (error) toast.error(error.message);
-    else toast.success("Campo atualizado");
+    try {
+      await apiJson(`/api/base/fields/${field.id}`, { method: "PATCH", body: payload });
+      toast.success("Campo atualizado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar campo");
+    }
   }, []);
 
   const addField = useCallback(async (sectionKey: string) => {
@@ -490,23 +493,27 @@ export function BaseManager({
     const sectionFields = fieldsRef.current.filter((f) => f.section === sectionKey);
     const fieldKey = `${slugify(label)}_${Date.now()}`;
     const dataSource = normalizeFieldDataSource({ field_key: fieldKey, label });
-    const { data, error } = await supabase
-      .from("base_fields")
-      .insert({
-        project_id: projectIdRef.current,
-        field_key: fieldKey,
-        label,
-        section: sectionKey,
-        field_type: dataSource === "manual" ? "text" : "single_select",
-        display_order: sectionFields.length * 10 + 10,
-        data_source: dataSource,
-      })
-      .select("*,base_options(*)")
-      .single();
-    if (error) return toast.error(error.message);
-    setFields((cur) => [...cur, normalizeField(data as Field)]);
-    setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
-    toast.success("Campo criado");
+    try {
+      const payload = await apiJson<{ ok: boolean; field: Field }>("/api/base/fields", {
+        method: "POST",
+        body: {
+          projectId: projectIdRef.current,
+          field: {
+            field_key: fieldKey,
+            label,
+            section: sectionKey,
+            field_type: dataSource === "manual" ? "text" : "single_select",
+            display_order: sectionFields.length * 10 + 10,
+            data_source: dataSource,
+          },
+        },
+      });
+      setFields((cur) => [...cur, normalizeField(payload.field)]);
+      setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
+      toast.success("Campo criado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar campo");
+    }
   }, []);
 
   const copyField = useCallback((field: Field) => {
@@ -525,80 +532,67 @@ export function BaseManager({
       const nextLabel = `${field.label} (cópia)`;
       const fieldKey = `${slugify(field.label || "campo")}_copia_${Date.now()}`;
 
-      const { data: createdField, error: fieldError } = await supabase
-        .from("base_fields")
-        .insert({
-          project_id: projectIdRef.current,
-          field_key: fieldKey,
-          label: nextLabel,
-          section: sectionKey,
-          field_type: field.field_type,
-          is_required: field.is_required,
-          display_order: (insertIndex + 1) * 10,
-          allows_multiple: field.allows_multiple,
-          allows_free_text: field.allows_free_text,
-          is_active: field.is_active,
-          data_source: "manual",
-        })
-        .select("*,base_options(*)")
-        .single();
-
-      if (fieldError) return toast.error(fieldError.message);
-
       const sortedOptions = [...field.base_options].sort(
         (a, b) => a.display_order - b.display_order,
       );
-      let createdOptions: Option[] = [];
-      if (sortedOptions.length > 0) {
-        const { data: optionsData, error: optionsError } = await supabase
-          .from("base_options")
-          .insert(
-            sortedOptions.map((option, index) => ({
-              field_id: createdField.id,
+      let createdField: Field;
+      let createdOptions: Option[];
+      try {
+        const createdPayload = await apiJson<{ ok: boolean; field: Field }>("/api/base/fields", {
+          method: "POST",
+          body: {
+            projectId: projectIdRef.current,
+            field: {
+              field_key: fieldKey,
+              label: nextLabel,
+              section: sectionKey,
+              field_type: field.field_type,
+              is_required: field.is_required,
+              display_order: (insertIndex + 1) * 10,
+              allows_multiple: field.allows_multiple,
+              allows_free_text: field.allows_free_text,
+              is_active: field.is_active,
+              data_source: "manual",
+            },
+            options: sortedOptions.map((option, index) => ({
               label: option.label,
               value: `${slugify(option.label || "opcao")}_${Date.now()}_${index}`,
               description: option.description,
               display_order: (index + 1) * 10,
               is_active: option.is_active,
             })),
-          )
-          .select("*");
-
-        if (optionsError) {
-          toast.error(optionsError.message);
-        } else {
-          createdOptions = (optionsData ?? []) as Option[];
-        }
+          },
+        });
+        createdField = normalizeField(createdPayload.field);
+        createdOptions = createdField.base_options;
+      } catch (error) {
+        return toast.error(error instanceof Error ? error.message : "Erro ao copiar campo");
       }
 
       const reordered = [...sectionFields];
       reordered.splice(insertIndex, 0, {
-        ...(createdField as Field),
+        ...createdField,
         base_options: createdOptions,
       });
       const orderUpdates = reordered.map((item, index) => ({
         id: item.id,
+        section: sectionKey,
         display_order: (index + 1) * 10,
       }));
 
       setFields((cur) => {
-        const created = { ...(createdField as Field), base_options: createdOptions };
+        const created = { ...createdField, base_options: createdOptions };
         return [...cur.filter((item) => item.id !== createdField.id), created].map((item) => {
           const update = orderUpdates.find((order) => order.id === item.id);
           return update ? { ...item, display_order: update.display_order } : item;
         });
       });
 
-      const results = await Promise.all(
-        orderUpdates.map((update) =>
-          supabase
-            .from("base_fields")
-            .update({ display_order: update.display_order })
-            .eq("id", update.id),
-        ),
-      );
-      const failed = results.find((result) => result.error);
-      if (failed?.error) return toast.error(failed.error.message);
+      try {
+        await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates: orderUpdates } });
+      } catch (error) {
+        return toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+      }
 
       toast.success("Campo copiado com opções");
     },
@@ -607,8 +601,11 @@ export function BaseManager({
 
   const removeField = useCallback(async (id: string) => {
     if (!confirm("Excluir este campo e todas as opções?")) return;
-    const { error } = await supabase.from("base_fields").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/base/fields/${id}`, { method: "DELETE" });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao excluir campo");
+    }
     setFields((cur) => cur.filter((f) => f.id !== id));
     toast.success("Campo excluído");
   }, []);
@@ -616,29 +613,31 @@ export function BaseManager({
   const saveSectionLimit = useCallback(async (sectionKey: string, maxItems: number) => {
     const safeValue = Number.isFinite(maxItems) && maxItems >= 1 ? Math.floor(maxItems) : 1;
     const existing = sectionLimitsRef.current[sectionKey];
+    const isEnabled = sectionEnabledRef.current[sectionKey]?.is_enabled ?? true;
     setSectionLimits((cur) => ({
       ...cur,
       [sectionKey]: { id: existing?.id ?? null, max_items: safeValue },
     }));
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("base_section_settings")
-        .update({ max_items: safeValue })
-        .eq("id", existing.id);
-      if (error) return toast.error(error.message);
-    } else {
-      const { data, error } = await supabase
-        .from("base_section_settings")
-        .insert({
-          project_id: projectIdRef.current,
+    try {
+      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>("/api/base/sections", {
+        method: "PUT",
+        body: {
+          projectId: projectIdRef.current,
           section: sectionKey,
           max_items: safeValue,
-          is_enabled: sectionEnabledRef.current[sectionKey]?.is_enabled ?? true,
-        })
-        .select("id")
-        .single();
-      if (error) return toast.error(error.message);
-      setSectionLimits((cur) => ({ ...cur, [sectionKey]: { id: data.id, max_items: safeValue } }));
+          is_enabled: isEnabled,
+        },
+      });
+      setSectionLimits((cur) => ({
+        ...cur,
+        [sectionKey]: { id: payload.setting.id, max_items: safeValue },
+      }));
+      setSectionEnabled((cur) => ({
+        ...cur,
+        [sectionKey]: { id: payload.setting.id, is_enabled: isEnabled },
+      }));
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar limite");
     }
     toast.success("Limite de itens atualizado");
   }, []);
@@ -650,25 +649,27 @@ export function BaseManager({
       [sectionKey]: { id: existing?.id ?? null, is_enabled },
     }));
 
-    if (existing?.id) {
-      const { error } = await supabase
-        .from("base_section_settings")
-        .update({ is_enabled, max_items: sectionLimitsRef.current[sectionKey]?.max_items ?? 3 })
-        .eq("id", existing.id);
-      if (error) return toast.error(error.message);
-    } else {
-      const { data, error } = await supabase
-        .from("base_section_settings")
-        .insert({
-          project_id: projectIdRef.current,
+    const maxItems = sectionLimitsRef.current[sectionKey]?.max_items ?? 3;
+    try {
+      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>("/api/base/sections", {
+        method: "PUT",
+        body: {
+          projectId: projectIdRef.current,
           section: sectionKey,
-          max_items: sectionLimitsRef.current[sectionKey]?.max_items ?? 3,
+          max_items: maxItems,
           is_enabled,
-        })
-        .select("id")
-        .single();
-      if (error) return toast.error(error.message);
-      setSectionEnabled((cur) => ({ ...cur, [sectionKey]: { id: data.id, is_enabled } }));
+        },
+      });
+      setSectionEnabled((cur) => ({
+        ...cur,
+        [sectionKey]: { id: payload.setting.id, is_enabled },
+      }));
+      setSectionLimits((cur) => ({
+        ...cur,
+        [sectionKey]: { id: payload.setting.id, max_items: maxItems },
+      }));
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar bloco");
     }
     toast.success(is_enabled ? "Bloco habilitado" : "Bloco desabilitado");
   }, []);
@@ -677,30 +678,37 @@ export function BaseManager({
     const field = fieldsRef.current.find((f) => f.id === fieldId);
     if (!field) return;
     const value = `${slugify(label)}_${Date.now()}`;
-    const { data, error } = await supabase
-      .from("base_options")
-      .insert({
-        field_id: fieldId,
-        label: label.trim(),
-        value,
-        display_order: field.base_options.length * 10 + 10,
-      })
-      .select("*")
-      .single();
-    if (error) return toast.error(error.message);
+    let option: Option;
+    try {
+      const payload = await apiJson<{ ok: boolean; option: Option }>("/api/base/options", {
+        method: "POST",
+        body: {
+          fieldId,
+          label: label.trim(),
+          value,
+          display_order: field.base_options.length * 10 + 10,
+        },
+      });
+      option = payload.option;
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao criar opcao");
+    }
     setFields((cur) =>
       cur.map((f) =>
-        f.id === fieldId ? { ...f, base_options: [...f.base_options, data as Option] } : f,
+        f.id === fieldId ? { ...f, base_options: [...f.base_options, option] } : f,
       ),
     );
   }, []);
 
   const toggleOption = useCallback(async (fieldId: string, optionId: string, active: boolean) => {
-    const { error } = await supabase
-      .from("base_options")
-      .update({ is_active: active })
-      .eq("id", optionId);
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/base/options/${optionId}`, {
+        method: "PATCH",
+        body: { is_active: active },
+      });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar opcao");
+    }
     setFields((cur) =>
       cur.map((f) =>
         f.id === fieldId
@@ -716,8 +724,11 @@ export function BaseManager({
   }, []);
 
   const removeOption = useCallback(async (fieldId: string, optionId: string) => {
-    const { error } = await supabase.from("base_options").delete().eq("id", optionId);
-    if (error) return toast.error(error.message);
+    try {
+      await apiJson(`/api/base/options/${optionId}`, { method: "DELETE" });
+    } catch (error) {
+      return toast.error(error instanceof Error ? error.message : "Erro ao excluir opcao");
+    }
     setFields((cur) =>
       cur.map((f) =>
         f.id === fieldId
@@ -729,11 +740,14 @@ export function BaseManager({
 
   const updateOptionDescription = useCallback(
     async (fieldId: string, optionId: string, description: string) => {
-      const { error } = await supabase
-        .from("base_options")
-        .update({ description })
-        .eq("id", optionId);
-      if (error) return toast.error(error.message);
+      try {
+        await apiJson(`/api/base/options/${optionId}`, {
+          method: "PATCH",
+          body: { description },
+        });
+      } catch (error) {
+        return toast.error(error instanceof Error ? error.message : "Erro ao atualizar descricao");
+      }
       setFields((cur) =>
         cur.map((f) =>
           f.id === fieldId
@@ -789,16 +803,11 @@ export function BaseManager({
           return u ? { ...f, section: u.section, display_order: u.display_order } : f;
         }),
       );
-      const results = await Promise.all(
-        updates.map((u) =>
-          supabase
-            .from("base_fields")
-            .update({ section: u.section, display_order: u.display_order })
-            .eq("id", u.id),
-        ),
-      );
-      const failed = results.find((result) => result.error);
-      if (failed?.error) toast.error(failed.error.message);
+      try {
+        await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates } });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+      }
       return;
     }
 
@@ -832,16 +841,11 @@ export function BaseManager({
       }),
     );
     // Persist
-    const results = await Promise.all(
-      updates.map((u) =>
-        supabase
-          .from("base_fields")
-          .update({ section: u.section, display_order: u.display_order })
-          .eq("id", u.id),
-      ),
-    );
-    const failed = results.find((result) => result.error);
-    if (failed?.error) toast.error(failed.error.message);
+    try {
+      await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+    }
   }, []);
 
   return (

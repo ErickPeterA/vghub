@@ -1,32 +1,14 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ProjectModelsManager } from "@/components/ProjectModelsManager";
-import { supabase } from "@/integrations/supabase/client";
-import { getCurrentUserSafely, withTimeout } from "@/lib/auth-safe";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/gerenciamento/bases")({
   beforeLoad: async () => {
-    const user = await getCurrentUserSafely();
-    if (!user) throw redirect({ to: "/login" });
-    const [{ data: adminRole }, { data: gpRole }] = await withTimeout(
-      Promise.all([
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle(),
-        supabase
-          .from("project_members")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("role", "gp")
-          .limit(1)
-          .maybeSingle(),
-      ]),
-      8_000,
-      "Nao foi possivel validar permissoes.",
-    );
-    if (!adminRole && !gpRole) throw redirect({ to: "/projetos" });
+    try {
+      await apiJson("/api/base/access");
+    } catch {
+      throw redirect({ to: "/projetos" });
+    }
   },
   component: GeneralModelsPage,
 });

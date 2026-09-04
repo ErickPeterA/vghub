@@ -1,10 +1,9 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
-import { withTimeout } from "@/lib/auth-safe";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
   component: ProjectLayout,
@@ -17,7 +16,6 @@ function ProjectLayout() {
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  // useRef para evitar que navigate mude a referencia e cause loop no useEffect
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
 
@@ -25,19 +23,13 @@ function ProjectLayout() {
     let cancelled = false;
     setLoading(true);
     setNotFound(false);
-    withTimeout(
-      supabase.from("projects").select("nome").eq("id", projectIdRef.current).maybeSingle(),
-      10_000,
-      "Nao foi possivel carregar o projeto.",
+
+    apiJson<{ ok: boolean; project: { id: string; nome: string } }>(
+      `/api/projects/${projectIdRef.current}`,
     )
-      .then(({ data, error }) => {
+      .then((payload) => {
         if (cancelled) return;
-        if (error) throw error;
-        if (!data) {
-          setNotFound(true);
-        } else {
-          setName(data.nome);
-        }
+        setName(payload.project.nome);
         setLoading(false);
       })
       .catch((error) => {
@@ -46,6 +38,7 @@ function ProjectLayout() {
         setNotFound(true);
         setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };

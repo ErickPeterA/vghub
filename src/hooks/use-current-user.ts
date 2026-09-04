@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { getSessionSafely, withTimeout } from "@/lib/auth-safe";
+import { getSessionSafely } from "@/lib/auth-safe";
+import { apiJson } from "@/lib/api";
 
 export type CurrentUser = {
   session: Session | null;
@@ -10,6 +11,18 @@ export type CurrentUser = {
   profile: { id: string; nome: string; email: string; status: string } | null;
   loading: boolean;
   refresh: () => Promise<void>;
+};
+
+type ApiMePayload = {
+  ok: boolean;
+  localUser: {
+    profile: CurrentUser["profile"];
+    isAdmin: boolean;
+  } | null;
+  permissions: {
+    provisioned: boolean;
+    isAdmin: boolean;
+  };
 };
 
 export function useCurrentUser(): CurrentUser {
@@ -22,29 +35,13 @@ export function useCurrentUser(): CurrentUser {
     if (!s?.user) {
       return { isAdmin: false, profile: null as CurrentUser["profile"] };
     }
+
     try {
-      const [{ data: roleRow }, { data: prof }] = await Promise.all([
-        withTimeout(
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", s.user.id)
-            .eq("role", "admin")
-            .maybeSingle(),
-          8_000,
-          "Não foi possível carregar permissões.",
-        ),
-        withTimeout(
-          supabase
-            .from("profiles")
-            .select("id,nome,email,status")
-            .eq("id", s.user.id)
-            .maybeSingle(),
-          8_000,
-          "Não foi possível carregar perfil.",
-        ),
-      ]);
-      return { isAdmin: !!roleRow, profile: prof as CurrentUser["profile"] };
+      const me = await apiJson<ApiMePayload>("/api/me");
+      return {
+        isAdmin: me.permissions.isAdmin,
+        profile: me.localUser?.profile ?? null,
+      };
     } catch {
       return { isAdmin: false, profile: null as CurrentUser["profile"] };
     }

@@ -2,9 +2,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FolderKanban, Menu, Plus, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { withTimeout } from "@/lib/auth-safe";
+import { apiJson } from "@/lib/api";
 
 type Projeto = {
   id: string;
@@ -12,6 +11,7 @@ type Projeto = {
   empresa: string | null;
   status: string;
   responsavel_id: string | null;
+  responsavel_nome: string | null;
   created_at: string;
 };
 
@@ -26,34 +26,16 @@ export function ProjectListPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from("projects")
-          .select("id, nome, empresa, status, responsavel_id, created_at")
-          .order("created_at", { ascending: false }),
-        10_000,
-        "Não foi possível carregar os projetos.",
-      );
-      if (error) throw error;
-      const projs = (data as Projeto[]) ?? [];
+      const payload = await apiJson<{ ok: boolean; projects: Projeto[] }>("/api/projects");
+      const projs = payload.projects ?? [];
       setRows(projs);
-      const ids = Array.from(
-        new Set(projs.map((p) => p.responsavel_id).filter(Boolean)),
-      ) as string[];
-      if (ids.length) {
-        const { data: profs } = await withTimeout(
-          supabase.from("profiles").select("id,nome").in("id", ids),
-          10_000,
-          "Não foi possível carregar responsáveis.",
-        );
-        const map: Record<string, string> = {};
-        (profs ?? []).forEach((p) => {
-          map[p.id] = p.nome;
-        });
-        setResponsaveis(map);
-      } else {
-        setResponsaveis({});
-      }
+      const map: Record<string, string> = {};
+      projs.forEach((project) => {
+        if (project.responsavel_id && project.responsavel_nome) {
+          map[project.responsavel_id] = project.responsavel_nome;
+        }
+      });
+      setResponsaveis(map);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao carregar projetos");
       setRows([]);
@@ -66,22 +48,25 @@ export function ProjectListPage() {
     void load();
   }, []);
 
-  // Ativa/desativa o projeto inteiro. Ao desativar, os dados continuam
-  // intactos, mas todos os vinculados perdem acesso, exceto GPs e admins
-  // (regra aplicada no banco, via RLS). Pensado para o fluxo de
-  // mensalidade: se não pagar, o admin desativa e o pessoal perde acesso.
   const alternarStatus = async (id: string, atual: string, nome: string) => {
     const novo = atual === "desativado" ? "ativo" : "desativado";
     if (novo === "desativado") {
       const confirmado = confirm(
-        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuários vinculados perdem acesso, exceto GPs e administradores.`,
+        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuarios vinculados perdem acesso, exceto GPs e administradores.`,
       );
       if (!confirmado) return;
     }
-    const { error } = await supabase.from("projects").update({ status: novo }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success(novo === "desativado" ? "Projeto desativado" : "Projeto ativado");
-    void load();
+
+    try {
+      await apiJson<{ ok: boolean }>(`/api/projects/${id}`, {
+        method: "PATCH",
+        body: { status: novo },
+      });
+      toast.success(novo === "desativado" ? "Projeto desativado" : "Projeto ativado");
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar projeto");
+    }
   };
 
   const activeProjects = rows.filter((p) => p.status !== "desativado");
@@ -106,7 +91,7 @@ export function ProjectListPage() {
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          {p.responsavel_id ? (responsaveis[p.responsavel_id] ?? "—") : "Sem responsável"}
+          {p.responsavel_id ? (responsaveis[p.responsavel_id] ?? "-") : "Sem responsavel"}
         </span>
         <span>{new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
       </div>
@@ -129,7 +114,7 @@ export function ProjectListPage() {
             }`}
             title={
               p.status === "ativo"
-                ? "Desativar projeto (bloqueia acesso, mantém os dados)"
+                ? "Desativar projeto (bloqueia acesso, mantem os dados)"
                 : "Ativar projeto (libera o acesso novamente)"
             }
           >
@@ -168,11 +153,11 @@ export function ProjectListPage() {
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
           <FolderKanban className="mx-auto h-10 w-10 text-muted-foreground" strokeWidth={1.2} />
-          <h3 className="mt-4 font-display text-2xl">Nenhum projeto disponível</h3>
+          <h3 className="mt-4 font-display text-2xl">Nenhum projeto disponivel</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             {isAdmin
               ? "Crie o primeiro projeto."
-              : "Você ainda não está vinculado a nenhum projeto. Fale com o administrador."}
+              : "Voce ainda nao esta vinculado a nenhum projeto. Fale com o administrador."}
           </p>
         </div>
       ) : (
