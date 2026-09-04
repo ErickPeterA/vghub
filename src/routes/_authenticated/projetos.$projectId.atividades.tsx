@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ActivityCompilationPanel, ActivityLinksPanel } from "@/components/ActivityLinksPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/atividades")({
@@ -25,14 +25,12 @@ function AtividadesPage() {
       return;
     }
     let cancelled = false;
-    supabase
-      .from("project_members")
-      .select("role")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setCanManage(data?.role === "gp" || data?.role === "admin");
+    apiJson<{ ok: boolean; projectRole: string | null }>(`/api/projects/${projectId}/navigation`)
+      .then(({ projectRole }) => {
+        if (!cancelled) setCanManage(projectRole === "gp" || projectRole === "admin");
+      })
+      .catch(() => {
+        if (!cancelled) setCanManage(false);
       });
     return () => {
       cancelled = true;

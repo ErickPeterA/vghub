@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Network, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 import {
   availableParents,
   buildOrganizationTree,
@@ -43,7 +42,6 @@ function clampZoom(value: number) {
 }
 
 export function OrganizationManager({ projectId }: { projectId: string }) {
-  const { user } = useCurrentUser();
   const [positions, setPositions] = useState<OrganizationPosition[]>([]);
   const [positionsWithDescription, setPositionsWithDescription] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -59,34 +57,19 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data, error }, { data: descriptions, error: descriptionsError }] = await Promise.all([
-      supabase
-        .from("project_positions")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("display_order")
-        .order("created_at"),
-      supabase
-        .from("descricoes_cargo")
-        .select("organization_position_id")
-        .eq("project_id", projectId)
-        .not("organization_position_id", "is", null),
-    ]);
-
-    if (error) toast.error(error.message);
-    if (descriptionsError) toast.error(descriptionsError.message);
-    setPositions((data ?? []) as OrganizationPosition[]);
-    setPositionsWithDescription(
-      new Set(
-        (descriptions ?? [])
-          .map(
-            (description: { organization_position_id: string | null }) =>
-              description.organization_position_id,
-          )
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
-    setLoading(false);
+    try {
+      const data = await apiJson<{
+        ok: boolean;
+        positions: OrganizationPosition[];
+        positionsWithDescription: string[];
+      }>(`/api/projects/${projectId}/organization`);
+      setPositions(data.positions);
+      setPositionsWithDescription(new Set(data.positionsWithDescription));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar organograma.");
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -187,27 +170,24 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     }
 
     if (formState.mode === "insertAbove" && formState.position) {
-      const { error } = await supabase.rpc("insert_project_position_above", {
-        _target_id: formState.position.id,
-        _nome: values.nome,
-        _descricao: values.descricao,
-        _status: values.status,
+      await apiJson(`/api/projects/${projectId}/organization`, {
+        method: "POST",
+        body: {
+          action: "insertAbove",
+          targetId: formState.position.id,
+          values: {
+            nome: values.nome,
+            descricao: values.descricao,
+            status: values.status,
+          },
+        },
       });
-      if (error) return toast.error(error.message);
       toast.success("Cargo inserido acima");
     } else if (formState.mode === "edit" && formState.position) {
-      const { error } = await supabase
-        .from("project_positions")
-        .update({
-          nome: values.nome,
-          descricao: values.descricao,
-          parent_id: values.parent_id,
-          display_order: values.display_order,
-          status: values.status,
-        })
-        .eq("id", formState.position.id)
-        .eq("project_id", projectId);
-      if (error) return toast.error(error.message);
+      await apiJson(`/api/projects/${projectId}/organization`, {
+        method: "POST",
+        body: { action: "update", positionId: formState.position.id, values },
+      });
       toast.success("Cargo atualizado");
     } else {
       const siblings = getChildren(positions, values.parent_id);
@@ -221,29 +201,25 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       const positionsToShift = siblings.filter((sibling) => sibling.display_order >= displayOrder);
 
       if (positionsToShift.length > 0) {
-        const updates = await Promise.all(
-          positionsToShift.map((sibling) =>
-            supabase
-              .from("project_positions")
-              .update({ display_order: sibling.display_order + 10 })
-              .eq("id", sibling.id)
-              .eq("project_id", projectId),
-          ),
-        );
-        const shiftError = updates.find((result) => result.error)?.error;
-        if (shiftError) return toast.error(shiftError.message);
+        await apiJson(`/api/projects/${projectId}/organization`, {
+          method: "POST",
+          body: {
+            action: "shift",
+            updates: positionsToShift.map((sibling) => ({
+              id: sibling.id,
+              displayOrder: sibling.display_order + 10,
+            })),
+          },
+        });
       }
 
-      const { error } = await supabase.from("project_positions").insert({
-        project_id: projectId,
-        parent_id: values.parent_id,
-        nome: values.nome,
-        descricao: values.descricao,
-        display_order: displayOrder,
-        status: values.status,
-        created_by: user?.id ?? null,
+      await apiJson(`/api/projects/${projectId}/organization`, {
+        method: "POST",
+        body: {
+          action: "create",
+          values: { ...values, display_order: displayOrder },
+        },
       });
-      if (error) return toast.error(error.message);
       toast.success("Cargo cadastrado");
     }
 
@@ -268,11 +244,10 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       return;
     }
 
-    const { error } = await supabase.rpc("move_project_position", {
-      _position_id: position.id,
-      _new_parent_id: parentId,
+    await apiJson(`/api/projects/${projectId}/organization`, {
+      method: "POST",
+      body: { action: "move", positionId: position.id, parentId },
     });
-    if (error) return toast.error(error.message);
     toast.success("Superior imediato alterado");
     setMoveTarget(null);
     await load();
@@ -280,11 +255,10 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
 
   const deletePosition = async (childrenParentId: string | null) => {
     if (!deleteTarget) return;
-    const { error } = await supabase.rpc("delete_project_position_with_reassignment", {
-      _position_id: deleteTarget.id,
-      _children_parent_id: childrenParentId,
+    await apiJson(`/api/projects/${projectId}/organization`, {
+      method: "POST",
+      body: { action: "delete", positionId: deleteTarget.id, childrenParentId },
     });
-    if (error) return toast.error(error.message);
     toast.success("Cargo excluído");
     if (selected?.id === deleteTarget.id) setSelected(null);
     setDeleteTarget(null);
@@ -292,11 +266,10 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
   };
 
   const reorderPosition = async (position: OrganizationPosition, direction: "up" | "down") => {
-    const { error } = await supabase.rpc("reorder_project_position", {
-      _position_id: position.id,
-      _direction: direction,
+    await apiJson(`/api/projects/${projectId}/organization`, {
+      method: "POST",
+      body: { action: "reorder", positionId: position.id, direction },
     });
-    if (error) return toast.error(error.message);
     await load();
   };
 
@@ -315,17 +288,17 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     const next = [...siblings];
     next.splice(placement === "before" ? targetIndex : targetIndex + 1, 0, source);
 
-    const updates = await Promise.all(
-      next.map((position, index) =>
-        supabase
-          .from("project_positions")
-          .update({ parent_id: nextParentId, display_order: (index + 1) * 10 })
-          .eq("id", position.id)
-          .eq("project_id", projectId),
-      ),
-    );
-    const error = updates.find((result) => result.error)?.error;
-    if (error) return toast.error(error.message);
+    await apiJson(`/api/projects/${projectId}/organization`, {
+      method: "POST",
+      body: {
+        action: "shift",
+        updates: next.map((position, index) => ({
+          id: position.id,
+          parentId: nextParentId,
+          displayOrder: (index + 1) * 10,
+        })),
+      },
+    });
     toast.success("Cargo reposicionado");
     await load();
   };

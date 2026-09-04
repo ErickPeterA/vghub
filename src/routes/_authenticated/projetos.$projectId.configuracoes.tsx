@@ -1,14 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ProjectConfigPage } from "@/components/ProjectConfigPage";
-import { supabase } from "@/integrations/supabase/client";
-import { getCurrentUserSafely, withTimeout } from "@/lib/auth-safe";
+import { getCurrentUserSafely } from "@/lib/auth-safe";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/configuracoes")({
   beforeLoad: async () => {
     const user = await getCurrentUserSafely();
     if (!user) throw redirect({ to: "/login" });
-    const { data } = await withTimeout(
-      supabase
+    const me = await apiJson<{ ok: boolean; permissions: { isAdmin: boolean } }>("/api/me");
+    if (!me.permissions.isAdmin) throw redirect({ to: "/projetos" });
+    /*
+      oldSupabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/config
       "Não foi possível validar permissões.",
     );
     if (!data) throw redirect({ to: "/projetos" });
+    */
   },
   component: ConfigRoute,
 });

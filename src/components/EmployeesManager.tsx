@@ -10,8 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -77,7 +76,6 @@ const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/70 px-3 py-2 text-sm text-[#042558] outline-none transition focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 disabled:bg-[#042558]/5 disabled:text-[#042558]/35";
 
 export function EmployeesManager({ projectId }: { projectId: string }) {
-  const { user } = useCurrentUser();
   const nameRef = useRef<HTMLInputElement | null>(null);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [positions, setPositions] = useState<PositionRow[]>([]);
@@ -89,30 +87,21 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [employeesResult, positionsResult, areasResult] = await Promise.all([
-      supabase.from("project_employees").select("*").eq("project_id", projectId).order("nome"),
-      supabase
-        .from("project_positions")
-        .select("id,nome,parent_id,display_order,created_at")
-        .eq("project_id", projectId)
-        .eq("status", "active")
-        .order("display_order")
-        .order("created_at"),
-      supabase
-        .from("project_areas")
-        .select("id,project_id,parent_id,nome,display_order,created_at")
-        .eq("project_id", projectId)
-        .order("display_order")
-        .order("created_at"),
-    ]);
-
-    const error = employeesResult.error ?? positionsResult.error ?? areasResult.error;
-    if (error) toast.error(error.message);
-
-    setEmployees((employeesResult.data ?? []) as EmployeeRow[]);
-    setPositions((positionsResult.data ?? []) as PositionRow[]);
-    setAreas((areasResult.data ?? []) as AreaRow[]);
-    setLoading(false);
+    try {
+      const data = await apiJson<{
+        ok: boolean;
+        employees: EmployeeRow[];
+        positions: PositionRow[];
+        areas: AreaRow[];
+      }>(`/api/projects/${projectId}/employees`);
+      setEmployees(data.employees);
+      setPositions(data.positions);
+      setAreas(data.areas);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar colaboradores.");
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -213,20 +202,24 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     }
 
     setSaving(true);
-    const { error } = await supabase.from("project_employees").insert({
-      project_id: projectId,
-      position_id: form.positionId,
-      area_id: form.areaId || null,
-      sector_id: form.sectorId || null,
-      superior_imediato_id: form.superiorImediatoId || null,
-      nome,
-      admission_date: form.admissionDate,
-      last_performance_review_date: form.lastPerformanceReviewDate || null,
-      created_by: user?.id ?? null,
-    });
+    try {
+      await apiJson(`/api/projects/${projectId}/employees`, {
+        method: "POST",
+        body: {
+          positionId: form.positionId,
+          areaId: form.areaId || null,
+          sectorId: form.sectorId || null,
+          superiorImediatoId: form.superiorImediatoId || null,
+          nome,
+          admissionDate: form.admissionDate,
+          lastPerformanceReviewDate: form.lastPerformanceReviewDate || null,
+        },
+      });
+    } catch (error) {
+      setSaving(false);
+      return toast.error(error instanceof Error ? error.message : "Erro ao cadastrar colaborador.");
+    }
     setSaving(false);
-
-    if (error) return toast.error(error.message);
 
     toast.success("Colaborador cadastrado");
     setForm(emptyForm);

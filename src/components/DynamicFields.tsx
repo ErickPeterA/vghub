@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -136,17 +136,31 @@ export function useProjectFields(projectId: string) {
 
   useEffect(() => {
     setLoading(true);
-    supabase
-      .from("base_fields")
-      .select(
-        "id,field_key,label,section,field_type,is_required,allows_free_text,data_source,display_order,base_options(id,label,value,description,is_active,display_order)",
-      )
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("display_order")
-      .then(({ data }) => {
+    apiJson<{
+      ok: boolean;
+      fields: Array<{
+        id: string;
+        field_key: string;
+        label: string;
+        section: string;
+        field_type: DynamicField["field_type"];
+        is_required: boolean;
+        allows_free_text: boolean;
+        data_source?: string | null;
+        display_order: number;
+        base_options?: Array<{
+          id: string;
+          label: string;
+          value: string;
+          description: string | null;
+          is_active: boolean;
+          display_order: number;
+        }>;
+      }>;
+    }>(`/api/base?projectId=${projectId}`)
+      .then(({ fields: data }) => {
         setFields(
-          dedupeFields(data ?? []).map((field) => ({
+          dedupeFields((data ?? []).filter((field) => field.is_active)).map((field) => ({
             ...field,
             label: normalizeCoreFieldLabel(field),
             data_source: normalizeFieldDataSource(field),
@@ -179,11 +193,11 @@ export function useSectionLimits(projectId: string) {
 
   useEffect(() => {
     setLoading(true);
-    supabase
-      .from("base_section_settings")
-      .select("section,max_items,is_enabled")
-      .eq("project_id", projectId)
-      .then(({ data }) => {
+    apiJson<{
+      ok: boolean;
+      sectionSettings: Array<{ section: string; max_items: number; is_enabled: boolean }>;
+    }>(`/api/base?projectId=${projectId}`)
+      .then(({ sectionSettings: data }) => {
         const map: Record<string, number> = {};
         const enabledMap: Record<string, boolean> = {};
         DC_SECTIONS.filter((section) => section.repeater).forEach((section) => {
@@ -205,19 +219,11 @@ export function useSectionLimits(projectId: string) {
 export function useProjectAreas(projectId: string) {
   const [areas, setAreas] = useState<ProjectArea[]>([]);
   useEffect(() => {
-    supabase
-      .from("project_areas")
-      .select("id,parent_id,nome,cor")
-      .eq("project_id", projectId)
-      .order("display_order")
-      .order("created_at")
-      .then(({ data, error }) => {
-        if (error) {
-          toast.error(error.message);
-          setAreas([]);
-          return;
-        }
-        setAreas((data ?? []) as ProjectArea[]);
+    apiJson<{ ok: boolean; areas: ProjectArea[] }>(`/api/projects/${projectId}/areas`)
+      .then(({ areas }) => setAreas(areas))
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar areas.");
+        setAreas([]);
       });
   }, [projectId]);
   return areas;
@@ -263,10 +269,13 @@ export function DynamicFieldControl({
 
     setSavingOption(true);
     const valueKey = `${slugify(label)}_${Date.now()}`;
-    const { data, error } = await supabase
-      .from("base_options")
-      .insert({
-        field_id: field.id,
+    const result = await apiJson<{
+      ok: boolean;
+      option: { id: string; label: string; value: string; description: string | null };
+    }>("/api/base/options", {
+      method: "POST",
+      body: {
+        fieldId: field.id,
         label,
         value: valueKey,
         description:
@@ -275,21 +284,20 @@ export function DynamicFieldControl({
             : null,
         display_order: localOptions.length * 10 + 10,
         is_active: true,
-      })
-      .select("id,label,value,description")
-      .single();
+      },
+    }).catch((error) => {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar opcao.");
+      return null;
+    });
 
     setSavingOption(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (!result) return;
 
     const nextOption = {
-      id: data.id,
-      label: data.label,
-      value: data.value,
-      description: data.description ?? null,
+      id: result.option.id,
+      label: result.option.label,
+      value: result.option.value,
+      description: result.option.description ?? null,
     };
     setLocalOptions((prev) => [...prev, nextOption]);
     setNewOptionLabel("");

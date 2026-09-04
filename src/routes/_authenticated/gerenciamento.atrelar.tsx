@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   attachUserToProjectAdmin,
@@ -61,13 +61,15 @@ function AtrelarUsuarios() {
   }, [isAdmin, lu, navigate]);
 
   const load = async () => {
-    const [{ data: ps }, { data: us }, { data: ms }] = await Promise.all([
-      supabase.from("projects").select("id,nome").order("nome"),
-      supabase.from("profiles").select("id,nome,email").order("nome"),
-      supabase
-        .from("project_members")
-        .select("id, project_id, user_id, role, projects(nome), profiles(nome,email)"),
-    ]);
+    const data = await apiJson<{
+      ok: boolean;
+      projects: Array<{ id: string; nome: string }>;
+      users: Array<{ id: string; nome: string; email: string }>;
+      members: unknown[];
+    }>("/api/project-members");
+    const ps = data.projects;
+    const us = data.users;
+    const ms = data.members;
     setProjects(ps ?? []);
     setUsers(us ?? []);
     setMembers(

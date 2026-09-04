@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus, Trash2, Users, Shield, UserPlus, Settings, Layers } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch, apiJson } from "@/lib/api";
 import {
   attachUserToProjectAdmin,
   removeProjectMemberAdmin,
@@ -63,37 +63,29 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: ms }, { data: ps }, { data: ars }, { data: scs }] = await Promise.all([
-      supabase
-        .from("project_members")
-        .select("id,user_id,role,profiles(id,nome,email)")
-        .eq("project_id", projectId),
-      supabase.from("profiles").select("id,nome,email").order("nome"),
-      supabase
-        .from("project_areas")
-        .select("id,nome,parent_id")
-        .eq("project_id", projectId)
-        .order("display_order"),
-      supabase.from("project_member_scopes").select("id,member_id,area_id"),
-    ]);
+    const data = await apiJson<{
+      ok: boolean;
+      members: Array<{
+        id: string;
+        user_id: string;
+        role: ProjectRoleValue;
+        profiles: Profile | null;
+      }>;
+      profiles: Profile[];
+      areas: Area[];
+      scopes: Scope[];
+    }>(`/api/projects/${projectId}/access`);
     setMembers(
-      (
-        (ms ?? []) as unknown as Array<{
-          id: string;
-          user_id: string;
-          role: ProjectRoleValue;
-          profiles: Profile | null;
-        }>
-      ).map((m) => ({
+      data.members.map((m) => ({
         id: m.id,
         user_id: m.user_id,
         role: m.role,
         profile: m.profiles,
       })),
     );
-    setProfiles((ps ?? []) as Profile[]);
-    setAreas((ars ?? []) as Area[]);
-    setScopes((scs ?? []) as Scope[]);
+    setProfiles(data.profiles);
+    setAreas(data.areas);
+    setScopes(data.scopes);
     setLoading(false);
   }, [projectId]);
 
@@ -135,16 +127,19 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
 
   const addScope = async (member: Member, areaId: string) => {
     if (!areaId) return;
-    const { error } = await supabase
-      .from("project_member_scopes")
-      .insert({ member_id: member.id, area_id: areaId });
-    if (error) return toast.error(error.message);
+    const response = await apiFetch(`/api/projects/${projectId}/access`, {
+      method: "POST",
+      body: { memberId: member.id, areaId },
+    });
+    if (!response.ok) return toast.error("Erro ao vincular escopo.");
     void load();
   };
 
   const removeScope = async (scope: Scope) => {
-    const { error } = await supabase.from("project_member_scopes").delete().eq("id", scope.id);
-    if (error) return toast.error(error.message);
+    const response = await apiFetch(`/api/projects/${projectId}/access?scopeId=${scope.id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) return toast.error("Erro ao remover escopo.");
     void load();
   };
 

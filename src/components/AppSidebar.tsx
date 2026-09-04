@@ -24,6 +24,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 
 export function AppSidebar() {
   const { isAdmin, profile, user } = useCurrentUser();
@@ -38,15 +39,12 @@ export function AppSidebar() {
       return;
     }
     let cancelled = false;
-    supabase
-      .from("project_members")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("role", "gp")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setIsGp(!!data);
+    apiJson<{ ok: boolean; isGp: boolean }>("/api/navigation")
+      .then(({ isGp }) => {
+        if (!cancelled) setIsGp(isGp);
+      })
+      .catch(() => {
+        if (!cancelled) setIsGp(false);
       });
     return () => {
       cancelled = true;

@@ -16,6 +16,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PamTokenRouteImport } from './routes/pam.$token'
 import { Route as ApiUsersRouteImport } from './routes/api/users'
 import { Route as ApiProjectsRouteImport } from './routes/api/projects'
+import { Route as ApiProjectMembersRouteImport } from './routes/api/project-members'
+import { Route as ApiNavigationRouteImport } from './routes/api/navigation'
 import { Route as ApiMeRouteImport } from './routes/api/me'
 import { Route as ApiBaseRouteImport } from './routes/api/base'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
@@ -43,7 +45,11 @@ import { Route as ApiPublicPamCompleteTokenRouteImport } from './routes/api/publ
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
+import { Route as ApiProjectsProjectIdOrganizationRouteImport } from './routes/api/projects.$projectId.organization'
+import { Route as ApiProjectsProjectIdNavigationRouteImport } from './routes/api/projects.$projectId.navigation'
+import { Route as ApiProjectsProjectIdEmployeesRouteImport } from './routes/api/projects.$projectId.employees'
 import { Route as ApiProjectsProjectIdAreasRouteImport } from './routes/api/projects.$projectId.areas'
+import { Route as ApiProjectsProjectIdAccessRouteImport } from './routes/api/projects.$projectId.access'
 import { Route as ApiBaseOptionsOptionIdRouteImport } from './routes/api/base.options.$optionId'
 import { Route as ApiBaseFieldsOrderRouteImport } from './routes/api/base.fields.order'
 import { Route as ApiBaseFieldsFieldIdRouteImport } from './routes/api/base.fields.$fieldId'
@@ -97,6 +103,16 @@ const ApiUsersRoute = ApiUsersRouteImport.update({
 const ApiProjectsRoute = ApiProjectsRouteImport.update({
   id: '/api/projects',
   path: '/api/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProjectMembersRoute = ApiProjectMembersRouteImport.update({
+  id: '/api/project-members',
+  path: '/api/project-members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNavigationRoute = ApiNavigationRouteImport.update({
+  id: '/api/navigation',
+  path: '/api/navigation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMeRoute = ApiMeRouteImport.update({
@@ -251,10 +267,34 @@ const ApiPublicActivityDraftTokenRoute =
     path: '/api/public/activity-draft/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiProjectsProjectIdOrganizationRoute =
+  ApiProjectsProjectIdOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdNavigationRoute =
+  ApiProjectsProjectIdNavigationRouteImport.update({
+    id: '/navigation',
+    path: '/navigation',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdEmployeesRoute =
+  ApiProjectsProjectIdEmployeesRouteImport.update({
+    id: '/employees',
+    path: '/employees',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
 const ApiProjectsProjectIdAreasRoute =
   ApiProjectsProjectIdAreasRouteImport.update({
     id: '/areas',
     path: '/areas',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdAccessRoute =
+  ApiProjectsProjectIdAccessRouteImport.update({
+    id: '/access',
+    path: '/access',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
 const ApiBaseOptionsOptionIdRoute = ApiBaseOptionsOptionIdRouteImport.update({
@@ -385,6 +425,8 @@ export interface FileRoutesByFullPath {
   '/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
+  '/api/navigation': typeof ApiNavigationRoute
+  '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
   '/pam/$token': typeof PamTokenRoute
@@ -416,7 +458,11 @@ export interface FileRoutesByFullPath {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
+  '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -440,6 +486,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
+  '/api/navigation': typeof ApiNavigationRoute
+  '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
   '/pam/$token': typeof PamTokenRoute
@@ -468,7 +516,11 @@ export interface FileRoutesByTo {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
+  '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -495,6 +547,8 @@ export interface FileRoutesById {
   '/_authenticated/projetos': typeof AuthenticatedProjetosRouteWithChildren
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
+  '/api/navigation': typeof ApiNavigationRoute
+  '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
   '/pam/$token': typeof PamTokenRoute
@@ -526,7 +580,11 @@ export interface FileRoutesById {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
+  '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -553,6 +611,8 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/api/base'
     | '/api/me'
+    | '/api/navigation'
+    | '/api/project-members'
     | '/api/projects'
     | '/api/users'
     | '/pam/$token'
@@ -584,7 +644,11 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/navigation'
+    | '/api/projects/$projectId/organization'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -608,6 +672,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/base'
     | '/api/me'
+    | '/api/navigation'
+    | '/api/project-members'
     | '/api/projects'
     | '/api/users'
     | '/pam/$token'
@@ -636,7 +702,11 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/navigation'
+    | '/api/projects/$projectId/organization'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -662,6 +732,8 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos'
     | '/api/base'
     | '/api/me'
+    | '/api/navigation'
+    | '/api/project-members'
     | '/api/projects'
     | '/api/users'
     | '/pam/$token'
@@ -693,7 +765,11 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/navigation'
+    | '/api/projects/$projectId/organization'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -719,6 +795,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiBaseRoute: typeof ApiBaseRouteWithChildren
   ApiMeRoute: typeof ApiMeRoute
+  ApiNavigationRoute: typeof ApiNavigationRoute
+  ApiProjectMembersRoute: typeof ApiProjectMembersRoute
   ApiProjectsRoute: typeof ApiProjectsRouteWithChildren
   ApiUsersRoute: typeof ApiUsersRoute
   PamTokenRoute: typeof PamTokenRoute
@@ -784,6 +862,20 @@ declare module '@tanstack/react-router' {
       path: '/api/projects'
       fullPath: '/api/projects'
       preLoaderRoute: typeof ApiProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/project-members': {
+      id: '/api/project-members'
+      path: '/api/project-members'
+      fullPath: '/api/project-members'
+      preLoaderRoute: typeof ApiProjectMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/navigation': {
+      id: '/api/navigation'
+      path: '/api/navigation'
+      fullPath: '/api/navigation'
+      preLoaderRoute: typeof ApiNavigationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/me': {
@@ -975,11 +1067,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/projects/$projectId/organization': {
+      id: '/api/projects/$projectId/organization'
+      path: '/organization'
+      fullPath: '/api/projects/$projectId/organization'
+      preLoaderRoute: typeof ApiProjectsProjectIdOrganizationRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/navigation': {
+      id: '/api/projects/$projectId/navigation'
+      path: '/navigation'
+      fullPath: '/api/projects/$projectId/navigation'
+      preLoaderRoute: typeof ApiProjectsProjectIdNavigationRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/employees': {
+      id: '/api/projects/$projectId/employees'
+      path: '/employees'
+      fullPath: '/api/projects/$projectId/employees'
+      preLoaderRoute: typeof ApiProjectsProjectIdEmployeesRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
     '/api/projects/$projectId/areas': {
       id: '/api/projects/$projectId/areas'
       path: '/areas'
       fullPath: '/api/projects/$projectId/areas'
       preLoaderRoute: typeof ApiProjectsProjectIdAreasRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/access': {
+      id: '/api/projects/$projectId/access'
+      path: '/access'
+      fullPath: '/api/projects/$projectId/access'
+      preLoaderRoute: typeof ApiProjectsProjectIdAccessRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
     }
     '/api/base/options/$optionId': {
@@ -1323,11 +1443,19 @@ const ApiProjectsProjectIdAreasRouteWithChildren =
   )
 
 interface ApiProjectsProjectIdRouteChildren {
+  ApiProjectsProjectIdAccessRoute: typeof ApiProjectsProjectIdAccessRoute
   ApiProjectsProjectIdAreasRoute: typeof ApiProjectsProjectIdAreasRouteWithChildren
+  ApiProjectsProjectIdEmployeesRoute: typeof ApiProjectsProjectIdEmployeesRoute
+  ApiProjectsProjectIdNavigationRoute: typeof ApiProjectsProjectIdNavigationRoute
+  ApiProjectsProjectIdOrganizationRoute: typeof ApiProjectsProjectIdOrganizationRoute
 }
 
 const ApiProjectsProjectIdRouteChildren: ApiProjectsProjectIdRouteChildren = {
+  ApiProjectsProjectIdAccessRoute: ApiProjectsProjectIdAccessRoute,
   ApiProjectsProjectIdAreasRoute: ApiProjectsProjectIdAreasRouteWithChildren,
+  ApiProjectsProjectIdEmployeesRoute: ApiProjectsProjectIdEmployeesRoute,
+  ApiProjectsProjectIdNavigationRoute: ApiProjectsProjectIdNavigationRoute,
+  ApiProjectsProjectIdOrganizationRoute: ApiProjectsProjectIdOrganizationRoute,
 }
 
 const ApiProjectsProjectIdRouteWithChildren =
@@ -1352,6 +1480,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiBaseRoute: ApiBaseRouteWithChildren,
   ApiMeRoute: ApiMeRoute,
+  ApiNavigationRoute: ApiNavigationRoute,
+  ApiProjectMembersRoute: ApiProjectMembersRoute,
   ApiProjectsRoute: ApiProjectsRouteWithChildren,
   ApiUsersRoute: ApiUsersRoute,
   PamTokenRoute: PamTokenRoute,

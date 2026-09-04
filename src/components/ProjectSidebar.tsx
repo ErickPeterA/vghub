@@ -16,8 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 
 const LIDER_ROLES = new Set([
   "lider_estrategico",
@@ -57,7 +56,6 @@ export function ProjectSidebar({
   fixed?: boolean;
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { user } = useCurrentUser();
   const [unreviewed, setUnreviewed] = useState(0);
   const [projectRole, setProjectRole] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<SidebarGroup, boolean>>(() =>
@@ -70,13 +68,13 @@ export function ProjectSidebar({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const { count } = await supabase
-        .from("activity_links")
-        .select("id", { count: "exact", head: true })
-        .eq("project_id", projectId)
-        .eq("status", "answered")
-        .is("reviewed_at", null);
-      if (!cancelled) setUnreviewed(count ?? 0);
+      const data = await apiJson<{ ok: boolean; unreviewed: number; projectRole: string | null }>(
+        `/api/projects/${projectId}/navigation`,
+      );
+      if (!cancelled) {
+        setUnreviewed(data.unreviewed);
+        setProjectRole(data.projectRole);
+      }
     };
     void load();
     const iv = setInterval(load, 30000);
@@ -85,17 +83,6 @@ export function ProjectSidebar({
       clearInterval(iv);
     };
   }, [projectId]);
-
-  useEffect(() => {
-    if (!user) return;
-    void supabase
-      .from("project_members")
-      .select("role")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setProjectRole(data?.role ?? null));
-  }, [projectId, user]);
 
   const isLider = !isAdmin && projectRole !== null && LIDER_ROLES.has(projectRole);
   const canManageProjectModels = isAdmin || projectRole === "gp" || projectRole === "admin";
