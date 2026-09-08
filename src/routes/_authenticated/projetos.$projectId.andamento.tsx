@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Loader2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/andamento")({
   component: Andamento,
@@ -33,20 +33,20 @@ const STAGES: Array<{
 }> = [
   {
     key: "em_criacao",
-    label: "Em criação",
-    description: "descrições ainda sendo montadas",
+    label: "Em criaÃ§Ã£o",
+    description: "descriÃ§Ãµes ainda sendo montadas",
     color: "#2563eb",
   },
   {
     key: "em_aprovacao",
-    label: "Em aprovação",
-    description: "descrições aguardando validação",
+    label: "Em aprovaÃ§Ã£o",
+    description: "descriÃ§Ãµes aguardando validaÃ§Ã£o",
     color: "#d97706",
   },
   {
     key: "concluido",
-    label: "Concluídos",
-    description: "descrições finalizadas",
+    label: "ConcluÃ­dos",
+    description: "descriÃ§Ãµes finalizadas",
     color: "#16a34a",
   },
 ];
@@ -61,18 +61,16 @@ function Andamento() {
 
     const load = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("descricoes_cargo")
-        .select("id,cargo,etapa,created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-
-      if (!active) return;
-      if (error) {
-        toast.error(error.message);
+      try {
+        const { rows } = await apiJson<{ ok: boolean; rows: DcRow[] }>(
+          `/api/projects/${projectId}/dc?mode=progress`,
+        );
+        if (!active) return;
+        setRows(rows ?? []);
+      } catch (error) {
+        if (!active) return;
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar andamento.");
         setRows([]);
-      } else {
-        setRows((data as DcRow[]) ?? []);
       }
       setLoading(false);
     };
@@ -128,14 +126,14 @@ function Andamento() {
                 Andamento do projeto
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#042558]/60">
-                A onda mostra quantas descrições estão em criação, em aprovação e concluídas.
+                A onda mostra quantas descriÃ§Ãµes estÃ£o em criaÃ§Ã£o, em aprovaÃ§Ã£o e concluÃ­das.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[560px]">
               <MetricCard label="Total" value={stats.total} />
               <MetricCard label="Em andamento" value={stats.active} />
-              <MetricCard label="Em aprovação" value={stats.counts.em_aprovacao} tone="amber" />
+              <MetricCard label="Em aprovaÃ§Ã£o" value={stats.counts.em_aprovacao} tone="amber" />
               <MetricCard label="Progresso" value={`${stats.progress}%`} tone="navy" />
             </div>
           </div>
@@ -148,9 +146,9 @@ function Andamento() {
         ) : stats.total === 0 ? (
           <div className="flex h-72 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/75 text-center">
             <FileText className="mb-3 h-9 w-9 text-[#042558]/30" />
-            <h2 className="text-lg font-semibold text-[#042558]">Sem descrições para acompanhar</h2>
+            <h2 className="text-lg font-semibold text-[#042558]">Sem descriÃ§Ãµes para acompanhar</h2>
             <p className="mt-1 text-sm text-[#042558]/55">
-              Quando houver descrições de cargo no projeto, a onda aparece aqui.
+              Quando houver descriÃ§Ãµes de cargo no projeto, a onda aparece aqui.
             </p>
           </div>
         ) : (
@@ -160,12 +158,12 @@ function Andamento() {
                 <div>
                   <h2 className="text-lg font-semibold text-[#042558]">Onda de andamento</h2>
                   <p className="text-sm text-[#042558]/55">
-                    Baseada no estágio atual das descrições de cargo.
+                    Baseada no estÃ¡gio atual das descriÃ§Ãµes de cargo.
                   </p>
                 </div>
                 <span className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]/70">
                   <TrendingUp className="h-4 w-4" />
-                  {stats.total} descrições
+                  {stats.total} descriÃ§Ãµes
                 </span>
               </div>
 
@@ -267,3 +265,4 @@ function MetricCard({
     </div>
   );
 }
+

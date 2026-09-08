@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { toast } from "sonner";
 import {
@@ -13,7 +13,7 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { normalizeActivityFields, type ActivityField } from "./ActivityConfigManager";
 import { useProjectAreas, type ProjectArea } from "./DynamicFields";
 
@@ -66,8 +66,8 @@ const ACTIVITY_STAGES: Array<{
 }> = [
   {
     key: "creating",
-    label: "Em criação",
-    empty: "Nenhuma atividade em criação",
+    label: "Em criaÃ§Ã£o",
+    empty: "Nenhuma atividade em criaÃ§Ã£o",
     icon: Clock3,
     iconClass: "text-blue-500",
   },
@@ -124,52 +124,36 @@ export function ActivityLinksPanel({
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: cfg }, { data: ls }, { data: emps }, { data: pos }] = await Promise.all([
-      supabase
-        .from("activity_configs")
-        .select("id,header_schema,questions_schema")
-        .eq("project_id", projectId)
-        .maybeSingle(),
-      supabase
-        .from("activity_links")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("project_employees")
-        .select("id,nome,position_id,area_id,sector_id")
-        .eq("project_id", projectId)
-        .order("nome"),
-      supabase.from("project_positions").select("id,nome").eq("project_id", projectId),
-    ]);
-    if (cfg) {
-      setConfigId(cfg.id);
-      setConfigFields({
-        header: normalizeActivityFields((cfg.header_schema as ActivityField[]) ?? []),
-        questions: normalizeActivityFields((cfg.questions_schema as ActivityField[]) ?? []),
-      });
-    } else {
-      setConfigId(null);
-      setConfigFields(null);
-    }
+    try {
+      const { config: cfg, links: ls, employees: emps, positions: pos } = await apiJson<{
+        ok: boolean;
+        config: { id: string; header_schema: ActivityField[]; questions_schema: ActivityField[] } | null;
+        links: LinkRow[];
+        employees: EmployeeRow[];
+        positions: PositionRow[];
+      }>(`/api/projects/${projectId}/activity-links`);
+      if (cfg) {
+        setConfigId(cfg.id);
+        setConfigFields({
+          header: normalizeActivityFields((cfg.header_schema as ActivityField[]) ?? []),
+          questions: normalizeActivityFields((cfg.questions_schema as ActivityField[]) ?? []),
+        });
+      } else {
+        setConfigId(null);
+        setConfigFields(null);
+      }
 
-    setEmployees((emps ?? []) as EmployeeRow[]);
-    setPositions((pos ?? []) as PositionRow[]);
+      setEmployees((emps ?? []) as EmployeeRow[]);
+      setPositions((pos ?? []) as PositionRow[]);
 
-    const now = new Date().toISOString();
-    const rows = (ls ?? []) as LinkRow[];
-    const toExpire = rows
-      .filter((l) => l.status === "pending" && l.expires_at < now)
-      .map((l) => l.id);
-    if (toExpire.length) {
-      await supabase.from("activity_links").update({ status: "expired" }).in("id", toExpire);
-      rows.forEach((l) => {
-        if (toExpire.includes(l.id)) l.status = "expired";
-      });
+      const rows = (ls ?? []) as LinkRow[];
+      setLinks(rows);
+      onUnreviewedChange?.(rows.filter((l) => l.status === "answered" && !l.reviewed_at).length);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar atividades.");
+    } finally {
+      setLoading(false);
     }
-    setLinks(rows);
-    onUnreviewedChange?.(rows.filter((l) => l.status === "answered" && !l.reviewed_at).length);
-    setLoading(false);
   }, [projectId, onUnreviewedChange]);
 
   useEffect(() => {
@@ -205,7 +189,7 @@ export function ActivityLinksPanel({
   };
 
   const gerar = async (employee: EmployeeRow) => {
-    if (!configId) return toast.error("Configure o formulário primeiro.");
+    if (!configId) return toast.error("Configure o formulario primeiro.");
 
     const areaName = employee.area_id ? (areaById.get(employee.area_id)?.nome ?? "") : "";
     const setorName = employee.sector_id ? (areaById.get(employee.sector_id)?.nome ?? "") : "";
@@ -229,70 +213,72 @@ export function ActivityLinksPanel({
     const expires_at = new Date(
       Date.now() + ACTIVITY_LINK_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
-    const { data: userData } = await supabase.auth.getUser();
-    const { error } = await supabase.from("activity_links").insert({
-      project_id: projectId,
-      config_id: configId,
-      expires_at,
-      header_answers: header,
-      label: employee.nome,
-      created_by: userData.user?.id ?? null,
-    });
-    setGenerating(null);
-    if (error) return toast.error(error.message);
-    toast.success(`Link gerado para ${employee.nome}`);
-    void load();
+    try {
+      await apiJson(`/api/projects/${projectId}/activity-links`, {
+        method: "POST",
+        body: {
+          configId,
+          expiresAt: expires_at,
+          headerAnswers: header,
+          label: employee.nome,
+        },
+      });
+      toast.success(`Link gerado para ${employee.nome}`);
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar link.");
+    } finally {
+      setGenerating(null);
+    }
   };
-
   const copiar = async (token: string) => {
     const url = `${window.location.origin}/atividades/preencher/${token}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiado");
     } catch {
-      toast.error("Não foi possível copiar");
+      toast.error("NÃ£o foi possÃ­vel copiar");
     }
   };
 
   const cancelar = async (l: LinkRow) => {
     if (!confirm("Cancelar este link?")) return;
-    const { error } = await supabase
-      .from("activity_links")
-      .update({ status: "cancelled" })
-      .eq("id", l.id);
-    if (error) return toast.error(error.message);
-    void load();
+    try {
+      await apiJson(`/api/projects/${projectId}/activity-links`, {
+        method: "PATCH",
+        body: { linkId: l.id, action: "cancel" },
+      });
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao cancelar link.");
+    }
   };
-
   const reativar = async (l: LinkRow) => {
     const expires_at = new Date(
       Date.now() + ACTIVITY_REOPEN_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
-    const { error } = await supabase
-      .from("activity_links")
-      .update({ status: "pending", expires_at })
-      .eq("id", l.id);
-    if (error) return toast.error(error.message);
-    toast.success("Link reaberto por 3 dias");
-    void load();
-  };
-
-  const abrirResposta = async (l: LinkRow) => {
-    const { data } = await supabase
-      .from("activity_responses")
-      .select("*")
-      .eq("link_id", l.id)
-      .maybeSingle();
-    setOpenResp({ link: l, response: (data as ResponseRow | null) ?? null });
-    if (l.status === "answered" && !l.reviewed_at) {
-      await supabase
-        .from("activity_links")
-        .update({ reviewed_at: new Date().toISOString() })
-        .eq("id", l.id);
+    try {
+      await apiJson(`/api/projects/${projectId}/activity-links`, {
+        method: "PATCH",
+        body: { linkId: l.id, action: "reactivate", expiresAt: expires_at },
+      });
+      toast.success("Link reaberto por 3 dias");
       void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao reabrir link.");
     }
   };
-
+  const abrirResposta = async (l: LinkRow) => {
+    try {
+      const { response } = await apiJson<{ ok: boolean; response: ResponseRow | null }>(
+        `/api/projects/${projectId}/activity-links/${l.id}/response`,
+      );
+      setOpenResp({ link: l, response });
+      if (l.status === "answered" && !l.reviewed_at) void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao abrir resposta.");
+    }
+  };
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
@@ -303,7 +289,7 @@ export function ActivityLinksPanel({
           <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
         </div>
         {!configId && (
-          <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>
+          <p className="mb-2 text-xs text-amber-700">Salve a configuraÃ§Ã£o antes de gerar links.</p>
         )}
 
         {loading ? (
@@ -318,11 +304,11 @@ export function ActivityLinksPanel({
               <thead className="bg-[#042558]/5 text-left text-xs uppercase tracking-wider text-[#042558]/60">
                 <tr>
                   <th className="px-3 py-2">Nome</th>
-                  <th className="px-3 py-2">Área</th>
+                  <th className="px-3 py-2">Ãrea</th>
                   <th className="px-3 py-2">Setor</th>
                   <th className="px-3 py-2">Cargo</th>
                   <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2 text-right">Ações</th>
+                  <th className="px-3 py-2 text-right">AÃ§Ãµes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#042558]/10 bg-white/60">
@@ -334,13 +320,13 @@ export function ActivityLinksPanel({
                     <tr key={emp.id} className="text-[#042558]">
                       <td className="px-3 py-2 font-medium">{emp.nome}</td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {(emp.area_id && areaById.get(emp.area_id)?.nome) || "—"}
+                        {(emp.area_id && areaById.get(emp.area_id)?.nome) || "â€”"}
                       </td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "—"}
+                        {(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "â€”"}
                       </td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {positionById.get(emp.position_id)?.nome ?? "—"}
+                        {positionById.get(emp.position_id)?.nome ?? "â€”"}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
@@ -476,41 +462,29 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: cfg }, { data: ls }, { data: rs, error }] = await Promise.all([
-      supabase
-        .from("activity_configs")
-        .select("header_schema,questions_schema")
-        .eq("project_id", projectId)
-        .maybeSingle(),
-      supabase
-        .from("activity_links")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("activity_responses")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("submitted_at", { ascending: true }),
-    ]);
+    try {
+      const { config: cfg, links: ls, responses: rs } = await apiJson<{
+        ok: boolean;
+        config: { header_schema: ActivityField[] | null; questions_schema: ActivityField[] | null } | null;
+        links: LinkRow[];
+        responses: ResponseRow[];
+      }>(`/api/projects/${projectId}/activity-compilation`);
 
-    if (error) {
-      toast.error(error.message);
+      setConfigFields({
+        header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(
+          includeInCompilation,
+        ),
+        questions: normalizeActivityFields(
+          (cfg?.questions_schema as ActivityField[] | null) ?? [],
+        ).filter(includeInCompilation),
+      });
+      setLinks(((ls ?? []) as LinkRow[]).filter((link) => link.status === "answered"));
+      setResponses(((rs ?? []) as ResponseRow[]).filter((response) => response.link_id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar atividades.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setConfigFields({
-      header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(
-        includeInCompilation,
-      ),
-      questions: normalizeActivityFields(
-        (cfg?.questions_schema as ActivityField[] | null) ?? [],
-      ).filter(includeInCompilation),
-    });
-    setLinks(((ls ?? []) as LinkRow[]).filter((link) => link.status === "answered"));
-    setResponses(((rs ?? []) as ResponseRow[]).filter((response) => response.link_id));
-    setLoading(false);
   }, [projectId]);
 
   useEffect(() => {
@@ -523,7 +497,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
 
   const previewCompilation = () => {
     if (!completedResponses.length) {
-      toast.error("Ainda não há atividades concluídas para compilar.");
+      toast.error("Ainda nÃ£o hÃ¡ atividades concluÃ­das para compilar.");
       return;
     }
     setPreviewOpen(true);
@@ -538,7 +512,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       blob,
       `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`,
     );
-    toast.success("PDF da compilação baixado");
+    toast.success("PDF da compilaÃ§Ã£o baixado");
   };
 
   return (
@@ -547,7 +521,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Atividades concluídas
+              Atividades concluÃ­das
             </h3>
             <p className="mt-1 text-sm text-[#042558]/60">
               {completedResponses.length} resposta(s) pronta(s) para compilar
@@ -559,7 +533,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Eye className="h-4 w-4" />
-            Gerar compilação
+            Gerar compilaÃ§Ã£o
           </button>
         </div>
       </div>
@@ -584,14 +558,14 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h4 className="text-sm font-semibold text-[#042558]">
-                      {link?.label ?? "Sem rótulo"}
+                      {link?.label ?? "Sem rÃ³tulo"}
                     </h4>
                     <p className="mt-1 text-xs text-[#042558]/50">
                       Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}
                     </p>
                   </div>
                   <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                    Concluído
+                    ConcluÃ­do
                   </span>
                 </div>
               </article>
@@ -633,9 +607,9 @@ function CompilationPreview({
       >
         <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-[#042558]/10 bg-white/95 p-5 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da compilação</h3>
+            <h3 className="text-lg font-semibold text-[#042558]">PrÃ©-visualizaÃ§Ã£o da compilaÃ§Ã£o</h3>
             <p className="text-sm text-[#042558]/60">
-              {responses.length} resposta(s) serão incluídas no PDF
+              {responses.length} resposta(s) serÃ£o incluÃ­das no PDF
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -657,7 +631,7 @@ function CompilationPreview({
 
         <div className="bg-slate-100 p-4 md:p-8">
           <div className="mx-auto min-h-[860px] max-w-[760px] bg-white p-8 text-[#042558] shadow-sm">
-            <h1 className="text-2xl font-bold">Compilação de respostas das atividades</h1>
+            <h1 className="text-2xl font-bold">CompilaÃ§Ã£o de respostas das atividades</h1>
             <p className="mt-2 text-sm text-[#042558]/60">Total de respostas: {responses.length}</p>
 
             <div className="mt-8 space-y-8">
@@ -713,7 +687,7 @@ function ActivityLinkCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-[#042558]">
-            {link.label ?? "Sem rótulo"}
+            {link.label ?? "Sem rÃ³tulo"}
           </h4>
           <p className="mt-1 text-xs text-[#042558]/50">
             Criado {new Date(link.created_at).toLocaleDateString("pt-BR")}
@@ -723,7 +697,7 @@ function ActivityLinkCard({
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[link.status]}`}
         >
           {STATUS_LABEL[link.status]}
-          {link.status === "answered" && !link.reviewed_at && " · novo"}
+          {link.status === "answered" && !link.reviewed_at && " Â· novo"}
         </span>
       </div>
 
@@ -943,7 +917,7 @@ function createPdfBlob(lines: Array<{ text: string; size?: number; gap?: number 
 
 function escapePdfText(text: string) {
   return text
-    .replace(/[–—]/g, "-")
+    .replace(/[â€“â€”]/g, "-")
     .replace(/\u00a0/g, " ")
     .split("")
     .map((char) => {
@@ -1055,7 +1029,7 @@ function FieldInput({
           className={base}
           disabled={!parentAreaId}
         >
-          <option value="">{parentAreaId ? "Selecione" : "Selecione a Área primeiro"}</option>
+          <option value="">{parentAreaId ? "Selecione" : "Selecione a Ãrea primeiro"}</option>
           {setorOptions.map((area) => (
             <option key={area.id} value={area.id}>
               {area.nome}
@@ -1108,11 +1082,11 @@ function ResponseDrawer({
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-xl text-[#042558]">Resposta</h3>
           <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">
-            ×
+            Ã—
           </button>
         </div>
         <p className="text-xs text-[#042558]/50">
-          {data.link.label ?? "Sem rótulo"} · Enviado{" "}
+          {data.link.label ?? "Sem rÃ³tulo"} Â· Enviado{" "}
           {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}
         </p>
 
@@ -1121,7 +1095,7 @@ function ResponseDrawer({
         ) : (
           <>
             <Section
-              title="Cabeçalho"
+              title="CabeÃ§alho"
               fields={fields.header.filter((field) => field.active ?? true)}
               answers={data.response.header_answers}
             />
@@ -1165,3 +1139,4 @@ function Section({
     </div>
   );
 }
+

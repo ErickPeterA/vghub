@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 
 type JsonObj = Record<string, string | number | boolean | null | string[]>;
 export async function logAction(args: {
@@ -8,16 +8,13 @@ export async function logAction(args: {
   entidadeId?: string;
   detalhes?: JsonObj;
 }) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase.from("project_history").insert({
-    project_id: args.projectId,
-    user_id: user.id,
-    acao: args.acao,
-    entidade: args.entidade ?? null,
-    entidade_id: args.entidadeId ?? null,
-    detalhes: args.detalhes ?? {},
+  await apiFetch(`/api/projects/${args.projectId}/history`, {
+    method: "POST",
+    body: {
+      acao: args.acao,
+      entidade: args.entidade ?? null,
+      entidadeId: args.entidadeId ?? null,
+      detalhes: args.detalhes ?? {},
+    },
   });
 }

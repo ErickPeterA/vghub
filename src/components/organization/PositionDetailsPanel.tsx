@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { FileText, Loader2, MoveDown, Pencil, Plus, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import type { OrganizationPosition } from "@/lib/organization";
 import { getChildren } from "@/lib/organization";
 
@@ -43,13 +43,10 @@ export function PositionDetailsPanel({
     setLoadingDescription(true);
     void (async () => {
       try {
-        const { data } = await supabase
-          .from("descricoes_cargo")
-          .select("id,cargo")
-          .eq("project_id", projectId)
-          .eq("organization_position_id", position.id)
-          .maybeSingle();
-        if (!cancelled) setLinkedDescription(data ?? null);
+        const { description } = await apiJson<{ ok: boolean; description: LinkedDescription | null }>(
+          `/api/projects/${projectId}/dc?mode=position-description&positionId=${position.id}`,
+        );
+        if (!cancelled) setLinkedDescription(description ?? null);
       } finally {
         if (!cancelled) setLoadingDescription(false);
       }
@@ -130,7 +127,7 @@ export function PositionDetailsPanel({
           ) : (
             <FileText className="h-4 w-4" />
           )}
-          {linkedDescription ? "Abrir descrição de cargo" : "Criar descrição de cargo"}
+          {linkedDescription ? "Abrir descriÃ§Ã£o de cargo" : "Criar descriÃ§Ã£o de cargo"}
         </button>
         <button
           type="button"
@@ -160,3 +157,4 @@ export function PositionDetailsPanel({
     </aside>
   );
 }
+

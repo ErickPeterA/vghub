@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 
 type Body = {
   itemId?: string;
@@ -19,14 +19,6 @@ export const Route = createFileRoute("/api/public/pam-draft/$token")({
   server: {
     handlers: {
       POST: async ({ params, request }) => {
-        const token = params.token;
-        if (!token || token.length < 32) {
-          return Response.json(
-            { error: "invalid_token", message: "Link invalido." },
-            { status: 400 },
-          );
-        }
-
         let body: Body;
         try {
           body = await request.json();
@@ -43,31 +35,6 @@ export const Route = createFileRoute("/api/public/pam-draft/$token")({
           );
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: pam } = await supabaseAdmin
-          .from("pam")
-          .select("id,status,link_revoked_at")
-          .eq("token", token)
-          .maybeSingle();
-
-        if (!pam)
-          return Response.json(
-            { error: "not_found", message: "Link nao encontrado." },
-            { status: 404 },
-          );
-        if (pam.link_revoked_at)
-          return Response.json({ error: "revoked", message: "Link revogado." }, { status: 410 });
-        if (pam.status === "draft")
-          return Response.json(
-            { error: "not_released", message: "PAM nao liberado." },
-            { status: 403 },
-          );
-        if (pam.status === "completed")
-          return Response.json(
-            { error: "completed", message: "PAM concluido. Edicao bloqueada." },
-            { status: 410 },
-          );
-
         const nextStatus = body.status ?? (filled(body) ? "in_progress" : "not_started");
         if (nextStatus === "completed" && !filled(body)) {
           return Response.json(
@@ -76,27 +43,22 @@ export const Route = createFileRoute("/api/public/pam-draft/$token")({
           );
         }
 
-        const savedAt = new Date().toISOString();
-        const { error } = await supabaseAdmin
-          .from("pam_items")
-          .update({
-            problem_reason: body.problem_reason ?? "",
-            improvement_plan: body.improvement_plan ?? "",
-            evidence_plan: body.evidence_plan ?? "",
-            review_date: body.review_date || null,
+        try {
+          const { savePublicPamDraft } = await import("@/server/pam/pam-repository");
+          const result = await savePublicPamDraft({
+            token: params.token,
+            itemId: body.itemId,
+            problemReason: body.problem_reason ?? "",
+            improvementPlan: body.improvement_plan ?? "",
+            evidencePlan: body.evidence_plan ?? "",
+            reviewDate: body.review_date || null,
             status: nextStatus,
-          })
-          .eq("id", body.itemId)
-          .eq("pam_id", pam.id);
-
-        if (error)
-          return Response.json({ error: "server_error", message: error.message }, { status: 500 });
-
-        if (pam.status === "released") {
-          await supabaseAdmin.from("pam").update({ status: "in_progress" }).eq("id", pam.id);
+          });
+          return Response.json({ ok: true, savedAt: result.savedAt });
+        } catch (error) {
+          const { toErrorResponse } = await import("@/server/http/errors");
+          return toErrorResponse(error);
         }
-
-        return Response.json({ ok: true, savedAt });
       },
     },
   },

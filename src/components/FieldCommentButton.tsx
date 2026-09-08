@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { MessageSquare, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 
 type Comment = {
   id: string;
@@ -40,7 +39,6 @@ export function FieldCommentButton({
   onChange?: () => void | Promise<void>;
   onDecision?: (event: FieldCommentDecisionEvent) => void | Promise<void>;
 }) {
-  const { user } = useCurrentUser();
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
@@ -48,76 +46,61 @@ export function FieldCommentButton({
   const [authors, setAuthors] = useState<Record<string, string>>({});
 
   const load = async () => {
-    let query = supabase
-      .from("field_comments")
-      .select(
-        "id,author_id,content,created_at,version_id,decision,decided_at,decided_by,approved_version_id",
-      )
-      .eq("job_description_id", dcId)
-      .eq("field_key", fieldKey)
-      .order("created_at", { ascending: true });
-    if (versionId) query = query.eq("version_id", versionId);
-    const { data } = await query;
-    const list = (data ?? []) as Comment[];
-    setComments(list);
-    const authorIds = list
-      .flatMap((comment) => [comment.author_id, comment.decided_by])
-      .filter(Boolean) as string[];
-    const missing = Array.from(new Set(authorIds)).filter((id) => !authors[id]);
-    if (missing.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,nome").in("id", missing);
-      const next = { ...authors };
-      (profs ?? []).forEach((p) => {
-        next[p.id] = p.nome;
-      });
-      setAuthors(next);
-    }
+    const params = new URLSearchParams({ fieldKey });
+    if (versionId) params.set("versionId", versionId);
+    const data = await apiJson<{
+      ok: boolean;
+      comments: Comment[];
+      authors: Record<string, string>;
+    }>(`/api/dc/${dcId}/comments?${params.toString()}`);
+    setComments(data.comments ?? []);
+    setAuthors((current) => ({ ...current, ...(data.authors ?? {}) }));
   };
-
   const decide = async (commentId: string, decision: "approved" | "rejected") => {
     setLoading(true);
-    const { error } = await supabase.rpc("decide_field_comment", {
-      _comment_id: commentId,
-      _decision: decision,
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(decision === "approved" ? "ComentÃ¡rio aprovado" : "ComentÃ¡rio reprovado");
-    await load();
-    await onChange?.();
-    if (decision === "approved") {
-      setOpen(false);
-      await onDecision?.({ fieldKey, commentId, decision });
+    try {
+      await apiJson(`/api/dc/${dcId}/comments`, {
+        method: "PATCH",
+        body: { commentId, decision },
+      });
+      toast.success(decision === "approved" ? "Comentario aprovado" : "Comentario reprovado");
+      await load();
+      await onChange?.();
+      if (decision === "approved") {
+        setOpen(false);
+        await onDecision?.({ fieldKey, commentId, decision });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao avaliar comentario.");
+    } finally {
+      setLoading(false);
     }
   };
-
   useEffect(() => {
     void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [dcId, fieldKey, versionId]);
 
   const submit = async () => {
-    if (!user || !text.trim()) return;
+    if (!text.trim()) return;
     setLoading(true);
-    const { error } = await supabase.from("field_comments").insert({
-      job_description_id: dcId,
-      field_key: fieldKey,
-      version_id: versionId,
-      author_id: user.id,
-      content: text.trim(),
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await apiJson(`/api/dc/${dcId}/comments`, {
+        method: "POST",
+        body: {
+          fieldKey,
+          versionId,
+          content: text.trim(),
+        },
+      });
+      setText("");
+      await load();
+      await onChange?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao comentar.");
+    } finally {
+      setLoading(false);
     }
-    setText("");
-    await load();
-    await onChange?.();
   };
-
   const count = comments.length;
   const pendingCount = comments.filter((comment) => comment.decision === "pending").length;
   const hasPending = pendingCount > 0;
@@ -135,7 +118,7 @@ export function FieldCommentButton({
                 ? "border-amber-200 bg-amber-50 text-amber-700"
                 : "border-border text-muted-foreground hover:bg-secondary"
           }`}
-          title="Comentários"
+          title="ComentÃ¡rios"
         >
           <MessageSquare className="h-3 w-3" />
           {hasPending ? (
@@ -149,11 +132,11 @@ export function FieldCommentButton({
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="end">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Comentários
+          ComentÃ¡rios
         </p>
         <div className="max-h-56 space-y-2 overflow-y-auto">
           {comments.length === 0 && (
-            <p className="text-xs italic text-muted-foreground">Sem comentários.</p>
+            <p className="text-xs italic text-muted-foreground">Sem comentÃ¡rios.</p>
           )}
           {comments.map((c) => (
             <div
@@ -165,7 +148,7 @@ export function FieldCommentButton({
               }`}
             >
               <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                <span className="font-medium">{authors[c.author_id] ?? "—"}</span>
+                <span className="font-medium">{authors[c.author_id] ?? "â€”"}</span>
                 <span>{new Date(c.created_at).toLocaleString("pt-BR")}</span>
               </div>
               <p className="whitespace-pre-wrap">{c.content}</p>
@@ -215,7 +198,7 @@ export function FieldCommentButton({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              placeholder="Escreva um comentário..."
+              placeholder="Escreva um comentÃ¡rio..."
               className="w-full rounded-md border border-border bg-background p-2 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
             <button
@@ -224,7 +207,7 @@ export function FieldCommentButton({
               disabled={loading || !text.trim()}
               className="w-full rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
             >
-              {loading ? "Enviando..." : "Adicionar comentário"}
+              {loading ? "Enviando..." : "Adicionar comentÃ¡rio"}
             </button>
           </div>
         )}
@@ -232,3 +215,4 @@ export function FieldCommentButton({
     </Popover>
   );
 }
+

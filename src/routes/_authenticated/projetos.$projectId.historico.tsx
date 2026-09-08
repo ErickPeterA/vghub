@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { History, Clock, User, Tag, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/historico")({
@@ -150,38 +150,18 @@ function Historico() {
 
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("project_history")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (!active) return;
-
-      const list = (data as Item[]) ?? [];
-      setItems(list);
-
-      const ids = Array.from(
-        new Set(
-          list
-            .flatMap((item) => [item.user_id, item.detalhes?.user_id])
-            .filter((id): id is string => typeof id === "string" && id.length > 0),
-        ),
-      );
-
-      if (ids.length) {
-        const { data: profs } = await supabase.from("profiles").select("id,nome").in("id", ids);
+      try {
+        const data = await apiJson<{
+          ok: boolean;
+          items: Item[];
+          users: Record<string, string>;
+        }>(`/api/projects/${projectId}/history`);
         if (!active) return;
-        const map: Record<string, string> = {};
-        (profs ?? []).forEach((profile) => {
-          map[profile.id] = profile.nome;
-        });
-        setUsers(map);
-      } else {
-        setUsers({});
+        setItems(data.items ?? []);
+        setUsers(data.users ?? {});
+      } finally {
+        if (active) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     void load();

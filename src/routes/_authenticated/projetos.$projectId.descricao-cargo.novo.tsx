@@ -1,10 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { DCForm } from "@/components/DCForm";
 import { emptyDC, type DescricaoCargo } from "@/lib/dc-types";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { logAction } from "@/lib/history";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/descricao-cargo/novo")({
@@ -25,7 +24,6 @@ function validDateOrNull(value: unknown) {
 
 function NovaDC() {
   const { projectId } = Route.useParams();
-  const { user } = useCurrentUser();
   const navigate = useNavigate();
   const positionId =
     typeof window !== "undefined"
@@ -42,32 +40,19 @@ function NovaDC() {
     setLoadingLinkedPosition(true);
     void (async () => {
       try {
-        const { data, error } = await supabase
-          .from("project_positions")
-          .select("id,nome,parent_id")
-          .eq("project_id", projectId)
-          .eq("id", positionId)
-          .maybeSingle();
+        const { position } = await apiJson<{
+          ok: boolean;
+          position: (LinkedPosition & { parent_nome?: string | null }) | null;
+        }>(`/api/projects/${projectId}/dc?mode=linked-position&positionId=${positionId}`);
         if (cancelled) return;
-        if (error || !data) {
-          toast.error(error?.message ?? "Cargo do organograma nao encontrado.");
+        if (!position) {
+          toast.error("Cargo do organograma nao encontrado.");
           setLinkedPosition(null);
           return;
         }
 
-        setLinkedPosition(data);
-        if (!data.parent_id) {
-          setLinkedParentName("");
-          return;
-        }
-
-        const { data: parent } = await supabase
-          .from("project_positions")
-          .select("nome")
-          .eq("project_id", projectId)
-          .eq("id", data.parent_id)
-          .maybeSingle();
-        if (!cancelled) setLinkedParentName(parent?.nome ?? "");
+        setLinkedPosition(position);
+        setLinkedParentName(position.parent_nome ?? "");
       } finally {
         if (!cancelled) setLoadingLinkedPosition(false);
       }
@@ -89,39 +74,37 @@ function NovaDC() {
   );
 
   const onSubmit = async (dc: DescricaoCargo) => {
-    if (!user) return;
     const { id: _omit, ...payload } = dc;
     void _omit;
-    const { data, error } = await supabase
-      .from("descricoes_cargo")
-      .insert({
-        ...payload,
-        project_id: projectId,
-        created_by: user.id,
-        data_versao: validDateOrNull(payload.data_versao),
-        data_revisao: validDateOrNull(payload.data_revisao),
-        organization_position_id: linkedPosition?.id ?? null,
-      })
-      .select("id")
-      .single();
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { dc: created } = await apiJson<{ ok: boolean; dc: { id: string } }>(
+        `/api/projects/${projectId}/dc`,
+        {
+          method: "POST",
+          body: {
+            ...payload,
+            data_versao: validDateOrNull(payload.data_versao),
+            data_revisao: validDateOrNull(payload.data_revisao),
+            organization_position_id: linkedPosition?.id ?? null,
+          },
+        },
+      );
+      await logAction({
+        projectId,
+        acao: "dc_criada",
+        entidade: "descricao_cargo",
+        entidadeId: created.id,
+        detalhes: { cargo: dc.cargo },
+      });
+      toast.success("Descricao criada");
+      navigate({
+        to: "/projetos/$projectId/descricao-cargo/$dcId",
+        params: { projectId, dcId: created.id },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar descricao.");
     }
-    await logAction({
-      projectId,
-      acao: "dc_criada",
-      entidade: "descricao_cargo",
-      entidadeId: data.id,
-      detalhes: { cargo: dc.cargo },
-    });
-    toast.success("Descricao criada");
-    navigate({
-      to: "/projetos/$projectId/descricao-cargo/$dcId",
-      params: { projectId, dcId: data.id },
-    });
   };
-
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 font-display text-4xl">Nova descricao de cargo</h1>
@@ -140,3 +123,4 @@ function NovaDC() {
     </main>
   );
 }
+

@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { History as HistoryIcon, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { DCForm } from "@/components/DCForm";
 import { emptyDC, type DescricaoCargo } from "@/lib/dc-types";
 import { logAction } from "@/lib/history";
@@ -53,24 +53,11 @@ function fromSnapshot(snapshot: unknown): DescricaoCargo {
 }
 
 async function getOrgSuperiorName(projectId: string, positionId: string) {
-  const { data: position } = await supabase
-    .from("project_positions")
-    .select("id,nome,parent_id")
-    .eq("project_id", projectId)
-    .eq("id", positionId)
-    .maybeSingle();
-
-  const orgPosition = position as OrgPositionRow | null;
-  if (!orgPosition?.parent_id) return "";
-
-  const { data: parent } = await supabase
-    .from("project_positions")
-    .select("nome")
-    .eq("project_id", projectId)
-    .eq("id", orgPosition.parent_id)
-    .maybeSingle();
-
-  return parent?.nome ?? "";
+  const { position } = await apiJson<{
+    ok: boolean;
+    position: { parent_nome?: string | null } | null;
+  }>(`/api/projects/${projectId}/dc?mode=linked-position&positionId=${positionId}`);
+  return position?.parent_nome ?? "";
 }
 
 function EditDC() {
@@ -87,73 +74,35 @@ function EditDC() {
   const [focusFieldKey, setFocusFieldKey] = useState<string | null>(null);
 
   const loadVersions = async () => {
-    const { data } = await supabase
-      .from("job_description_versions")
-      .select("id,version_number,created_at,snapshot,source_comment_version_id")
-      .eq("job_description_id", dcId)
-      .order("version_number", { ascending: true });
-    setVersions((data ?? []) as VersionRow[]);
+    const data = await apiJson<{ ok: boolean; versions: VersionRow[] }>(
+      `/api/projects/${projectId}/dc/${dcId}`,
+    );
+    setVersions(data.versions ?? []);
   };
-
   const loadCurrent = async () => {
-    const { data, error } = await supabase
-      .from("descricoes_cargo")
-      .select("*")
-      .eq("id", dcId)
-      .maybeSingle();
-    if (error || !data) {
-      toast.error("NÃ£o encontrado");
+    try {
+      const data = await apiJson<{
+        ok: boolean;
+        current: DCRow & { organization_superior_name?: string | null };
+        versions: VersionRow[];
+        projectRole: string | null;
+        isResponsavel: boolean;
+      }>(`/api/projects/${projectId}/dc/${dcId}`);
+      const next = fromSnapshot(data.current) as DCRow;
+      if (next.organization_position_id) {
+        next.superior_imediato = data.current.organization_superior_name ?? "";
+      }
+      setCurrent({ ...next, etapa: (data.current.etapa as DCRow["etapa"]) ?? "em_criacao" });
+      setVersions(data.versions ?? []);
+      setProjectRole(data.projectRole ?? null);
+      setIsResponsavel(data.isResponsavel ?? false);
+    } catch {
+      toast.error("Nao encontrado");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
-      return;
     }
-    const next = fromSnapshot(data) as DCRow;
-    if (next.organization_position_id) {
-      next.superior_imediato = await getOrgSuperiorName(projectId, next.organization_position_id);
-    }
-    setCurrent({ ...next, etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
   };
-
   useEffect(() => {
-    void supabase
-      .from("descricoes_cargo")
-      .select("*")
-      .eq("id", dcId)
-      .maybeSingle()
-      .then(async ({ data, error }) => {
-        if (error || !data) {
-          toast.error("Não encontrado");
-          navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
-          return;
-        }
-        const next = fromSnapshot(data) as DCRow;
-        if (next.organization_position_id) {
-          next.superior_imediato = await getOrgSuperiorName(
-            projectId,
-            next.organization_position_id,
-          );
-        }
-        setCurrent({ ...next, etapa: (data.etapa as DCRow["etapa"]) ?? "em_criacao" });
-      });
-    void loadVersions();
-    void supabase
-      .from("projects")
-      .select("responsavel_id")
-      .eq("id", projectId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (user) setIsResponsavel(data?.responsavel_id === user.id);
-      });
-    if (user) {
-      void supabase
-        .from("project_members")
-        .select("role")
-        .eq("project_id", projectId)
-        .eq("user_id", user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          setProjectRole(data?.role ?? null);
-        });
-    }
+    void loadCurrent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dcId, projectId, user?.id]);
 
@@ -198,70 +147,56 @@ function EditDC() {
       );
       payload.organization_position_id = current.organization_position_id;
     }
-    const { error } = await supabase
-      .from("descricoes_cargo")
-      .update({
-        ...payload,
-        data_versao: validDateOrNull(payload.data_versao),
-        data_revisao: validDateOrNull(payload.data_revisao),
-      })
-      .eq("id", dcId);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    await logAction({
-      projectId,
-      acao: "dc_atualizada",
-      entidade: "descricao_cargo",
-      entidadeId: dcId,
-      detalhes: { cargo: dc.cargo },
-    });
-    if (currentVersion?.id) {
-      const { data: versionId, error: versionError } = await supabase.rpc(
-        "finalize_resolved_dc_comments",
+    try {
+      const { versionId } = await apiJson<{ ok: boolean; versionId: string | null }>(
+        `/api/projects/${projectId}/dc/${dcId}`,
         {
-          _dc_id: dcId,
-          _version_id: currentVersion.id,
+          method: "PATCH",
+          body: {
+            action: "update",
+            payload: {
+              ...payload,
+              data_versao: validDateOrNull(payload.data_versao),
+              data_revisao: validDateOrNull(payload.data_revisao),
+              organization_position_id: payload.organization_position_id ?? null,
+            },
+            currentVersionId: currentVersion?.id ?? null,
+          },
         },
       );
-      if (versionError) {
-        toast.error(versionError.message);
-        return;
-      }
+      await logAction({
+        projectId,
+        acao: "dc_atualizada",
+        entidade: "descricao_cargo",
+        entidadeId: dcId,
+        detalhes: { cargo: dc.cargo },
+      });
       if (versionId) {
         await loadVersions();
-        toast.success("Nova versão gerada com os comentários resolvidos");
+        toast.success("Nova versao gerada com os comentarios resolvidos");
         return;
       }
+      toast.success("Atualizado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar");
     }
-    toast.success("Atualizado");
   };
-
   const finalizarRevisao = async () => {
     if (!currentVersion) return;
     setFinalizando(true);
     try {
-      const { count } = await supabase
-        .from("field_comments")
-        .select("id", { count: "exact", head: true })
-        .eq("job_description_id", dcId)
-        .eq("version_id", currentVersion.id);
-      const hasComments = (count ?? 0) > 0;
-      const target = hasComments ? "em_criacao" : "concluido";
-      const { error } = await supabase
-        .from("descricoes_cargo")
-        .update({ etapa: target })
-        .eq("id", dcId);
-      if (error) throw error;
+      const { comments, target } = await apiJson<{ ok: boolean; comments: number; target: DCRow["etapa"] }>(
+        `/api/projects/${projectId}/dc/${dcId}`,
+        { method: "PATCH", body: { action: "finalize_review", versionId: currentVersion.id } },
+      );
       await logAction({
         projectId,
         acao: "dc_revisao_finalizada",
         entidade: "descricao_cargo",
         entidadeId: dcId,
-        detalhes: { comentarios: count ?? 0, para: target },
+        detalhes: { comentarios: comments, para: target },
       });
-      toast.success(hasComments ? "Item retornou para Em Criação" : "Revisão concluída");
+      toast.success(comments > 0 ? "Item retornou para Em Criacao" : "Revisao concluida");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao finalizar");
@@ -269,15 +204,13 @@ function EditDC() {
       setFinalizando(false);
     }
   };
-
   const approveDescription = async () => {
     setFinalizando(true);
     try {
-      const { error } = await supabase
-        .from("descricoes_cargo")
-        .update({ etapa: "concluido" })
-        .eq("id", dcId);
-      if (error) throw error;
+      await apiJson(`/api/projects/${projectId}/dc/${dcId}`, {
+        method: "PATCH",
+        body: { action: "stage", etapa: "concluido" },
+      });
       await logAction({
         projectId,
         acao: "dc_aprovada",
@@ -285,7 +218,7 @@ function EditDC() {
         entidadeId: dcId,
         detalhes: { para: "concluido" },
       });
-      toast.success("Descrição aprovada");
+      toast.success("Descricao aprovada");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao aprovar");
@@ -293,7 +226,6 @@ function EditDC() {
       setFinalizando(false);
     }
   };
-
   if (!displayedInitial)
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -308,7 +240,7 @@ function EditDC() {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-4xl">
-          {readOnly ? "Descrição (leitura)" : "Editar descrição"}
+          {readOnly ? "DescriÃ§Ã£o (leitura)" : "Editar descriÃ§Ã£o"}
         </h1>
         <button
           type="button"
@@ -318,21 +250,21 @@ function EditDC() {
           }}
           className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <HistoryIcon className="h-4 w-4" /> Versões ({versions.length})
+          <HistoryIcon className="h-4 w-4" /> VersÃµes ({versions.length})
         </button>
       </div>
 
       {viewingVersion && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           <span>
-            Visualizando versão {viewingVersion.version_number} de {versions.length}
+            Visualizando versÃ£o {viewingVersion.version_number} de {versions.length}
           </span>
           <button
             type="button"
             onClick={() => setViewingVersionId(null)}
             className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-3 py-1 text-xs font-medium hover:bg-amber-200"
           >
-            <ArrowLeft className="h-3 w-3" /> Voltar à versão atual
+            <ArrowLeft className="h-3 w-3" /> Voltar Ã  versÃ£o atual
           </button>
         </div>
       )}
@@ -341,7 +273,7 @@ function EditDC() {
         projectId={projectId}
         initial={displayedInitial}
         onSubmit={onSubmit}
-        submitLabel="Salvar alterações"
+        submitLabel="Salvar alteraÃ§Ãµes"
         readOnly={readOnly}
         focusFieldKey={focusFieldKey}
         commentTarget={{
@@ -369,11 +301,11 @@ function EditDC() {
       <Dialog open={openVersions} onOpenChange={setOpenVersions}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Versões</DialogTitle>
+            <DialogTitle>VersÃµes</DialogTitle>
           </DialogHeader>
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {versions.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma versão registrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma versÃ£o registrada.</p>
             )}
             {versions
               .slice()
@@ -392,7 +324,7 @@ function EditDC() {
                     className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${isViewing ? "border-amber-400 bg-amber-50" : "border-border hover:bg-secondary"}`}
                   >
                     <span className="font-medium">
-                      Versão {v.version_number}
+                      VersÃ£o {v.version_number}
                       {isCurrent ? " (atual)" : ""}
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -407,3 +339,4 @@ function EditDC() {
     </main>
   );
 }
+

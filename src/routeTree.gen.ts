@@ -45,11 +45,18 @@ import { Route as ApiPublicPamCompleteTokenRouteImport } from './routes/api/publ
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
+import { Route as ApiProjectsProjectIdPamRouteImport } from './routes/api/projects.$projectId.pam'
 import { Route as ApiProjectsProjectIdOrganizationRouteImport } from './routes/api/projects.$projectId.organization'
 import { Route as ApiProjectsProjectIdNavigationRouteImport } from './routes/api/projects.$projectId.navigation'
+import { Route as ApiProjectsProjectIdHistoryRouteImport } from './routes/api/projects.$projectId.history'
 import { Route as ApiProjectsProjectIdEmployeesRouteImport } from './routes/api/projects.$projectId.employees'
+import { Route as ApiProjectsProjectIdDcRouteImport } from './routes/api/projects.$projectId.dc'
 import { Route as ApiProjectsProjectIdAreasRouteImport } from './routes/api/projects.$projectId.areas'
+import { Route as ApiProjectsProjectIdActivityLinksRouteImport } from './routes/api/projects.$projectId.activity-links'
+import { Route as ApiProjectsProjectIdActivityConfigRouteImport } from './routes/api/projects.$projectId.activity-config'
+import { Route as ApiProjectsProjectIdActivityCompilationRouteImport } from './routes/api/projects.$projectId.activity-compilation'
 import { Route as ApiProjectsProjectIdAccessRouteImport } from './routes/api/projects.$projectId.access'
+import { Route as ApiDcDcIdCommentsRouteImport } from './routes/api/dc.$dcId.comments'
 import { Route as ApiBaseOptionsOptionIdRouteImport } from './routes/api/base.options.$optionId'
 import { Route as ApiBaseFieldsOrderRouteImport } from './routes/api/base.fields.order'
 import { Route as ApiBaseFieldsFieldIdRouteImport } from './routes/api/base.fields.$fieldId'
@@ -66,9 +73,11 @@ import { Route as AuthenticatedProjetosProjectIdAreasRouteImport } from './route
 import { Route as AuthenticatedProjetosProjectIdAndamentoRouteImport } from './routes/_authenticated/projetos.$projectId.andamento'
 import { Route as AuthenticatedGerenciamentoUsuariosNovoRouteImport } from './routes/_authenticated/gerenciamento.usuarios.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.index'
+import { Route as ApiProjectsProjectIdDcDcIdRouteImport } from './routes/api/projects.$projectId.dc.$dcId'
 import { Route as ApiProjectsProjectIdAreasAreaIdRouteImport } from './routes/api/projects.$projectId.areas.$areaId'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoNovoRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.novo'
 import { Route as AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport } from './routes/_authenticated/projetos.$projectId.descricao-cargo.$dcId'
+import { Route as ApiProjectsProjectIdActivityLinksLinkIdResponseRouteImport } from './routes/api/projects.$projectId.activity-links.$linkId.response'
 import { Route as AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRouteImport } from './routes/_authenticated/projetos.$projectId.avaliacao-desempenho.comparar.$reviewId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -267,6 +276,11 @@ const ApiPublicActivityDraftTokenRoute =
     path: '/api/public/activity-draft/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiProjectsProjectIdPamRoute = ApiProjectsProjectIdPamRouteImport.update({
+  id: '/pam',
+  path: '/pam',
+  getParentRoute: () => ApiProjectsProjectIdRoute,
+} as any)
 const ApiProjectsProjectIdOrganizationRoute =
   ApiProjectsProjectIdOrganizationRouteImport.update({
     id: '/organization',
@@ -279,16 +293,45 @@ const ApiProjectsProjectIdNavigationRoute =
     path: '/navigation',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
+const ApiProjectsProjectIdHistoryRoute =
+  ApiProjectsProjectIdHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
 const ApiProjectsProjectIdEmployeesRoute =
   ApiProjectsProjectIdEmployeesRouteImport.update({
     id: '/employees',
     path: '/employees',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
+const ApiProjectsProjectIdDcRoute = ApiProjectsProjectIdDcRouteImport.update({
+  id: '/dc',
+  path: '/dc',
+  getParentRoute: () => ApiProjectsProjectIdRoute,
+} as any)
 const ApiProjectsProjectIdAreasRoute =
   ApiProjectsProjectIdAreasRouteImport.update({
     id: '/areas',
     path: '/areas',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdActivityLinksRoute =
+  ApiProjectsProjectIdActivityLinksRouteImport.update({
+    id: '/activity-links',
+    path: '/activity-links',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdActivityConfigRoute =
+  ApiProjectsProjectIdActivityConfigRouteImport.update({
+    id: '/activity-config',
+    path: '/activity-config',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
+  } as any)
+const ApiProjectsProjectIdActivityCompilationRoute =
+  ApiProjectsProjectIdActivityCompilationRouteImport.update({
+    id: '/activity-compilation',
+    path: '/activity-compilation',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
 const ApiProjectsProjectIdAccessRoute =
@@ -297,6 +340,11 @@ const ApiProjectsProjectIdAccessRoute =
     path: '/access',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
+const ApiDcDcIdCommentsRoute = ApiDcDcIdCommentsRouteImport.update({
+  id: '/api/dc/$dcId/comments',
+  path: '/api/dc/$dcId/comments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBaseOptionsOptionIdRoute = ApiBaseOptionsOptionIdRouteImport.update({
   id: '/$optionId',
   path: '/$optionId',
@@ -390,6 +438,12 @@ const AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
   } as any)
+const ApiProjectsProjectIdDcDcIdRoute =
+  ApiProjectsProjectIdDcDcIdRouteImport.update({
+    id: '/$dcId',
+    path: '/$dcId',
+    getParentRoute: () => ApiProjectsProjectIdDcRoute,
+  } as any)
 const ApiProjectsProjectIdAreasAreaIdRoute =
   ApiProjectsProjectIdAreasAreaIdRouteImport.update({
     id: '/$areaId',
@@ -407,6 +461,12 @@ const AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute =
     id: '/$dcId',
     path: '/$dcId',
     getParentRoute: () => AuthenticatedProjetosProjectIdDescricaoCargoRoute,
+  } as any)
+const ApiProjectsProjectIdActivityLinksLinkIdResponseRoute =
+  ApiProjectsProjectIdActivityLinksLinkIdResponseRouteImport.update({
+    id: '/$linkId/response',
+    path: '/$linkId/response',
+    getParentRoute: () => ApiProjectsProjectIdActivityLinksRoute,
   } as any)
 const AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute =
   AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRouteImport.update(
@@ -458,11 +518,18 @@ export interface FileRoutesByFullPath {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
+  '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
+  '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
+  '/api/projects/$projectId/activity-links': typeof ApiProjectsProjectIdActivityLinksRouteWithChildren
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/dc': typeof ApiProjectsProjectIdDcRouteWithChildren
   '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/history': typeof ApiProjectsProjectIdHistoryRoute
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
+  '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -477,8 +544,10 @@ export interface FileRoutesByFullPath {
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/api/projects/$projectId/areas/$areaId': typeof ApiProjectsProjectIdAreasAreaIdRoute
+  '/api/projects/$projectId/dc/$dcId': typeof ApiProjectsProjectIdDcDcIdRoute
   '/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
   '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
+  '/api/projects/$projectId/activity-links/$linkId/response': typeof ApiProjectsProjectIdActivityLinksLinkIdResponseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -516,11 +585,18 @@ export interface FileRoutesByTo {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
+  '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
+  '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
+  '/api/projects/$projectId/activity-links': typeof ApiProjectsProjectIdActivityLinksRouteWithChildren
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/dc': typeof ApiProjectsProjectIdDcRouteWithChildren
   '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/history': typeof ApiProjectsProjectIdHistoryRoute
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
+  '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -535,8 +611,10 @@ export interface FileRoutesByTo {
   '/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/api/projects/$projectId/areas/$areaId': typeof ApiProjectsProjectIdAreasAreaIdRoute
+  '/api/projects/$projectId/dc/$dcId': typeof ApiProjectsProjectIdDcDcIdRoute
   '/projetos/$projectId/descricao-cargo': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
   '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
+  '/api/projects/$projectId/activity-links/$linkId/response': typeof ApiProjectsProjectIdActivityLinksLinkIdResponseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -580,11 +658,18 @@ export interface FileRoutesById {
   '/api/base/fields/$fieldId': typeof ApiBaseFieldsFieldIdRoute
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
+  '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
+  '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
+  '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
+  '/api/projects/$projectId/activity-links': typeof ApiProjectsProjectIdActivityLinksRouteWithChildren
   '/api/projects/$projectId/areas': typeof ApiProjectsProjectIdAreasRouteWithChildren
+  '/api/projects/$projectId/dc': typeof ApiProjectsProjectIdDcRouteWithChildren
   '/api/projects/$projectId/employees': typeof ApiProjectsProjectIdEmployeesRoute
+  '/api/projects/$projectId/history': typeof ApiProjectsProjectIdHistoryRoute
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
+  '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -599,8 +684,10 @@ export interface FileRoutesById {
   '/_authenticated/projetos/$projectId/descricao-cargo/$dcId': typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/novo': typeof AuthenticatedProjetosProjectIdDescricaoCargoNovoRoute
   '/api/projects/$projectId/areas/$areaId': typeof ApiProjectsProjectIdAreasAreaIdRoute
+  '/api/projects/$projectId/dc/$dcId': typeof ApiProjectsProjectIdDcDcIdRoute
   '/_authenticated/projetos/$projectId/descricao-cargo/': typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRoute
   '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': typeof AuthenticatedProjetosProjectIdAvaliacaoDesempenhoCompararReviewIdRoute
+  '/api/projects/$projectId/activity-links/$linkId/response': typeof ApiProjectsProjectIdActivityLinksLinkIdResponseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -644,11 +731,18 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/dc/$dcId/comments'
     | '/api/projects/$projectId/access'
+    | '/api/projects/$projectId/activity-compilation'
+    | '/api/projects/$projectId/activity-config'
+    | '/api/projects/$projectId/activity-links'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/dc'
     | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/history'
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
+    | '/api/projects/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -663,8 +757,10 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
     | '/api/projects/$projectId/areas/$areaId'
+    | '/api/projects/$projectId/dc/$dcId'
     | '/projetos/$projectId/descricao-cargo/'
     | '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
+    | '/api/projects/$projectId/activity-links/$linkId/response'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -702,11 +798,18 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/dc/$dcId/comments'
     | '/api/projects/$projectId/access'
+    | '/api/projects/$projectId/activity-compilation'
+    | '/api/projects/$projectId/activity-config'
+    | '/api/projects/$projectId/activity-links'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/dc'
     | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/history'
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
+    | '/api/projects/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -721,8 +824,10 @@ export interface FileRouteTypes {
     | '/projetos/$projectId/descricao-cargo/$dcId'
     | '/projetos/$projectId/descricao-cargo/novo'
     | '/api/projects/$projectId/areas/$areaId'
+    | '/api/projects/$projectId/dc/$dcId'
     | '/projetos/$projectId/descricao-cargo'
     | '/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
+    | '/api/projects/$projectId/activity-links/$linkId/response'
   id:
     | '__root__'
     | '/'
@@ -765,11 +870,18 @@ export interface FileRouteTypes {
     | '/api/base/fields/$fieldId'
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
+    | '/api/dc/$dcId/comments'
     | '/api/projects/$projectId/access'
+    | '/api/projects/$projectId/activity-compilation'
+    | '/api/projects/$projectId/activity-config'
+    | '/api/projects/$projectId/activity-links'
     | '/api/projects/$projectId/areas'
+    | '/api/projects/$projectId/dc'
     | '/api/projects/$projectId/employees'
+    | '/api/projects/$projectId/history'
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
+    | '/api/projects/$projectId/pam'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -784,8 +896,10 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos/$projectId/descricao-cargo/$dcId'
     | '/_authenticated/projetos/$projectId/descricao-cargo/novo'
     | '/api/projects/$projectId/areas/$areaId'
+    | '/api/projects/$projectId/dc/$dcId'
     | '/_authenticated/projetos/$projectId/descricao-cargo/'
     | '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
+    | '/api/projects/$projectId/activity-links/$linkId/response'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -802,6 +916,7 @@ export interface RootRouteChildren {
   PamTokenRoute: typeof PamTokenRoute
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
   AvaliacaoDesempenhoPreencherTokenRoute: typeof AvaliacaoDesempenhoPreencherTokenRoute
+  ApiDcDcIdCommentsRoute: typeof ApiDcDcIdCommentsRoute
   ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
@@ -1067,6 +1182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/projects/$projectId/pam': {
+      id: '/api/projects/$projectId/pam'
+      path: '/pam'
+      fullPath: '/api/projects/$projectId/pam'
+      preLoaderRoute: typeof ApiProjectsProjectIdPamRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
     '/api/projects/$projectId/organization': {
       id: '/api/projects/$projectId/organization'
       path: '/organization'
@@ -1081,11 +1203,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProjectsProjectIdNavigationRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
     }
+    '/api/projects/$projectId/history': {
+      id: '/api/projects/$projectId/history'
+      path: '/history'
+      fullPath: '/api/projects/$projectId/history'
+      preLoaderRoute: typeof ApiProjectsProjectIdHistoryRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
     '/api/projects/$projectId/employees': {
       id: '/api/projects/$projectId/employees'
       path: '/employees'
       fullPath: '/api/projects/$projectId/employees'
       preLoaderRoute: typeof ApiProjectsProjectIdEmployeesRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/dc': {
+      id: '/api/projects/$projectId/dc'
+      path: '/dc'
+      fullPath: '/api/projects/$projectId/dc'
+      preLoaderRoute: typeof ApiProjectsProjectIdDcRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
     }
     '/api/projects/$projectId/areas': {
@@ -1095,12 +1231,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProjectsProjectIdAreasRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
     }
+    '/api/projects/$projectId/activity-links': {
+      id: '/api/projects/$projectId/activity-links'
+      path: '/activity-links'
+      fullPath: '/api/projects/$projectId/activity-links'
+      preLoaderRoute: typeof ApiProjectsProjectIdActivityLinksRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/activity-config': {
+      id: '/api/projects/$projectId/activity-config'
+      path: '/activity-config'
+      fullPath: '/api/projects/$projectId/activity-config'
+      preLoaderRoute: typeof ApiProjectsProjectIdActivityConfigRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/projects/$projectId/activity-compilation': {
+      id: '/api/projects/$projectId/activity-compilation'
+      path: '/activity-compilation'
+      fullPath: '/api/projects/$projectId/activity-compilation'
+      preLoaderRoute: typeof ApiProjectsProjectIdActivityCompilationRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
+    }
     '/api/projects/$projectId/access': {
       id: '/api/projects/$projectId/access'
       path: '/access'
       fullPath: '/api/projects/$projectId/access'
       preLoaderRoute: typeof ApiProjectsProjectIdAccessRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/dc/$dcId/comments': {
+      id: '/api/dc/$dcId/comments'
+      path: '/api/dc/$dcId/comments'
+      fullPath: '/api/dc/$dcId/comments'
+      preLoaderRoute: typeof ApiDcDcIdCommentsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/base/options/$optionId': {
       id: '/api/base/options/$optionId'
@@ -1214,6 +1378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoIndexRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
     }
+    '/api/projects/$projectId/dc/$dcId': {
+      id: '/api/projects/$projectId/dc/$dcId'
+      path: '/$dcId'
+      fullPath: '/api/projects/$projectId/dc/$dcId'
+      preLoaderRoute: typeof ApiProjectsProjectIdDcDcIdRouteImport
+      parentRoute: typeof ApiProjectsProjectIdDcRoute
+    }
     '/api/projects/$projectId/areas/$areaId': {
       id: '/api/projects/$projectId/areas/$areaId'
       path: '/$areaId'
@@ -1234,6 +1405,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projetos/$projectId/descricao-cargo/$dcId'
       preLoaderRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoDcIdRouteImport
       parentRoute: typeof AuthenticatedProjetosProjectIdDescricaoCargoRoute
+    }
+    '/api/projects/$projectId/activity-links/$linkId/response': {
+      id: '/api/projects/$projectId/activity-links/$linkId/response'
+      path: '/$linkId/response'
+      fullPath: '/api/projects/$projectId/activity-links/$linkId/response'
+      preLoaderRoute: typeof ApiProjectsProjectIdActivityLinksLinkIdResponseRouteImport
+      parentRoute: typeof ApiProjectsProjectIdActivityLinksRoute
     }
     '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId': {
       id: '/_authenticated/projetos/$projectId/avaliacao-desempenho/comparar/$reviewId'
@@ -1428,6 +1606,21 @@ const ApiBaseRouteChildren: ApiBaseRouteChildren = {
 const ApiBaseRouteWithChildren =
   ApiBaseRoute._addFileChildren(ApiBaseRouteChildren)
 
+interface ApiProjectsProjectIdActivityLinksRouteChildren {
+  ApiProjectsProjectIdActivityLinksLinkIdResponseRoute: typeof ApiProjectsProjectIdActivityLinksLinkIdResponseRoute
+}
+
+const ApiProjectsProjectIdActivityLinksRouteChildren: ApiProjectsProjectIdActivityLinksRouteChildren =
+  {
+    ApiProjectsProjectIdActivityLinksLinkIdResponseRoute:
+      ApiProjectsProjectIdActivityLinksLinkIdResponseRoute,
+  }
+
+const ApiProjectsProjectIdActivityLinksRouteWithChildren =
+  ApiProjectsProjectIdActivityLinksRoute._addFileChildren(
+    ApiProjectsProjectIdActivityLinksRouteChildren,
+  )
+
 interface ApiProjectsProjectIdAreasRouteChildren {
   ApiProjectsProjectIdAreasAreaIdRoute: typeof ApiProjectsProjectIdAreasAreaIdRoute
 }
@@ -1442,20 +1635,49 @@ const ApiProjectsProjectIdAreasRouteWithChildren =
     ApiProjectsProjectIdAreasRouteChildren,
   )
 
+interface ApiProjectsProjectIdDcRouteChildren {
+  ApiProjectsProjectIdDcDcIdRoute: typeof ApiProjectsProjectIdDcDcIdRoute
+}
+
+const ApiProjectsProjectIdDcRouteChildren: ApiProjectsProjectIdDcRouteChildren =
+  {
+    ApiProjectsProjectIdDcDcIdRoute: ApiProjectsProjectIdDcDcIdRoute,
+  }
+
+const ApiProjectsProjectIdDcRouteWithChildren =
+  ApiProjectsProjectIdDcRoute._addFileChildren(
+    ApiProjectsProjectIdDcRouteChildren,
+  )
+
 interface ApiProjectsProjectIdRouteChildren {
   ApiProjectsProjectIdAccessRoute: typeof ApiProjectsProjectIdAccessRoute
+  ApiProjectsProjectIdActivityCompilationRoute: typeof ApiProjectsProjectIdActivityCompilationRoute
+  ApiProjectsProjectIdActivityConfigRoute: typeof ApiProjectsProjectIdActivityConfigRoute
+  ApiProjectsProjectIdActivityLinksRoute: typeof ApiProjectsProjectIdActivityLinksRouteWithChildren
   ApiProjectsProjectIdAreasRoute: typeof ApiProjectsProjectIdAreasRouteWithChildren
+  ApiProjectsProjectIdDcRoute: typeof ApiProjectsProjectIdDcRouteWithChildren
   ApiProjectsProjectIdEmployeesRoute: typeof ApiProjectsProjectIdEmployeesRoute
+  ApiProjectsProjectIdHistoryRoute: typeof ApiProjectsProjectIdHistoryRoute
   ApiProjectsProjectIdNavigationRoute: typeof ApiProjectsProjectIdNavigationRoute
   ApiProjectsProjectIdOrganizationRoute: typeof ApiProjectsProjectIdOrganizationRoute
+  ApiProjectsProjectIdPamRoute: typeof ApiProjectsProjectIdPamRoute
 }
 
 const ApiProjectsProjectIdRouteChildren: ApiProjectsProjectIdRouteChildren = {
   ApiProjectsProjectIdAccessRoute: ApiProjectsProjectIdAccessRoute,
+  ApiProjectsProjectIdActivityCompilationRoute:
+    ApiProjectsProjectIdActivityCompilationRoute,
+  ApiProjectsProjectIdActivityConfigRoute:
+    ApiProjectsProjectIdActivityConfigRoute,
+  ApiProjectsProjectIdActivityLinksRoute:
+    ApiProjectsProjectIdActivityLinksRouteWithChildren,
   ApiProjectsProjectIdAreasRoute: ApiProjectsProjectIdAreasRouteWithChildren,
+  ApiProjectsProjectIdDcRoute: ApiProjectsProjectIdDcRouteWithChildren,
   ApiProjectsProjectIdEmployeesRoute: ApiProjectsProjectIdEmployeesRoute,
+  ApiProjectsProjectIdHistoryRoute: ApiProjectsProjectIdHistoryRoute,
   ApiProjectsProjectIdNavigationRoute: ApiProjectsProjectIdNavigationRoute,
   ApiProjectsProjectIdOrganizationRoute: ApiProjectsProjectIdOrganizationRoute,
+  ApiProjectsProjectIdPamRoute: ApiProjectsProjectIdPamRoute,
 }
 
 const ApiProjectsProjectIdRouteWithChildren =
@@ -1488,6 +1710,7 @@ const rootRouteChildren: RootRouteChildren = {
   AtividadesPreencherTokenRoute: AtividadesPreencherTokenRoute,
   AvaliacaoDesempenhoPreencherTokenRoute:
     AvaliacaoDesempenhoPreencherTokenRoute,
+  ApiDcDcIdCommentsRoute: ApiDcDcIdCommentsRoute,
   ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,

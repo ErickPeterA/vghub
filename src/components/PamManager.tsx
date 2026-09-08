@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   ClipboardCopy,
@@ -11,8 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 import {
   buildPamSuggestions,
   displayPamImprovementPoint,
@@ -80,7 +79,6 @@ const inputClass =
   "w-full rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm text-[#042558] outline-none transition focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/15";
 
 export function PamManager({ projectId }: { projectId: string }) {
-  const { user } = useCurrentUser();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [pams, setPams] = useState<PamRow[]>([]);
@@ -92,39 +90,26 @@ export function PamManager({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: reviewRows }, { data: participantRows }, { data: pamRows }, { data: itemRows }] =
-      await Promise.all([
-        supabase
-          .from("performance_reviews")
-          .select(
-            "id,project_id,employee_id,employee_name,job_title,name,review_type,status,finalized_at,due_date,score_summary_snapshot,questions_snapshot",
-          )
-          .eq("project_id", projectId)
-          .eq("status", "finalized")
-          .order("finalized_at", { ascending: false }),
-        supabase
-          .from("performance_review_participants")
-          .select("review_id,participant_type,response_answers")
-          .eq("project_id", projectId)
-          .eq("participant_type", "collaborator"),
-        supabase
-          .from("pam")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("pam_items")
-          .select("*")
-          .order("display_order", { ascending: true }),
-      ]);
+    try {
+      const data = await apiJson<{
+        ok: boolean;
+        reviews: ReviewRow[];
+        participants: ParticipantRow[];
+        pams: PamRow[];
+        items: PamItemRow[];
+      }>(`/api/projects/${projectId}/pam`);
 
-    const nextPams = ((pamRows ?? []) as PamRow[]).filter((pam) => pam.project_id === projectId);
-    setReviews(((reviewRows ?? []) as ReviewRow[]).filter((row) => row.review_type !== "experience"));
-    setParticipants((participantRows ?? []) as ParticipantRow[]);
-    setPams(nextPams);
-    setItems(((itemRows ?? []) as PamItemRow[]).filter((item) => nextPams.some((pam) => pam.id === item.pam_id)));
-    setSelectedPamId((current) => current || nextPams[0]?.id || "");
-    setLoading(false);
+      const nextPams = data.pams ?? [];
+      setReviews((data.reviews ?? []).filter((row) => row.review_type !== "experience"));
+      setParticipants(data.participants ?? []);
+      setPams(nextPams);
+      setItems(data.items ?? []);
+      setSelectedPamId((current) => current || nextPams[0]?.id || "");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar PAM.");
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -150,97 +135,105 @@ export function PamManager({ projectId }: { projectId: string }) {
     const suggestions = buildPamSuggestions(review, collaborator?.response_answers ?? {}, 80);
     const feedbackDate = (review.finalized_at ?? new Date().toISOString()).slice(0, 10);
 
-    const { data: pam, error } = await supabase
-      .from("pam")
-      .insert({
-        project_id: projectId,
-        employee_id: review.employee_id,
-        review_id: review.id,
-        employee_name: review.employee_name,
-        job_title: review.job_title,
-        feedback_date: feedbackDate,
-        status: "draft",
-        created_by: user?.id ?? null,
-      })
-      .select("*")
-      .single();
+    try {
+      const { pam } = await apiJson<{ ok: boolean; pam: PamRow }>(`/api/projects/${projectId}/pam`, {
+        method: "POST",
+        body: {
+          action: "create_pam",
+          reviewId: review.id,
+          employeeId: review.employee_id,
+          employeeName: review.employee_name,
+          jobTitle: review.job_title,
+          feedbackDate,
+          items: suggestions.map((suggestion, index) => ({
+            source: suggestion.source,
+            source_key: suggestion.source_key,
+            source_score: suggestion.source_score,
+            improvement_point: suggestion.improvement_point,
+            skill_label: suggestion.skill_label,
+            display_order: index + 1,
+          })),
+        },
+      });
 
-    if (error || !pam) {
-      toast.error(error?.message ?? "Nao foi possivel criar o PAM.");
-      return;
+      if (!suggestions.length) {
+        toast.info("Nenhum ponto abaixo de 80% foi encontrado; adicione pontos manuais.");
+      }
+
+      setSelectedPamId(pam.id);
+      toast.success("PAM criado como rascunho");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar o PAM.");
     }
-
-    if (suggestions.length) {
-      const { error: itemError } = await supabase.from("pam_items").insert(
-        suggestions.map((suggestion, index) => ({
-          pam_id: pam.id,
-          source: suggestion.source,
-          source_key: suggestion.source_key,
-          source_score: suggestion.source_score,
-          improvement_point: suggestion.improvement_point,
-          skill_label: suggestion.skill_label,
-          display_order: index + 1,
-        })),
-      );
-      if (itemError) toast.error(itemError.message);
-    } else {
-      toast.info("Nenhum ponto abaixo de 80% foi encontrado; adicione pontos manuais.");
-    }
-
-    setSelectedPamId(pam.id);
-    toast.success("PAM criado como rascunho");
-    await load();
   };
-
   const addManualItem = async () => {
     if (!selectedPam || !manualTitle.trim()) {
       toast.error("Informe o ponto de melhoria.");
       return;
     }
-    const { error } = await supabase.from("pam_items").insert({
-      pam_id: selectedPam.id,
-      source: "manual",
-      improvement_point: manualTitle.trim(),
-      skill_label: manualSkill.trim() || "Ponto manual",
-      display_order: selectedItems.length + 1,
-    });
-    if (error) return toast.error(error.message);
-    setManualTitle("");
-    setManualSkill("");
-    toast.success("Ponto adicionado");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/pam`, {
+        method: "POST",
+        body: {
+          action: "add_item",
+          pamId: selectedPam.id,
+          source: "manual",
+          improvementPoint: manualTitle.trim(),
+          skillLabel: manualSkill.trim() || "Ponto manual",
+          displayOrder: selectedItems.length + 1,
+        },
+      });
+      setManualTitle("");
+      setManualSkill("");
+      toast.success("Ponto adicionado");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao adicionar ponto.");
+    }
   };
-
   const deleteItem = async (item: PamItemRow) => {
     if (!confirm("Remover este ponto do PAM?")) return;
-    const { error } = await supabase.from("pam_items").delete().eq("id", item.id);
-    if (error) return toast.error(error.message);
-    toast.success("Ponto removido");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/pam?itemId=${item.id}`, { method: "DELETE" });
+      toast.success("Ponto removido");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao remover ponto.");
+    }
   };
-
   const updatePam = async (pam: PamRow, patch: Partial<PamRow>, success: string) => {
-    const { error } = await supabase.from("pam").update(patch).eq("id", pam.id);
-    if (error) return toast.error(error.message);
-    toast.success(success);
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/pam`, {
+        method: "PATCH",
+        body: { pamId: pam.id, patch },
+      });
+      toast.success(success);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar PAM.");
+    }
   };
-
   const releaseAndCopy = async (pam: PamRow) => {
-    const { error } = await supabase
-      .from("pam")
-      .update({
-        status: pam.status === "draft" ? "released" : pam.status,
-        released_at: pam.released_at ?? new Date().toISOString(),
-        link_revoked_at: null,
-      })
-      .eq("id", pam.id);
-    if (error) return toast.error(error.message);
-    await navigator.clipboard.writeText(publicPamUrl(pam.token));
-    toast.success("Link liberado e copiado");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/pam`, {
+        method: "PATCH",
+        body: {
+          pamId: pam.id,
+          patch: {
+            status: pam.status === "draft" ? "released" : pam.status,
+            released_at: pam.released_at ?? new Date().toISOString(),
+            link_revoked_at: null,
+          },
+        },
+      });
+      await navigator.clipboard.writeText(publicPamUrl(pam.token));
+      toast.success("Link liberado e copiado");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao liberar link.");
+    }
   };
-
   const copyLink = async (pam: PamRow) => {
     await navigator.clipboard.writeText(publicPamUrl(pam.token));
     toast.success("Link copiado");
@@ -609,3 +602,4 @@ function fallbackItemTitle(item: PamItemRow) {
   }
   return item.skill_label || "Ponto de melhoria";
 }
+

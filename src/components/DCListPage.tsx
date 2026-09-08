@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+﻿import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   FileText,
@@ -12,7 +12,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiJson } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { logAction } from "@/lib/history";
 import { withTimeout } from "@/lib/auth-safe";
@@ -32,13 +32,13 @@ type Area = { id: string; nome: string; cor: string | null; parent_id: string | 
 type Profile = { id: string; nome: string };
 
 const STAGES: { key: Stage; label: string; icon: React.ReactNode }[] = [
-  { key: "em_criacao", label: "Em Criação", icon: <Clock className="h-4 w-4 text-blue-500" /> },
+  { key: "em_criacao", label: "Em CriaÃ§Ã£o", icon: <Clock className="h-4 w-4 text-blue-500" /> },
   {
     key: "em_aprovacao",
-    label: "Em Aprovação",
+    label: "Em AprovaÃ§Ã£o",
     icon: <Users className="h-4 w-4 text-yellow-500" />,
   },
-  { key: "concluido", label: "Concluídos", icon: <Check className="h-4 w-4 text-green-500" /> },
+  { key: "concluido", label: "ConcluÃ­dos", icon: <Check className="h-4 w-4 text-green-500" /> },
 ];
 
 const stageOrder = (s: Stage): number => STAGES.findIndex((x) => x.key === s);
@@ -55,62 +55,19 @@ export function DCListPage({ projectId }: { projectId: string }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [{ data: dcs, error }, { data: ars }, { data: profs }, { data: proj }] =
-        await Promise.all([
-          withTimeout(
-            supabase
-              .from("descricoes_cargo")
-              .select("id,cargo,departamento,unidade_negocio,created_by,created_at,etapa")
-              .eq("project_id", projectId)
-              .order("created_at", { ascending: false }),
-            10_000,
-            "Não foi possível carregar descrições.",
-          ),
-          supabase
-            .from("project_areas")
-            .select("id,nome,cor,parent_id")
-            .eq("project_id", projectId),
-          supabase.from("profiles").select("id,nome"),
-          supabase.from("projects").select("responsavel_id").eq("id", projectId).maybeSingle(),
-        ]);
-      if (error) throw error;
-      const dcRows = ((dcs ?? []) as Omit<Row, "pending_comment_count">[]).map((row) => ({
-        ...row,
-        pending_comment_count: 0,
-      }));
-      if (dcRows.length > 0) {
-        const { data: pendingComments } = await supabase
-          .from("field_comments")
-          .select("job_description_id")
-          .in(
-            "job_description_id",
-            dcRows.map((row) => row.id),
-          )
-          .eq("decision", "pending");
-        const pendingByDc = new Map<string, number>();
-        (pendingComments ?? []).forEach((comment) => {
-          pendingByDc.set(
-            comment.job_description_id,
-            (pendingByDc.get(comment.job_description_id) ?? 0) + 1,
-          );
-        });
-        dcRows.forEach((row) => {
-          row.pending_comment_count = pendingByDc.get(row.id) ?? 0;
-        });
-      }
-      setRows(dcRows);
-      setAreas((ars ?? []) as Area[]);
-      setProfiles((profs ?? []) as Profile[]);
-      if (user) setIsResponsavel(proj?.responsavel_id === user.id);
-      if (user) {
-        const { data: mem } = await supabase
-          .from("project_members")
-          .select("role")
-          .eq("project_id", projectId)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setProjectRole(mem?.role ?? null);
-      }
+      const data = await apiJson<{
+        ok: boolean;
+        rows: Row[];
+        areas: Area[];
+        profiles: Profile[];
+        projectRole: string | null;
+        isResponsavel: boolean;
+      }>(`/api/projects/${projectId}/dc`);
+      setRows(data.rows ?? []);
+      setAreas(data.areas ?? []);
+      setProfiles(data.profiles ?? []);
+      setProjectRole(data.projectRole ?? null);
+      setIsResponsavel(data.isResponsavel ?? false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao carregar");
     } finally {
@@ -139,35 +96,39 @@ export function DCListPage({ projectId }: { projectId: string }) {
     : STAGES;
 
   const moveStage = async (row: Row, target: Stage) => {
-    const { error } = await supabase
-      .from("descricoes_cargo")
-      .update({ etapa: target })
-      .eq("id", row.id);
-    if (error) return toast.error(error.message);
-    await logAction({
-      projectId,
-      acao: "dc_etapa",
-      entidade: "descricao_cargo",
-      entidadeId: row.id,
-      detalhes: { de: row.etapa, para: target },
-    });
-    void load();
+    try {
+      await apiJson(`/api/projects/${projectId}/dc/${row.id}`, {
+        method: "PATCH",
+        body: { action: "stage", etapa: target },
+      });
+      await logAction({
+        projectId,
+        acao: "dc_etapa",
+        entidade: "descricao_cargo",
+        entidadeId: row.id,
+        detalhes: { de: row.etapa, para: target },
+      });
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao alterar etapa.");
+    }
   };
-
   const remove = async (row: Row) => {
     if (!confirm(`Excluir "${row.cargo}"?`)) return;
-    const { error } = await supabase.from("descricoes_cargo").delete().eq("id", row.id);
-    if (error) return toast.error(error.message);
-    await logAction({
-      projectId,
-      acao: "dc_excluida",
-      entidade: "descricao_cargo",
-      entidadeId: row.id,
-      detalhes: { cargo: row.cargo },
-    });
-    void load();
+    try {
+      await apiJson(`/api/projects/${projectId}/dc/${row.id}`, { method: "DELETE" });
+      await logAction({
+        projectId,
+        acao: "dc_excluida",
+        entidade: "descricao_cargo",
+        entidadeId: row.id,
+        detalhes: { cargo: row.cargo },
+      });
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir descricao.");
+    }
   };
-
   const getSetorInfo = (row: Row) => {
     const setor = row.departamento ? areaById.get(row.departamento) : null;
     if (!setor) return null;
@@ -188,10 +149,10 @@ export function DCListPage({ projectId }: { projectId: string }) {
               <div className=""></div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-[#042558]">
-                  Aprovações e acompanhamento
+                  AprovaÃ§Ãµes e acompanhamento
                 </h1>
                 <p className="text-sm text-[#042558]/60">
-                  Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.
+                  Acompanhe as descriÃ§Ãµes criadas pelo organograma e avance as etapas de revisÃ£o.
                 </p>
               </div>
             </div>
@@ -211,7 +172,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
           <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
-              <p className="text-sm text-[#042558]/60">Carregando descrições...</p>
+              <p className="text-sm text-[#042558]/60">Carregando descriÃ§Ãµes...</p>
             </div>
           </div>
         ) : (
@@ -242,7 +203,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                   {items.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
                       <FileText className="mb-2 h-8 w-8 text-[#042558]/30" />
-                      <p className="text-xs text-[#042558]/40">Nenhuma descrição</p>
+                      <p className="text-xs text-[#042558]/40">Nenhuma descriÃ§Ã£o</p>
                     </div>
                   ) : (
                     <div className="flex-1 space-y-3">
@@ -339,7 +300,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   <button
                                     onClick={() => moveStage(row, "em_aprovacao")}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
-                                    title="Enviar para aprovação"
+                                    title="Enviar para aprovaÃ§Ã£o"
                                   >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </button>
@@ -377,3 +338,4 @@ export function DCListPage({ projectId }: { projectId: string }) {
     </main>
   );
 }
+
