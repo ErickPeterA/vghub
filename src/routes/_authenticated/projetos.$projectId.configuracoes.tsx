@@ -9,18 +9,6 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId/config
     if (!user) throw redirect({ to: "/login" });
     const me = await apiJson<{ ok: boolean; permissions: { isAdmin: boolean } }>("/api/me");
     if (!me.permissions.isAdmin) throw redirect({ to: "/projetos" });
-    /*
-      oldSupabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle(),
-      8_000,
-      "Não foi possível validar permissões.",
-    );
-    if (!data) throw redirect({ to: "/projetos" });
-    */
   },
   component: ConfigRoute,
 });

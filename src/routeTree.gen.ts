@@ -17,6 +17,7 @@ import { Route as PamTokenRouteImport } from './routes/pam.$token'
 import { Route as ApiUsersRouteImport } from './routes/api/users'
 import { Route as ApiProjectsRouteImport } from './routes/api/projects'
 import { Route as ApiProjectMembersRouteImport } from './routes/api/project-members'
+import { Route as ApiPerformanceConfigsRouteImport } from './routes/api/performance-configs'
 import { Route as ApiNavigationRouteImport } from './routes/api/navigation'
 import { Route as ApiMeRouteImport } from './routes/api/me'
 import { Route as ApiBaseRouteImport } from './routes/api/base'
@@ -45,6 +46,7 @@ import { Route as ApiPublicPamCompleteTokenRouteImport } from './routes/api/publ
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
 import { Route as ApiPublicActivityFormTokenRouteImport } from './routes/api/public/activity-form.$token'
 import { Route as ApiPublicActivityDraftTokenRouteImport } from './routes/api/public/activity-draft.$token'
+import { Route as ApiProjectsProjectIdPerformanceRouteImport } from './routes/api/projects.$projectId.performance'
 import { Route as ApiProjectsProjectIdPamRouteImport } from './routes/api/projects.$projectId.pam'
 import { Route as ApiProjectsProjectIdOrganizationRouteImport } from './routes/api/projects.$projectId.organization'
 import { Route as ApiProjectsProjectIdNavigationRouteImport } from './routes/api/projects.$projectId.navigation'
@@ -117,6 +119,11 @@ const ApiProjectsRoute = ApiProjectsRouteImport.update({
 const ApiProjectMembersRoute = ApiProjectMembersRouteImport.update({
   id: '/api/project-members',
   path: '/api/project-members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPerformanceConfigsRoute = ApiPerformanceConfigsRouteImport.update({
+  id: '/api/performance-configs',
+  path: '/api/performance-configs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiNavigationRoute = ApiNavigationRouteImport.update({
@@ -275,6 +282,12 @@ const ApiPublicActivityDraftTokenRoute =
     id: '/api/public/activity-draft/$token',
     path: '/api/public/activity-draft/$token',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiProjectsProjectIdPerformanceRoute =
+  ApiProjectsProjectIdPerformanceRouteImport.update({
+    id: '/performance',
+    path: '/performance',
+    getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
 const ApiProjectsProjectIdPamRoute = ApiProjectsProjectIdPamRouteImport.update({
   id: '/pam',
@@ -486,6 +499,7 @@ export interface FileRoutesByFullPath {
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
   '/api/navigation': typeof ApiNavigationRoute
+  '/api/performance-configs': typeof ApiPerformanceConfigsRoute
   '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
@@ -530,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
+  '/api/projects/$projectId/performance': typeof ApiProjectsProjectIdPerformanceRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -556,6 +571,7 @@ export interface FileRoutesByTo {
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
   '/api/navigation': typeof ApiNavigationRoute
+  '/api/performance-configs': typeof ApiPerformanceConfigsRoute
   '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
@@ -597,6 +613,7 @@ export interface FileRoutesByTo {
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
+  '/api/projects/$projectId/performance': typeof ApiProjectsProjectIdPerformanceRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -626,6 +643,7 @@ export interface FileRoutesById {
   '/api/base': typeof ApiBaseRouteWithChildren
   '/api/me': typeof ApiMeRoute
   '/api/navigation': typeof ApiNavigationRoute
+  '/api/performance-configs': typeof ApiPerformanceConfigsRoute
   '/api/project-members': typeof ApiProjectMembersRoute
   '/api/projects': typeof ApiProjectsRouteWithChildren
   '/api/users': typeof ApiUsersRoute
@@ -670,6 +688,7 @@ export interface FileRoutesById {
   '/api/projects/$projectId/navigation': typeof ApiProjectsProjectIdNavigationRoute
   '/api/projects/$projectId/organization': typeof ApiProjectsProjectIdOrganizationRoute
   '/api/projects/$projectId/pam': typeof ApiProjectsProjectIdPamRoute
+  '/api/projects/$projectId/performance': typeof ApiProjectsProjectIdPerformanceRoute
   '/api/public/activity-draft/$token': typeof ApiPublicActivityDraftTokenRoute
   '/api/public/activity-form/$token': typeof ApiPublicActivityFormTokenRoute
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
@@ -699,6 +718,7 @@ export interface FileRouteTypes {
     | '/api/base'
     | '/api/me'
     | '/api/navigation'
+    | '/api/performance-configs'
     | '/api/project-members'
     | '/api/projects'
     | '/api/users'
@@ -743,6 +763,7 @@ export interface FileRouteTypes {
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
     | '/api/projects/$projectId/pam'
+    | '/api/projects/$projectId/performance'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -769,6 +790,7 @@ export interface FileRouteTypes {
     | '/api/base'
     | '/api/me'
     | '/api/navigation'
+    | '/api/performance-configs'
     | '/api/project-members'
     | '/api/projects'
     | '/api/users'
@@ -810,6 +832,7 @@ export interface FileRouteTypes {
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
     | '/api/projects/$projectId/pam'
+    | '/api/projects/$projectId/performance'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -838,6 +861,7 @@ export interface FileRouteTypes {
     | '/api/base'
     | '/api/me'
     | '/api/navigation'
+    | '/api/performance-configs'
     | '/api/project-members'
     | '/api/projects'
     | '/api/users'
@@ -882,6 +906,7 @@ export interface FileRouteTypes {
     | '/api/projects/$projectId/navigation'
     | '/api/projects/$projectId/organization'
     | '/api/projects/$projectId/pam'
+    | '/api/projects/$projectId/performance'
     | '/api/public/activity-draft/$token'
     | '/api/public/activity-form/$token'
     | '/api/public/activity-response/$token'
@@ -910,6 +935,7 @@ export interface RootRouteChildren {
   ApiBaseRoute: typeof ApiBaseRouteWithChildren
   ApiMeRoute: typeof ApiMeRoute
   ApiNavigationRoute: typeof ApiNavigationRoute
+  ApiPerformanceConfigsRoute: typeof ApiPerformanceConfigsRoute
   ApiProjectMembersRoute: typeof ApiProjectMembersRoute
   ApiProjectsRoute: typeof ApiProjectsRouteWithChildren
   ApiUsersRoute: typeof ApiUsersRoute
@@ -984,6 +1010,13 @@ declare module '@tanstack/react-router' {
       path: '/api/project-members'
       fullPath: '/api/project-members'
       preLoaderRoute: typeof ApiProjectMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/performance-configs': {
+      id: '/api/performance-configs'
+      path: '/api/performance-configs'
+      fullPath: '/api/performance-configs'
+      preLoaderRoute: typeof ApiPerformanceConfigsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/navigation': {
@@ -1181,6 +1214,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/activity-draft/$token'
       preLoaderRoute: typeof ApiPublicActivityDraftTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/projects/$projectId/performance': {
+      id: '/api/projects/$projectId/performance'
+      path: '/performance'
+      fullPath: '/api/projects/$projectId/performance'
+      preLoaderRoute: typeof ApiProjectsProjectIdPerformanceRouteImport
+      parentRoute: typeof ApiProjectsProjectIdRoute
     }
     '/api/projects/$projectId/pam': {
       id: '/api/projects/$projectId/pam'
@@ -1661,6 +1701,7 @@ interface ApiProjectsProjectIdRouteChildren {
   ApiProjectsProjectIdNavigationRoute: typeof ApiProjectsProjectIdNavigationRoute
   ApiProjectsProjectIdOrganizationRoute: typeof ApiProjectsProjectIdOrganizationRoute
   ApiProjectsProjectIdPamRoute: typeof ApiProjectsProjectIdPamRoute
+  ApiProjectsProjectIdPerformanceRoute: typeof ApiProjectsProjectIdPerformanceRoute
 }
 
 const ApiProjectsProjectIdRouteChildren: ApiProjectsProjectIdRouteChildren = {
@@ -1678,6 +1719,7 @@ const ApiProjectsProjectIdRouteChildren: ApiProjectsProjectIdRouteChildren = {
   ApiProjectsProjectIdNavigationRoute: ApiProjectsProjectIdNavigationRoute,
   ApiProjectsProjectIdOrganizationRoute: ApiProjectsProjectIdOrganizationRoute,
   ApiProjectsProjectIdPamRoute: ApiProjectsProjectIdPamRoute,
+  ApiProjectsProjectIdPerformanceRoute: ApiProjectsProjectIdPerformanceRoute,
 }
 
 const ApiProjectsProjectIdRouteWithChildren =
@@ -1703,6 +1745,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBaseRoute: ApiBaseRouteWithChildren,
   ApiMeRoute: ApiMeRoute,
   ApiNavigationRoute: ApiNavigationRoute,
+  ApiPerformanceConfigsRoute: ApiPerformanceConfigsRoute,
   ApiProjectMembersRoute: ApiProjectMembersRoute,
   ApiProjectsRoute: ApiProjectsRouteWithChildren,
   ApiUsersRoute: ApiUsersRoute,

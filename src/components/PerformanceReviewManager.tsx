@@ -27,10 +27,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { apiJson } from "@/lib/api";
 
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };
 type FieldType = "text" | "textarea" | "select";
 type ParticipantType = "collaborator" | "leader";
 type ParticipantStatus = "not_sent" | "sent" | "accessed" | "in_progress" | "answered";
@@ -147,6 +146,18 @@ type EvaluationWeightConfigRow = {
 type CriterionScoringConfigRow = {
   criterion_key: string;
   scoring_schema: unknown;
+};
+type PerformanceWorkspaceData = {
+  reviews: ReviewRow[];
+  participants: ParticipantRow[];
+  positions: PositionRow[];
+  employees: PerfEmployeeRow[];
+  descriptions: DcRow[];
+  configs: ConfigRow[];
+  baseFields: BaseFieldRow[];
+  weightConfigs: EvaluationWeightConfigRow[];
+  scoringConfigs: CriterionScoringConfigRow[];
+  areas: Array<{ id: string; nome: string }>;
 };
 type CriterionScoreSummary = {
   key: string;
@@ -1906,33 +1917,22 @@ function buildPerformanceBlockScores(
 }
 
 export function PerformanceReviewManager({ projectId }: { projectId: string }) {
-  const { user, isAdmin } = useCurrentUser();
   const [tab, setTab] = useState<"reviews" | "schedule">("reviews");
   const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
-    if (isAdmin) {
-      setCanManage(true);
-      return;
-    }
-    if (!user) {
-      setCanManage(false);
-      return;
-    }
     let cancelled = false;
-    supabase
-      .from("project_members")
-      .select("role")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setCanManage(data?.role === "gp" || data?.role === "admin");
+    void apiJson<{ canManage: boolean }>(`/api/projects/${projectId}/performance?view=access`)
+      .then((data) => {
+        if (!cancelled) setCanManage(data.canManage);
+      })
+      .catch(() => {
+        if (!cancelled) setCanManage(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, projectId, user]);
+  }, [projectId]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#042558]/5 via-white to-[#042558]/5 px-6 py-8">
@@ -1986,7 +1986,6 @@ export function PerformanceComparisonPage({
   projectId: string;
   reviewId: string;
 }) {
-  const { user, isAdmin } = useCurrentUser();
   const [review, setReview] = useState<ReviewRow | null>(null);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [comments, setComments] = useState<CommentRow[]>([]);
@@ -2001,89 +2000,29 @@ export function PerformanceComparisonPage({
   const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
 
   const load = useCallback(async () => {
-    const [
-      { data: rev },
-      { data: parts },
-      { data: comm },
-      { data: hist },
-      { data: weightRows },
-      { data: scoringRows },
-    ] = await Promise.all([
-      supabase
-        .from("performance_reviews")
-        .select("*")
-        .eq("project_id", projectId)
-        .eq("id", reviewId)
-        .maybeSingle(),
-      supabase.from("performance_review_participants").select("*").eq("review_id", reviewId),
-      supabase
-        .from("performance_review_comments")
-        .select("*")
-        .eq("review_id", reviewId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("performance_answer_history")
-        .select("*")
-        .eq("review_id", reviewId)
-        .order("changed_at", { ascending: false }),
-      supabase
-        .from("evaluation_weight_configs")
-        .select("career_key,career_label,weights")
-        .eq("project_id", projectId),
-      supabase
-        .from("criterion_scoring_configs")
-        .select("criterion_key,scoring_schema")
-        .eq("project_id", projectId),
-    ]);
-    setReview((rev as ReviewRow | null) ?? null);
-    setParticipants((parts ?? []) as ParticipantRow[]);
-    setComments((comm ?? []) as CommentRow[]);
-    setHistory((hist ?? []) as HistoryRow[]);
-    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
-    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
+    const data = await apiJson<{
+      review: ReviewRow;
+      participants: ParticipantRow[];
+      comments: CommentRow[];
+      history: HistoryRow[];
+      weightConfigs: EvaluationWeightConfigRow[];
+      scoringConfigs: CriterionScoringConfigRow[];
+      authors: Record<string, string>;
+      canManage: boolean;
+    }>(`/api/projects/${projectId}/performance?view=comparison&reviewId=${reviewId}`);
+    setReview(data.review);
+    setParticipants(data.participants);
+    setComments(data.comments);
+    setHistory(data.history);
+    setWeightConfigs(data.weightConfigs);
+    setScoringConfigs(data.scoringConfigs);
+    setAuthors(data.authors);
+    setCanManage(data.canManage);
   }, [projectId, reviewId]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      setCanManage(true);
-      return;
-    }
-    if (!user) return;
-    void supabase
-      .from("project_members")
-      .select("role")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setCanManage(data?.role === "gp" || data?.role === "admin");
-      });
-  }, [isAdmin, projectId, user]);
-
-  useEffect(() => {
-    const ids = Array.from(
-      new Set([
-        ...comments.map((c) => c.author_id),
-        ...(history.map((h) => h.changed_by).filter(Boolean) as string[]),
-      ]),
-    );
-    if (!ids.length) return;
-    void supabase
-      .from("profiles")
-      .select("id,nome")
-      .in("id", ids)
-      .then(({ data }) => {
-        const next: Record<string, string> = {};
-        (data ?? []).forEach((p) => {
-          next[p.id] = p.nome;
-        });
-        setAuthors(next);
-      });
-  }, [comments, history]);
 
   useEffect(() => {
     setManagementOpinion(review?.management_opinion ?? "");
@@ -2111,15 +2050,16 @@ export function PerformanceComparisonPage({
   );
 
   const addComment = async (questionKey: string, content: string) => {
-    if (!user || locked) return;
-    const { error } = await supabase.from("performance_review_comments").insert({
-      review_id: review.id,
-      question_key: questionKey,
-      author_id: user.id,
-      content,
-    });
-    if (error) return toast.error(error.message);
-    await load();
+    if (locked) return;
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "addComment", reviewId: review.id, questionKey, content },
+      });
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel comentar.");
+    }
   };
 
   const updateAnswer = async (
@@ -2131,22 +2071,22 @@ export function PerformanceComparisonPage({
     const current = participant.response_answers?.[questionKey] ?? "";
     if (current === nextAnswer) return;
     if (!confirm("Alterar esta resposta? O valor anterior será mantido no histórico.")) return;
-    const nextAnswers = { ...(participant.response_answers ?? {}), [questionKey]: nextAnswer };
-    const { error } = await supabase
-      .from("performance_review_participants")
-      .update({ response_answers: nextAnswers })
-      .eq("id", participant.id);
-    if (error) return toast.error(error.message);
-    await supabase.from("performance_answer_history").insert({
-      participant_id: participant.id,
-      review_id: review.id,
-      question_key: questionKey,
-      previous_answer: current,
-      new_answer: nextAnswer,
-      changed_by: user?.id ?? null,
-    });
-    toast.success("Resposta alterada");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: {
+          action: "updateAnswer",
+          reviewId: review.id,
+          participantId: participant.id,
+          questionKey,
+          nextAnswer,
+        },
+      });
+      toast.success("Resposta alterada");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel alterar a resposta.");
+    }
   };
 
   const finalize = async () => {
@@ -2159,26 +2099,16 @@ export function PerformanceComparisonPage({
       toast.error("A avaliação só pode ser finalizada depois das duas respostas.");
       return;
     }
-    const { error } = await supabase
-      .from("performance_reviews")
-      .update({
-        status: "finalized",
-        finalized_by: user?.id ?? null,
-        finalized_at: new Date().toISOString(),
-      })
-      .eq("id", review.id);
-    if (error) return toast.error(error.message);
-    if (review.employee_id) {
-      await supabase
-        .from("project_employees")
-        .update({
-          last_performance_review_date: review.due_date ?? new Date().toISOString().slice(0, 10),
-        })
-        .eq("id", review.employee_id)
-        .eq("project_id", projectId);
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "finalize", reviewId: review.id },
+      });
+      toast.success("Avaliação finalizada");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel finalizar.");
     }
-    toast.success("Avaliação finalizada");
-    await load();
   };
 
   const openFinalizeOpinion = () => {
@@ -2201,30 +2131,21 @@ export function PerformanceComparisonPage({
       return;
     }
     setFinalizing(true);
-    const { error } = await supabase
-      .from("performance_reviews")
-      .update({
-        status: "finalized",
-        management_opinion: opinion,
-        score_summary_snapshot: toJson(scoreSummary),
-        evaluation_weights_snapshot: toJson(effectiveReview.evaluation_weights_snapshot ?? {}),
-        criterion_scoring_snapshot: toJson(effectiveReview.criterion_scoring_snapshot ?? {}),
-        finalized_by: user?.id ?? null,
-        finalized_at: new Date().toISOString(),
-      })
-      .eq("id", review.id);
-    if (error) {
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: {
+          action: "finalize",
+          reviewId: review.id,
+          managementOpinion: opinion,
+          scoreSummary: toJson(scoreSummary),
+          evaluationWeights: toJson(effectiveReview.evaluation_weights_snapshot ?? {}),
+          criterionScoring: toJson(effectiveReview.criterion_scoring_snapshot ?? {}),
+        },
+      });
+    } catch (error) {
       setFinalizing(false);
-      return toast.error(error.message);
-    }
-    if (review.employee_id) {
-      await supabase
-        .from("project_employees")
-        .update({
-          last_performance_review_date: review.due_date ?? new Date().toISOString().slice(0, 10),
-        })
-        .eq("id", review.employee_id)
-        .eq("project_id", projectId);
+      return toast.error(error instanceof Error ? error.message : "Nao foi possivel finalizar.");
     }
     setFinalizing(false);
     setOpinionOpen(false);
@@ -2235,19 +2156,16 @@ export function PerformanceComparisonPage({
 
   const reopen = async () => {
     if (!canManage || !confirm("Reabrir esta avaliação para alterações?")) return;
-    const { error } = await supabase
-      .from("performance_reviews")
-      .update({
-        status: "ready_for_comparison",
-        reopened_by: user?.id ?? null,
-        reopened_at: new Date().toISOString(),
-        finalized_by: null,
-        finalized_at: null,
-      })
-      .eq("id", review.id);
-    if (error) return toast.error(error.message);
-    toast.success("Avaliação reaberta");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "reopen", reviewId: review.id },
+      });
+      toast.success("Avaliação reaberta");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel reabrir.");
+    }
   };
 
   return (
@@ -2918,11 +2836,10 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from("performance_review_configs")
-      .select("*")
-      .eq("project_id", projectId)
-      .maybeSingle();
+    const { configs } = await apiJson<{ configs: ConfigRow[] }>(
+      `/api/performance-configs?projectId=${projectId}`,
+    );
+    const data = configs[0] ?? null;
     if (data) {
       const cfg = toConfigRow(data);
       setConfigId(cfg.id);
@@ -2941,20 +2858,42 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
 
   const save = async () => {
     setSaving(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const payload = {
-      project_id: projectId,
-      questions_schema: questions,
-      is_active: isActive,
-      created_by: userData.user?.id ?? null,
-    };
-    const { error } = configId
-      ? await supabase.from("performance_review_configs").update(payload).eq("id", configId)
-      : await supabase.from("performance_review_configs").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Configuração salva");
-    await load();
+    try {
+      if (configId) {
+        await apiJson("/api/performance-configs", {
+          method: "PATCH",
+          body: {
+            projectId,
+            configId,
+            name: "Avaliacao de experiencia",
+            periodDays: EXPERIENCE_LIMIT_DAYS,
+            reviewType: "experience",
+            questionsSchema: questions,
+            isActive,
+          },
+        });
+      } else {
+        await apiJson("/api/performance-configs", {
+          method: "POST",
+          body: {
+            projectId,
+            configs: [{
+              name: "Avaliacao de experiencia",
+              periodDays: EXPERIENCE_LIMIT_DAYS,
+              reviewType: "experience",
+              questionsSchema: questions,
+              isActive,
+            }],
+          },
+        });
+      }
+      toast.success("Configuração salva");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addQuestion = () => {
@@ -3135,7 +3074,6 @@ export function PerformancePeriodConfigPanel({
   initialReviewType?: ReviewType | null;
   hideReviewTypeTabs?: boolean;
 }) {
-  const { user } = useCurrentUser();
   const [configs, setConfigs] = useState<ConfigRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<PerformanceQuestion[]>([]);
@@ -3158,45 +3096,36 @@ export function PerformancePeriodConfigPanel({
   };
 
   const load = useCallback(async () => {
-    let query = supabase
-      .from("performance_review_configs")
-      .select("*")
-      .order("period_days", { ascending: true });
-    query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
-    const { data, error } = await query;
-    if (error) {
-      toast.error(error.message);
+    const suffix = projectId ? `?projectId=${projectId}` : "";
+    let rows: ConfigRow[];
+    try {
+      const result = await apiJson<{ configs: ConfigRow[] }>(`/api/performance-configs${suffix}`);
+      rows = toConfigRows(result.configs);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar modelos.");
       return;
     }
-
-    let rows = toConfigRows(data);
     const missingTypes = (["experience", "performance"] as ReviewType[]).filter(
       (type) => !rows.some((config) => (config.review_type ?? "experience") === type),
     );
     if (missingTypes.length > 0) {
-      const { error: insertError } = await supabase.from("performance_review_configs").insert(
-        missingTypes.map((type) => ({
-          project_id: projectId,
-          name: type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho",
-          period_days: EXPERIENCE_LIMIT_DAYS,
-          review_type: type,
-          questions_schema: defaultQuestionsForConfig(type),
-          is_active: true,
-          created_by: user?.id ?? null,
-        })) as never,
-      );
-      if (insertError) {
-        toast.error(insertError.message);
-      } else {
-        let refreshedQuery = supabase
-          .from("performance_review_configs")
-          .select("*")
-          .order("period_days", { ascending: true });
-        refreshedQuery = projectId
-          ? refreshedQuery.eq("project_id", projectId)
-          : refreshedQuery.is("project_id", null);
-        const { data: refreshed } = await refreshedQuery;
-        rows = toConfigRows(refreshed);
+      try {
+        const created = await apiJson<{ configs: ConfigRow[] }>("/api/performance-configs", {
+          method: "POST",
+          body: {
+            projectId,
+            configs: missingTypes.map((type) => ({
+              name: type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho",
+              periodDays: EXPERIENCE_LIMIT_DAYS,
+              reviewType: type,
+              questionsSchema: defaultQuestionsForConfig(type),
+              isActive: true,
+            })),
+          },
+        });
+        rows = toConfigRows(created.configs);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Nao foi possivel criar os modelos.");
       }
     }
 
@@ -3214,7 +3143,7 @@ export function PerformancePeriodConfigPanel({
       setSelectedId(initialSelected.id);
       hydrate(initialSelected);
     } else setSelectedId(null);
-  }, [configTypeTab, projectId, selectedId, user?.id]);
+  }, [configTypeTab, projectId, selectedId]);
 
   useEffect(() => {
     void load();
@@ -3234,20 +3163,26 @@ export function PerformancePeriodConfigPanel({
     if (!modelName.trim()) return toast.error("Informe o nome do modelo.");
 
     setSaving(true);
-    const { error } = await supabase
-      .from("performance_review_configs")
-      .update({
-        name: modelName.trim(),
-        period_days: selectedConfig.period_days ?? EXPERIENCE_LIMIT_DAYS,
-        review_type: selectedConfig.review_type ?? "experience",
-        questions_schema: toJson(questions),
-        is_active: isActive,
-      })
-      .eq("id", selectedConfig.id);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Modelo salvo");
-    await load();
+    try {
+      await apiJson("/api/performance-configs", {
+        method: "PATCH",
+        body: {
+          projectId,
+          configId: selectedConfig.id,
+          name: modelName.trim(),
+          periodDays: selectedConfig.period_days ?? EXPERIENCE_LIMIT_DAYS,
+          reviewType: selectedConfig.review_type ?? "experience",
+          questionsSchema: toJson(questions),
+          isActive,
+        },
+      });
+      toast.success("Modelo salvo");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar o modelo.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addQuestion = () => {
@@ -3713,7 +3648,6 @@ function toLocalDateKey(date: Date) {
 }
 
 function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
-  const { user } = useCurrentUser();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [areas, setAreas] = useState<Array<{ id: string; nome: string }>>([]);
@@ -3737,73 +3671,25 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [
-      { data: revs },
-      { data: pos },
-      { data: emps },
-      { data: dcs },
-      { data: cfgs },
-      { data: fields },
-      { data: parts },
-      { data: areaRows },
-      { data: weightRows },
-      { data: scoringRows },
-    ] = await Promise.all([
-      supabase
-        .from("performance_reviews")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("due_date", { ascending: true }),
-      supabase
-        .from("project_positions")
-        .select("id,nome,parent_id")
-        .eq("project_id", projectId)
-        .eq("status", "active")
-        .order("display_order"),
-      supabase
-        .from("project_employees")
-        .select(
-          "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
-        )
-        .eq("project_id", projectId)
-        .order("nome"),
-      supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
-      supabase
-        .from("performance_review_configs")
-        .select("*")
-        .eq("project_id", projectId)
-        .eq("is_active", true)
-        .order("period_days", { ascending: true }),
-      supabase
-        .from("base_fields")
-        .select("field_key,label,section,base_options(label,value,is_active)")
-        .eq("project_id", projectId)
-        .eq("is_active", true),
-      supabase
-        .from("performance_review_participants")
-        .select("id,review_id,participant_type,token,status,expires_at,sent_at,submitted_at")
-        .eq("project_id", projectId),
-      supabase.from("project_areas").select("id,nome").eq("project_id", projectId),
-      supabase
-        .from("evaluation_weight_configs")
-        .select("career_key,career_label,weights")
-        .eq("project_id", projectId),
-      supabase
-        .from("criterion_scoring_configs")
-        .select("criterion_key,scoring_schema")
-        .eq("project_id", projectId),
-    ]);
-    setReviews(toReviewRows(revs));
-    setPositions((pos ?? []) as PositionRow[]);
-    setEmployees((emps ?? []) as PerfEmployeeRow[]);
-    setDescriptions((dcs ?? []) as DcRow[]);
-    setConfigs(toConfigRows(cfgs));
-    setBaseFields((fields ?? []) as BaseFieldRow[]);
-    setParticipants((parts ?? []) as ParticipantRow[]);
-    setAreas((areaRows ?? []) as Array<{ id: string; nome: string }>);
-    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
-    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
-    setLoading(false);
+    try {
+      const data = await apiJson<PerformanceWorkspaceData>(
+        `/api/projects/${projectId}/performance`,
+      );
+      setReviews(toReviewRows(data.reviews));
+      setPositions(data.positions);
+      setEmployees(data.employees);
+      setDescriptions(data.descriptions);
+      setConfigs(toConfigRows(data.configs));
+      setBaseFields(data.baseFields);
+      setParticipants(data.participants);
+      setAreas(data.areas);
+      setWeightConfigs(data.weightConfigs);
+      setScoringConfigs(data.scoringConfigs);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar a agenda.");
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -3953,11 +3839,10 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
 
   const markLinkSent = async (entry: AgendaEntry) => {
     if (!entry.existingReview) return;
-    await supabase
-      .from("performance_review_participants")
-      .update({ status: "sent", sent_at: new Date().toISOString() })
-      .eq("review_id", entry.existingReview.id)
-      .eq("status", "not_sent");
+    await apiJson(`/api/projects/${projectId}/performance`, {
+      method: "POST",
+      body: { action: "markSent", reviewId: entry.existingReview.id },
+    });
     await load();
   };
 
@@ -3997,43 +3882,27 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       );
       const expires_at = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: review, error } = await supabase
-        .from("performance_reviews")
-        .insert({
-          project_id: projectId,
-          config_id: item.config.id,
-          employee_id: item.employee.id,
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: {
+          action: "createReview",
+          configId: item.config.id,
+          employeeId: item.employee.id,
+          leaderEmployeeId: item.leader.id,
+          jobDescriptionId: item.description.id,
           name: automaticReviewName(item.employee.nome, item.periodDays, item.reviewType),
-          employee_position_id: item.employee.position_id,
-          leader_position_id: item.leader.position_id,
-          job_description_id: item.description.id,
-          employee_name: item.employee.nome,
-          leader_name: item.leader.nome,
-          job_title: item.description.cargo || item.employeePosition.nome,
-          period_name: reviewPeriodLabel(item.periodDays, item.reviewType),
-          period_days: item.periodDays,
-          due_date: item.dueDate,
-          review_type: item.reviewType,
-          job_description_snapshot: toJson(item.description),
-          activities_snapshot: toJson([]),
-          questions_snapshot: toJson(questions),
-          evaluation_weights_snapshot: toJson(snapshots.evaluationWeights),
-          criterion_scoring_snapshot: toJson(snapshots.criterionScoring),
-          created_by: user?.id ?? null,
-        })
-        .select("id")
-        .single();
-      if (error || !review) return toast.error(error?.message ?? "Nao foi possivel criar.");
-      const { error: partErr } = await supabase.from("performance_review_participants").insert([
-        {
-          review_id: review.id,
-          project_id: projectId,
-          participant_type: "collaborator",
-          expires_at,
+          periodName: reviewPeriodLabel(item.periodDays, item.reviewType),
+          periodDays: item.periodDays,
+          dueDate: item.dueDate,
+          reviewType: item.reviewType,
+          jobDescriptionSnapshot: toJson(item.description),
+          activitiesSnapshot: toJson([]),
+          questionsSnapshot: toJson(questions),
+          evaluationWeightsSnapshot: toJson(snapshots.evaluationWeights),
+          criterionScoringSnapshot: toJson(snapshots.criterionScoring),
+          expiresAt: expires_at,
         },
-        { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
-      ]);
-      if (partErr) return toast.error(partErr.message);
+      });
       toast.success("Avaliacao criada na agenda");
       await load();
     } catch (error) {
@@ -4300,7 +4169,6 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
 }
 
 function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
-  const { user } = useCurrentUser();
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
   const [positions, setPositions] = useState<PositionRow[]>([]);
@@ -4320,68 +4188,24 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const [reviewTypeTab, setReviewTypeTab] = useState<ReviewType>("experience");
 
   const load = useCallback(async () => {
-    const [
-      { data: revs },
-      { data: parts },
-      { data: pos },
-      { data: emps },
-      { data: dcs },
-      { data: cfgs },
-      { data: fields },
-      { data: weightRows },
-      { data: scoringRows },
-    ] = await Promise.all([
-      supabase
-        .from("performance_reviews")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase.from("performance_review_participants").select("*").eq("project_id", projectId),
-      supabase
-        .from("project_positions")
-        .select("id,nome,parent_id")
-        .eq("project_id", projectId)
-        .eq("status", "active")
-        .order("display_order"),
-      supabase
-        .from("project_employees")
-        .select(
-          "id,project_id,position_id,area_id,sector_id,superior_imediato_id,nome,admission_date,last_performance_review_date",
-        )
-        .eq("project_id", projectId)
-        .order("nome"),
-      supabase.from("descricoes_cargo").select("*").eq("project_id", projectId),
-      supabase
-        .from("performance_review_configs")
-        .select("*")
-        .eq("project_id", projectId)
-        .eq("is_active", true)
-        .order("period_days", { ascending: true }),
-      supabase
-        .from("base_fields")
-        .select("field_key,label,section,base_options(label,value,is_active)")
-        .eq("project_id", projectId)
-        .eq("is_active", true),
-      supabase
-        .from("evaluation_weight_configs")
-        .select("career_key,career_label,weights")
-        .eq("project_id", projectId),
-      supabase
-        .from("criterion_scoring_configs")
-        .select("criterion_key,scoring_schema")
-        .eq("project_id", projectId),
-    ]);
-    setReviews(toReviewRows(revs));
-    setParticipants((parts ?? []) as ParticipantRow[]);
-    setPositions((pos ?? []) as PositionRow[]);
-    setEmployees((emps ?? []) as PerfEmployeeRow[]);
-    setDescriptions((dcs ?? []) as DcRow[]);
-    const rows = toConfigRows(cfgs);
-    setConfigs(rows);
-    setBaseFields((fields ?? []) as BaseFieldRow[]);
-    setWeightConfigs((weightRows ?? []) as EvaluationWeightConfigRow[]);
-    setScoringConfigs((scoringRows ?? []) as CriterionScoringConfigRow[]);
-    setConfigId((current) => current || rows[0]?.id || "");
+    try {
+      const data = await apiJson<PerformanceWorkspaceData>(
+        `/api/projects/${projectId}/performance`,
+      );
+      setReviews(toReviewRows(data.reviews));
+      setParticipants(data.participants);
+      setPositions(data.positions);
+      setEmployees(data.employees);
+      setDescriptions(data.descriptions);
+      const rows = toConfigRows(data.configs);
+      setConfigs(rows);
+      setBaseFields(data.baseFields);
+      setWeightConfigs(data.weightConfigs);
+      setScoringConfigs(data.scoringConfigs);
+      setConfigId((current) => current || rows[0]?.id || "");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar avaliacoes.");
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -4491,44 +4315,27 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       );
       const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: review, error } = await supabase
-        .from("performance_reviews")
-        .insert({
-          project_id: projectId,
-          config_id: selectedConfig.id,
-          employee_id: selectedEmployee.id,
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: {
+          action: "createReview",
+          configId: selectedConfig.id,
+          employeeId: selectedEmployee.id,
+          leaderEmployeeId: selectedLeader.id,
+          jobDescriptionId: selectedDc.id,
           name: automaticReviewName(selectedEmployee.nome, reviewPeriodDays, formReviewType),
-          employee_position_id: employeePositionId,
-          leader_position_id: selectedLeader.position_id,
-          job_description_id: selectedDc.id,
-          employee_name: selectedEmployee.nome,
-          leader_name: selectedLeader.nome,
-          job_title: selectedDc.cargo || employeePosition.nome,
-          period_name: reviewPeriodLabel(reviewPeriodDays, formReviewType),
-          period_days: reviewPeriodDays,
-          due_date: expectedReviewDate,
-          review_type: formReviewType,
-          job_description_snapshot: toJson(selectedDc),
-          activities_snapshot: toJson([]),
-          questions_snapshot: toJson(questions),
-          evaluation_weights_snapshot: toJson(snapshots.evaluationWeights),
-          criterion_scoring_snapshot: toJson(snapshots.criterionScoring),
-          created_by: user?.id ?? null,
-        })
-        .select("id")
-        .single();
-      if (error || !review) return toast.error(error?.message ?? "Não foi possível criar.");
-
-      const { error: partErr } = await supabase.from("performance_review_participants").insert([
-        {
-          review_id: review.id,
-          project_id: projectId,
-          participant_type: "collaborator",
-          expires_at,
+          periodName: reviewPeriodLabel(reviewPeriodDays, formReviewType),
+          periodDays: reviewPeriodDays,
+          dueDate: expectedReviewDate,
+          reviewType: formReviewType,
+          jobDescriptionSnapshot: toJson(selectedDc),
+          activitiesSnapshot: toJson([]),
+          questionsSnapshot: toJson(questions),
+          evaluationWeightsSnapshot: toJson(snapshots.evaluationWeights),
+          criterionScoringSnapshot: toJson(snapshots.criterionScoring),
+          expiresAt: expires_at,
         },
-        { review_id: review.id, project_id: projectId, participant_type: "leader", expires_at },
-      ]);
-      if (partErr) return toast.error(partErr.message);
+      });
       setEmployeeId("");
       setLeaderEmployeeId("");
       toast.success("Avaliação criada");
@@ -4545,10 +4352,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     try {
       await navigator.clipboard.writeText(url);
       if (participant.status === "not_sent") {
-        await supabase
-          .from("performance_review_participants")
-          .update({ status: "sent", sent_at: new Date().toISOString() })
-          .eq("id", participant.id);
+        await apiJson(`/api/projects/${projectId}/performance`, {
+          method: "POST",
+          body: { action: "markSent", participantId: participant.id },
+        });
       }
       toast.success("Link copiado");
       await load();

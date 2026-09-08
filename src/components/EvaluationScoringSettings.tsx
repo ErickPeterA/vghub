@@ -12,8 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import { apiJson } from "@/lib/api";
 
 type CriterionKey =
   | "instruction"
@@ -54,6 +53,19 @@ type ScoreRow = {
     score?: number | null;
     notApplicable?: boolean;
   }> | null;
+};
+type ScoringData = {
+  baseFields: Array<{
+    field_key: string;
+    base_options?: Array<{ label: string; value: string; is_active?: boolean | null }>;
+  }>;
+  descriptions: Array<{
+    tipo_carreira?: string | null;
+    dynamic_values?: Record<string, unknown> | null;
+  }>;
+  weightConfigs: WeightRow[];
+  performanceConfig: { questions_schema?: PerformanceQuestion[] } | null;
+  scoringConfigs: ScoreRow[];
 };
 
 const CRITERIA: Array<{ key: CriterionKey; label: string }> = [
@@ -287,29 +299,17 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: field }, { data: descriptions }, { data: savedWeights, error }] =
-      await Promise.all([
-        supabase
-          .from("base_fields")
-          .select("base_options(label,value,is_active)")
-          .eq("project_id", projectId)
-          .eq("field_key", "tipo_carreira")
-          .maybeSingle(),
-        supabase
-          .from("descricoes_cargo")
-          .select("tipo_carreira,dynamic_values")
-          .eq("project_id", projectId),
-        supabase
-          .from("evaluation_weight_configs")
-          .select("career_key,career_label,weights")
-          .eq("project_id", projectId),
-      ]);
-
-    if (error) {
-      toast.error(error.message);
+    let result: ScoringData;
+    try {
+      result = await apiJson<ScoringData>(`/api/projects/${projectId}/performance?view=scoring`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar os pesos.");
       setLoading(false);
       return;
     }
+    const field = result.baseFields.find((item) => item.field_key === "tipo_carreira") ?? null;
+    const descriptions = result.descriptions;
+    const savedWeights = result.weightConfigs;
 
     const careerMap = new Map<string, Career>();
     const options = (
@@ -390,11 +390,9 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
   const save = async () => {
     if (!canSave) return toast.error("Ajuste todas as carreiras para totalizar 100%.");
     setSaving(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const payload = careers.map((career) => ({
-      project_id: projectId,
-      career_key: career.key,
-      career_label: career.label,
+    const rows = careers.map((career) => ({
+      careerKey: career.key,
+      careerLabel: career.label,
       weights: CRITERIA.reduce(
         (acc, criterion) => ({
           ...acc,
@@ -402,15 +400,19 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
         }),
         {} as Record<CriterionKey, number>,
       ),
-      created_by: userData.user?.id ?? null,
     }));
-    const { error } = await supabase
-      .from("evaluation_weight_configs")
-      .upsert(payload as never, { onConflict: "project_id,career_key" });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Pesos salvos");
-    await load();
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "saveWeights", rows },
+      });
+      toast.success("Pesos salvos");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar os pesos.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -531,25 +533,18 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: configs }, { data: savedScores, error }] = await Promise.all([
-      supabase
-        .from("performance_review_configs")
-        .select("questions_schema")
-        .eq("project_id", projectId)
-        .eq("review_type", "performance")
-        .eq("is_active", true)
-        .maybeSingle(),
-      supabase
-        .from("criterion_scoring_configs")
-        .select("criterion_key,scoring_schema")
-        .eq("project_id", projectId),
-    ]);
-
-    if (error) {
-      toast.error(error.message);
+    let result: ScoringData;
+    try {
+      result = await apiJson<ScoringData>(`/api/projects/${projectId}/performance?view=scoring`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Nao foi possivel carregar as pontuacoes.",
+      );
       setLoading(false);
       return;
     }
+    const configs = result.performanceConfig;
+    const savedScores = result.scoringConfigs;
 
     const modelRules = uniqueRulesFromQuestions(
       ((configs as { questions_schema?: PerformanceQuestion[] } | null)?.questions_schema ??
@@ -596,25 +591,26 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
   const save = async () => {
     if (hasInvalidScore) return toast.error("Informe pontuações entre 0% e 100%.");
     setSaving(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const payload = {
-      project_id: projectId,
-      criterion_key: selectedCriterion,
-      scoring_schema: rules.map((rule) => ({
-        id: rule.id,
-        label: rule.label,
-        score: rule.notApplicable ? null : toNumber(rule.score),
-        notApplicable: rule.notApplicable ?? false,
-      })) as Json,
-      created_by: userData.user?.id ?? null,
-    };
-    const { error } = await supabase
-      .from("criterion_scoring_configs")
-      .upsert(payload as never, { onConflict: "project_id,criterion_key" });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Pontuações salvas");
-    await load();
+    const scoringSchema = rules.map((rule) => ({
+      id: rule.id,
+      label: rule.label,
+      score: rule.notApplicable ? null : toNumber(rule.score),
+      notApplicable: rule.notApplicable ?? false,
+    }));
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "saveScoring", criterionKey: selectedCriterion, scoringSchema },
+      });
+      toast.success("Pontuações salvas");
+      await load();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Nao foi possivel salvar as pontuacoes.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
