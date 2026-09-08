@@ -9,6 +9,19 @@ import {
 type JsonValue = unknown;
 type ReviewType = "experience" | "performance";
 
+function toDateOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) return null;
+  const date = new Date(`${match[1]}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== match[1]
+    ? null
+    : match[1];
+}
+
 async function requireCanManageConfigScope(userId: string, projectId: string | null) {
   if (projectId) return requireCanManageProject(userId, projectId);
   const result = await query<{ allowed: boolean }>(`select public.is_any_gp($1::uuid) as allowed`, [
@@ -119,7 +132,11 @@ export async function getPerformanceWorkspaceData(userId: string, projectId: str
     reviews: reviews.rows,
     participants: participants.rows,
     positions: positions.rows,
-    employees: employees.rows,
+    employees: employees.rows.map((employee) => ({
+      ...employee,
+      admission_date: toDateOnly(employee.admission_date),
+      last_performance_review_date: toDateOnly(employee.last_performance_review_date),
+    })),
     descriptions: descriptions.rows,
     configs: configs.rows,
     baseFields: fields.rows,

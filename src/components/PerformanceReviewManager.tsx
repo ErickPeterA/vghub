@@ -87,7 +87,7 @@ type PerfEmployeeRow = {
   sector_id: string | null;
   superior_imediato_id: string | null;
   nome: string;
-  admission_date: string;
+  admission_date: string | null;
   last_performance_review_date: string | null;
 };
 type ConfigRow = {
@@ -3489,20 +3489,40 @@ function automaticReviewName(
   return `${employeeName} - Avaliacao de ${reviewPeriodLabel(days, type).toLowerCase()}`;
 }
 
-function addDaysToDate(dateValue: string, days: number) {
-  const date = new Date(`${dateValue}T00:00:00`);
+function normalizeDateOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) return null;
+  const date = new Date(`${match[1]}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== match[1]
+    ? null
+    : match[1];
+}
+
+function addDaysToDate(dateValue: unknown, days: number) {
+  const normalized = normalizeDateOnly(dateValue);
+  if (!normalized || !Number.isFinite(days)) return null;
+  const date = new Date(`${normalized}T00:00:00.000Z`);
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 }
 
-function daysBetween(fromDate: string, toDate: string) {
-  const from = new Date(`${fromDate}T00:00:00`).getTime();
-  const to = new Date(`${toDate}T00:00:00`).getTime();
+function daysBetween(fromDate: unknown, toDate: unknown) {
+  const fromValue = normalizeDateOnly(fromDate);
+  const toValue = normalizeDateOnly(toDate);
+  if (!fromValue || !toValue) return null;
+  const from = new Date(`${fromValue}T00:00:00.000Z`).getTime();
+  const to = new Date(`${toValue}T00:00:00.000Z`).getTime();
   return Math.round((to - from) / 86_400_000);
 }
 
-function getEmployeeReviewType(employee: PerfEmployeeRow, today: string): ReviewType {
-  return daysBetween(employee.admission_date, today) > EXPERIENCE_LIMIT_DAYS
+function getEmployeeReviewType(employee: PerfEmployeeRow, today: string): ReviewType | null {
+  const elapsedDays = daysBetween(employee.admission_date, today);
+  if (elapsedDays === null) return null;
+  return elapsedDays > EXPERIENCE_LIMIT_DAYS
     ? "performance"
     : "experience";
 }
@@ -3511,8 +3531,12 @@ function reviewTypeLabel(type: ReviewType) {
   return type === "experience" ? "Experiencia" : "Desempenho";
 }
 
-function formatDateOnly(dateValue: string) {
-  return new Date(`${dateValue}T00:00:00`).toLocaleDateString("pt-BR");
+function formatDateOnly(dateValue: unknown) {
+  const normalized = normalizeDateOnly(dateValue);
+  if (!normalized) return "Data inválida";
+  return new Date(`${normalized}T00:00:00.000Z`).toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
+  });
 }
 
 function SelectOptionsEditor({
@@ -3707,13 +3731,18 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
         const description =
           descriptions.find((dc) => dc.organization_position_id === employee.position_id) ?? null;
         const reviewType = getEmployeeReviewType(employee, today);
+        if (!reviewType) return [];
         const config =
           configs.find((item) => (item.review_type ?? "experience") === reviewType) ?? null;
         const reviewPeriods = reviewPeriodOptionsForType(reviewType);
         if (!config) return [];
         return reviewPeriods.map(({ days: periodDays }) => {
-          const baseDate = employee.last_performance_review_date || employee.admission_date;
+          const baseDate = normalizeDateOnly(
+            employee.last_performance_review_date ?? employee.admission_date,
+          );
+          if (!baseDate) return null;
           const dueDate = addDaysToDate(baseDate, periodDays);
+          if (!dueDate) return null;
           const existingReview =
             reviews.find(
               (review) =>
@@ -3736,7 +3765,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
             existingReview,
             reviewType,
           };
-        });
+        }).filter((item): item is AgendaItem => item !== null);
       })
       .sort(
         (a, b) =>
@@ -4244,7 +4273,8 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const availableReviewPeriodOptions = reviewPeriodOptionsForType(formReviewType);
   const selectedConfig = availableConfigs.find((config) => config.id === configId) ?? null;
   const getEmployeeBaseDate = useCallback(
-    (employee: PerfEmployeeRow) => employee.last_performance_review_date || employee.admission_date,
+    (employee: PerfEmployeeRow) =>
+      normalizeDateOnly(employee.last_performance_review_date ?? employee.admission_date),
     [],
   );
   const expectedReviewDate =
@@ -4291,6 +4321,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   const createReview = async () => {
     try {
       if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
+      if (!getEmployeeBaseDate(selectedEmployee)) {
+        return toast.error("O colaborador possui uma data de admissão ou última avaliação inválida.");
+      }
       if (!selectedEmployeeIsBelowLeader)
         return toast.error("Selecione um colaborador que responda diretamente para este lider.");
       if (!selectedDc)
