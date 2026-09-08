@@ -22,9 +22,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { apiJson } from "@/lib/api";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export function AppSidebar() {
   const { isAdmin, profile, user } = useCurrentUser();
@@ -182,8 +181,9 @@ export function AppSidebar() {
 
           <button
             onClick={async () => {
-              await supabase.auth.signOut();
-              navigate({ to: "/login" });
+              await apiJson<{ ok: true }>("/api/auth/logout", { method: "POST" });
+              await navigate({ to: "/login" });
+              window.location.reload();
             }}
             className="rounded-lg bg-white/5 p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white/80 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center"
             title="Sair"

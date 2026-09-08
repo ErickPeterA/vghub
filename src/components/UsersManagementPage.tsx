@@ -217,6 +217,7 @@ function EditDialog({
           />
           <input
             type="password"
+            minLength={10}
             className={inp}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

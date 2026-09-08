@@ -117,9 +117,9 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-// RootComponent limpo — sem router.invalidate() no onAuthStateChange.
+// RootComponent sem invalidacao global da sessao a cada mudanca de rota.
 // A proteção de rotas é feita pelo beforeLoad em _authenticated.tsx,
-// que já chama supabase.auth.getUser() a cada navegação.
+// que já consulta a sessão local a cada navegação.
 // O router.invalidate() aqui causava tela branca ao navegar após o login.
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();

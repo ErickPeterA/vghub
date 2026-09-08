@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/dc/$dcId/comments")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getFieldComments }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/dc/$dcId/comments")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { addFieldComment }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/dc/$dcId/comments")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { decideFieldComment }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);

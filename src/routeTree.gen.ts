@@ -30,6 +30,10 @@ import { Route as ApiBaseSectionsRouteImport } from './routes/api/base.sections'
 import { Route as ApiBaseOptionsRouteImport } from './routes/api/base.options'
 import { Route as ApiBaseFieldsRouteImport } from './routes/api/base.fields'
 import { Route as ApiBaseAccessRouteImport } from './routes/api/base.access'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth.session'
+import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth.password'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth.logout'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth.login'
 import { Route as AuthenticatedProjetosNovoRouteImport } from './routes/_authenticated/projetos.novo'
 import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
 import { Route as AuthenticatedGerenciamentoUsuariosRouteImport } from './routes/_authenticated/gerenciamento.usuarios'
@@ -188,6 +192,26 @@ const ApiBaseAccessRoute = ApiBaseAccessRouteImport.update({
   id: '/access',
   path: '/access',
   getParentRoute: () => ApiBaseRoute,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthPasswordRoute = ApiAuthPasswordRouteImport.update({
+  id: '/api/auth/password',
+  path: '/api/auth/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedProjetosNovoRoute =
   AuthenticatedProjetosNovoRouteImport.update({
@@ -509,6 +533,10 @@ export interface FileRoutesByFullPath {
   '/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/base/access': typeof ApiBaseAccessRoute
   '/api/base/fields': typeof ApiBaseFieldsRouteWithChildren
   '/api/base/options': typeof ApiBaseOptionsRouteWithChildren
@@ -579,6 +607,10 @@ export interface FileRoutesByTo {
   '/gerenciamento/atrelar': typeof AuthenticatedGerenciamentoAtrelarRoute
   '/gerenciamento/bases': typeof AuthenticatedGerenciamentoBasesRoute
   '/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/base/access': typeof ApiBaseAccessRoute
   '/api/base/fields': typeof ApiBaseFieldsRouteWithChildren
   '/api/base/options': typeof ApiBaseOptionsRouteWithChildren
@@ -653,6 +685,10 @@ export interface FileRoutesById {
   '/_authenticated/gerenciamento/usuarios': typeof AuthenticatedGerenciamentoUsuariosRouteWithChildren
   '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRouteWithChildren
   '/_authenticated/projetos/novo': typeof AuthenticatedProjetosNovoRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/password': typeof ApiAuthPasswordRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/base/access': typeof ApiBaseAccessRoute
   '/api/base/fields': typeof ApiBaseFieldsRouteWithChildren
   '/api/base/options': typeof ApiBaseOptionsRouteWithChildren
@@ -728,6 +764,10 @@ export interface FileRouteTypes {
     | '/gerenciamento/usuarios'
     | '/projetos/$projectId'
     | '/projetos/novo'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/session'
     | '/api/base/access'
     | '/api/base/fields'
     | '/api/base/options'
@@ -798,6 +838,10 @@ export interface FileRouteTypes {
     | '/gerenciamento/atrelar'
     | '/gerenciamento/bases'
     | '/projetos/novo'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/session'
     | '/api/base/access'
     | '/api/base/fields'
     | '/api/base/options'
@@ -871,6 +915,10 @@ export interface FileRouteTypes {
     | '/_authenticated/gerenciamento/usuarios'
     | '/_authenticated/projetos/$projectId'
     | '/_authenticated/projetos/novo'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/password'
+    | '/api/auth/session'
     | '/api/base/access'
     | '/api/base/fields'
     | '/api/base/options'
@@ -940,6 +988,10 @@ export interface RootRouteChildren {
   ApiProjectsRoute: typeof ApiProjectsRouteWithChildren
   ApiUsersRoute: typeof ApiUsersRoute
   PamTokenRoute: typeof PamTokenRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
   AvaliacaoDesempenhoPreencherTokenRoute: typeof AvaliacaoDesempenhoPreencherTokenRoute
   ApiDcDcIdCommentsRoute: typeof ApiDcDcIdCommentsRoute
@@ -1102,6 +1154,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/base/access'
       preLoaderRoute: typeof ApiBaseAccessRouteImport
       parentRoute: typeof ApiBaseRoute
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/password': {
+      id: '/api/auth/password'
+      path: '/api/auth/password'
+      fullPath: '/api/auth/password'
+      preLoaderRoute: typeof ApiAuthPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/projetos/novo': {
       id: '/_authenticated/projetos/novo'
@@ -1750,6 +1830,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiProjectsRoute: ApiProjectsRouteWithChildren,
   ApiUsersRoute: ApiUsersRoute,
   PamTokenRoute: PamTokenRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthPasswordRoute: ApiAuthPasswordRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
   AtividadesPreencherTokenRoute: AtividadesPreencherTokenRoute,
   AvaliacaoDesempenhoPreencherTokenRoute:
     AvaliacaoDesempenhoPreencherTokenRoute,

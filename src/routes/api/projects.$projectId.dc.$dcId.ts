@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getDcDetails }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -109,7 +109,7 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { deleteDc }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);

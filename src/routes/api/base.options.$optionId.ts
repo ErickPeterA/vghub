@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/base/options/$optionId")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateBaseOption }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/base/options/$optionId")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { deleteBaseOption }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);

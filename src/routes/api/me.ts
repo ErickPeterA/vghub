@@ -6,7 +6,7 @@ export const Route = createFileRoute("/api/me")({
       GET: async ({ request }) => {
         try {
           const [{ requireAuthenticatedUser }, { getLocalUserById }] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/users/user-repository"),
           ]);
           const identity = await requireAuthenticatedUser(request);

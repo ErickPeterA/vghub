@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/access")({
         try {
           const [{ requireAuthenticatedUser }, { requireAdminUser }, { getProjectAccessPageData }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/project-access/project-access-repository"),
             ]);
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/projects/$projectId/access")({
           const [{ z }, { requireAuthenticatedUser }, { requireAdminUser }, { addProjectMemberScope }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/project-access/project-access-repository"),
             ]);
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/projects/$projectId/access")({
           const [{ z }, { requireAuthenticatedUser }, { requireAdminUser }, { removeProjectMemberScope }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/project-access/project-access-repository"),
             ]);

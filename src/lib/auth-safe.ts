@@ -1,8 +1,10 @@
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-
 const DEFAULT_TIMEOUT_MS = 10_000;
 const AUTH_TIMEOUT_MS = 8_000;
+
+export type LocalSession = {
+  user: { id: string; email: string };
+  expiresAt: string;
+};
 
 export function withTimeout<T>(
   promise: PromiseLike<T>,
@@ -20,14 +22,15 @@ export function withTimeout<T>(
   });
 }
 
-export async function getSessionSafely(): Promise<Session | null> {
+export async function getSessionSafely(): Promise<LocalSession | null> {
   try {
-    const { data } = await withTimeout(
-      supabase.auth.getSession(),
+    const response = await withTimeout(
+      fetch("/api/auth/session", { credentials: "same-origin" }),
       AUTH_TIMEOUT_MS,
       "Não foi possível restaurar a sessão.",
     );
-    return data.session ?? null;
+    if (!response.ok) return null;
+    return (await response.json()) as LocalSession;
   } catch {
     return null;
   }

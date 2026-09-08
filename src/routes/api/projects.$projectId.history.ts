@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/projects/$projectId/history")({
             { requireLocalUser },
             { getProjectHistoryPageData },
           ] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/history/history-repository"),
           ]);
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/projects/$projectId/history")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { logProjectAction }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/history/history-repository"),
             ]);

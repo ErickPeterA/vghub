@@ -6,7 +6,7 @@ export const Route = createFileRoute("/api/performance-configs")({
       GET: async ({ request }) => {
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, repo] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/performance/performance-repository"),
           ]);
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/performance-configs")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/performance/performance-repository"),
             ]);
@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/performance-configs")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/performance/performance-repository"),
             ]);

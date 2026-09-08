@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/users")({
         try {
           const [{ requireAuthenticatedUser }, { requireAdminUser }, { listAssignableUsers }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/users/user-repository"),
             ]);

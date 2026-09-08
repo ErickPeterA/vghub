@@ -1,11 +1,12 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Lock, Mail, LogIn } from "lucide-react";
 import { getCurrentUserSafely } from "@/lib/auth-safe";
+import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Entrar — Estrutura DC" }] }),
   // Se já estiver logado, redireciona direto sem nem renderizar a página
   beforeLoad: async () => {
@@ -25,10 +26,13 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      await apiJson<{ ok: true }>("/api/auth/login", {
+        method: "POST",
+        body: { email, password },
+      });
       // replace: true garante que o botão "voltar" não leva de volta ao login
       await navigate({ to: "/projetos", replace: true });
+      window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao autenticar");
       setLoading(false);

@@ -55,8 +55,9 @@ function NovoUsuario() {
         </Field>
         <Field label="Senha">
           <input
-            type="text"
+            type="password"
             required
+            minLength={10}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={inp}

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { listProjectsForUser }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/projects/project-repository"),
             ]);
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/projects")({
             { createProjectForAdmin },
           ] = await Promise.all([
             import("zod"),
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/projects/project-repository"),
           ]);
@@ -67,7 +67,7 @@ export const Route = createFileRoute("/api/projects")({
             { updateProjectStatusForAdmin },
           ] = await Promise.all([
             import("zod"),
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/projects/project-repository"),
           ]);

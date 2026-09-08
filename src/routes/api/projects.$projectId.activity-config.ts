@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-config")
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getActivityConfig }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/activities/activity-repository"),
             ]);
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-config")
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { upsertActivityConfig }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/activities/activity-repository"),
             ]);

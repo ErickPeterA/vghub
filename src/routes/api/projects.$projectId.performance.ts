@@ -6,7 +6,7 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
       GET: async ({ request, params }) => {
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, repo] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/performance/performance-repository"),
           ]);
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/performance/performance-repository"),
             ]);

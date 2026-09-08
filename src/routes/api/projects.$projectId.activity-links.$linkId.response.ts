@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links/$l
             { requireLocalUser },
             { getActivityResponseForLink },
           ] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/activities/activity-repository"),
           ]);

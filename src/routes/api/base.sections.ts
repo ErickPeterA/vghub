@@ -12,7 +12,7 @@ export const Route = createFileRoute("/api/base/sections")({
             { upsertBaseSectionSetting },
           ] = await Promise.all([
             import("zod"),
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/base/base-repository"),
           ]);

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
             { requireLocalUser },
             { getActivityLinksPageData },
           ] = await Promise.all([
-            import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
             import("@/server/auth/local-user"),
             import("@/server/activities/activity-repository"),
           ]);
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { createActivityLink }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/activities/activity-repository"),
             ]);
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateActivityLink }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/activities/activity-repository"),
             ]);

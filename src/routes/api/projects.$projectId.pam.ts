@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getPamPageData }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/pam/pam-repository"),
             ]);
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/pam/pam-repository"),
             ]);
@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updatePam }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/pam/pam-repository"),
             ]);
@@ -128,7 +128,7 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { deletePamItem }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/pam/pam-repository"),
             ]);

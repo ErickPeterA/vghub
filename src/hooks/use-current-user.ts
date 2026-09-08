@@ -1,12 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-import { getSessionSafely } from "@/lib/auth-safe";
+import { getSessionSafely, type LocalSession } from "@/lib/auth-safe";
 import { apiJson } from "@/lib/api";
 
 export type CurrentUser = {
-  session: Session | null;
-  user: Session["user"] | null;
+  session: LocalSession | null;
+  user: LocalSession["user"] | null;
   isAdmin: boolean;
   profile: { id: string; nome: string; email: string; status: string } | null;
   loading: boolean;
@@ -26,12 +24,12 @@ type ApiMePayload = {
 };
 
 export function useCurrentUser(): CurrentUser {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<LocalSession | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<CurrentUser["profile"]>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (s: Session | null) => {
+  const load = useCallback(async (s: LocalSession | null) => {
     if (!s?.user) {
       return { isAdmin: false, profile: null as CurrentUser["profile"] };
     }
@@ -59,7 +57,7 @@ export function useCurrentUser(): CurrentUser {
 
   useEffect(() => {
     let active = true;
-    const applySession = async (nextSession: Session | null) => {
+    const applySession = async (nextSession: LocalSession | null) => {
       if (!active) return;
       setSession(nextSession);
       const nextUser = await load(nextSession);
@@ -71,17 +69,8 @@ export function useCurrentUser(): CurrentUser {
 
     getSessionSafely().then(applySession);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (!active) return;
-      setSession(s);
-      setLoading(true);
-      void applySession(s);
-    });
     return () => {
       active = false;
-      subscription.unsubscribe();
     };
   }, [load]);
 

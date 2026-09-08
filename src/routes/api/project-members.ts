@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/project-members")({
         try {
           const [{ requireAuthenticatedUser }, { requireAdminUser }, { getProjectAccessPageData }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/project-access/project-access-repository"),
             ]);

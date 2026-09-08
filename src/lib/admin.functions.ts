@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth-middleware";
 import { query, withTransaction } from "@/server/db/pool";
 import { assertAdminPostgres } from "@/server/admin/admin-repository";
+import { hashPassword } from "@/server/auth/password";
 
 const projectRoleSchema = z.enum([
   "admin",
@@ -17,45 +18,34 @@ const projectRoleSchema = z.enum([
 export type ProjectRoleValue = z.infer<typeof projectRoleSchema>;
 
 async function assertAdmin(userId: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   await assertAdminPostgres(userId);
-  const data = true;
-  if (!data) throw new Error("Apenas administradores podem executar esta ação.");
-  return supabaseAdmin;
 }
 
 export const createUserAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) =>
     z
       .object({
         nome: z.string().min(1).max(255),
         email: z.string().email(),
-        password: z.string().min(1).max(255),
+        password: z.string().min(10).max(255),
         isAdmin: z.boolean().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const admin = await assertAdmin(context.userId);
-    const { data: created, error } = await admin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { nome: data.nome },
-    });
-    if (error) throw new Error(error.message);
-    const newId = created.user!.id;
-    await withTransaction(async (client) => {
-      await client.query(
+    await assertAdmin(context.userId);
+    const passwordHash = await hashPassword(data.password);
+    const newId = await withTransaction(async (client) => {
+      const created = await client.query<{ id: string }>(
         `
-          insert into public.users (id, email, display_name, external_provider, external_subject)
-          values ($1::uuid, $2, $3, 'supabase', $1)
-          on conflict (id) do update
-          set email = excluded.email, display_name = excluded.display_name, updated_at = now()
+          insert into public.users (email, display_name, password_hash, password_changed_at)
+          values ($1, $2, $3, now())
+          returning id
         `,
-        [newId, data.email, data.nome],
+        [data.email.toLowerCase(), data.nome, passwordHash],
       );
+      const createdId = created.rows[0].id;
       await client.query(
         `
           insert into public.profiles (id, nome, email)
@@ -63,7 +53,7 @@ export const createUserAdmin = createServerFn({ method: "POST" })
           on conflict (id) do update
           set nome = excluded.nome, email = excluded.email, updated_at = now()
         `,
-        [newId, data.nome, data.email],
+        [createdId, data.nome, data.email.toLowerCase()],
       );
       if (data.isAdmin) {
         await client.query(
@@ -72,49 +62,45 @@ export const createUserAdmin = createServerFn({ method: "POST" })
             values ($1::uuid, 'admin'::public.app_role)
             on conflict (user_id, role) do nothing
           `,
-          [newId],
+          [createdId],
         );
       }
+      return createdId;
     });
     return { id: newId };
   });
 
 export const updateUserAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) =>
     z
       .object({
         userId: z.string().uuid(),
         nome: z.string().min(1).max(255).optional(),
         email: z.string().email().optional(),
-        password: z.string().min(1).max(255).optional(),
+        password: z.string().min(10).max(255).optional(),
         status: z.enum(["ativo", "inativo"]).optional(),
         isAdmin: z.boolean().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const admin = await assertAdmin(context.userId);
-    const authUpdate: Record<string, unknown> = {};
-    if (data.email) authUpdate.email = data.email;
-    if (data.password) authUpdate.password = data.password;
-    if (data.status) authUpdate.ban_duration = data.status === "inativo" ? "876000h" : "none";
-    if (Object.keys(authUpdate).length > 0) {
-      const { error } = await admin.auth.admin.updateUserById(data.userId, authUpdate);
-      if (error) throw new Error(error.message);
-    }
+    await assertAdmin(context.userId);
+    const passwordHash = data.password ? await hashPassword(data.password) : null;
     await withTransaction(async (client) => {
-      if (data.nome || data.email || data.status) {
+      if (data.nome || data.email || data.status || passwordHash) {
         await client.query(
           `
             update public.users
             set email = coalesce($2, email),
                 display_name = coalesce($3, display_name),
                 status = coalesce($4::public.user_status, status),
+                password_hash = coalesce($5, password_hash),
+                password_changed_at = case when $5::text is null then password_changed_at else now() end,
                 updated_at = now()
             where id = $1::uuid
           `,
-          [data.userId, data.email ?? null, data.nome ?? null, data.status ?? null],
+          [data.userId, data.email?.toLowerCase() ?? null, data.nome ?? null, data.status ?? null, passwordHash],
         );
         await client.query(
           `
@@ -125,7 +111,7 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
                 updated_at = now()
             where id = $1::uuid
           `,
-          [data.userId, data.nome ?? null, data.email ?? null, data.status ?? null],
+          [data.userId, data.nome ?? null, data.email?.toLowerCase() ?? null, data.status ?? null],
         );
       }
       if (data.isAdmin !== undefined) {
@@ -145,23 +131,27 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
           );
         }
       }
+      if (passwordHash || data.status === "inativo") {
+        await client.query(
+          `update public.auth_sessions set revoked_at = coalesce(revoked_at, now()) where user_id = $1::uuid and revoked_at is null`,
+          [data.userId],
+        );
+      }
     });
     return { ok: true };
   });
 
 export const deleteUserAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) => z.object({ userId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const admin = await assertAdmin(context.userId);
-    const { error } = await admin.auth.admin.deleteUser(data.userId);
-    if (error) throw new Error(error.message);
+    await assertAdmin(context.userId);
     await query(`delete from public.users where id = $1::uuid`, [data.userId]);
     return { ok: true };
   });
 
 export const listUsersAdmin = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
     const result = await query(
@@ -179,7 +169,7 @@ export const listUsersAdmin = createServerFn({ method: "GET" })
   });
 
 export const createProjectAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) =>
     z
       .object({
@@ -231,7 +221,7 @@ export const createProjectAdmin = createServerFn({ method: "POST" })
   });
 
 export const attachUserToProjectAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) =>
     z
       .object({
@@ -270,7 +260,7 @@ export const attachUserToProjectAdmin = createServerFn({ method: "POST" })
   });
 
 export const updateProjectMemberRoleAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) =>
     z.object({ memberId: z.string().uuid(), role: projectRoleSchema }).parse(input),
   )
@@ -306,7 +296,7 @@ export const updateProjectMemberRoleAdmin = createServerFn({ method: "POST" })
   });
 
 export const removeProjectMemberAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input) => z.object({ memberId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getEmployeesPageData }] =
             await Promise.all([
-              import("@/server/auth/supabase-bearer"),
+            import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/employees/employee-repository"),
             ]);
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { createEmployee }] =
             await Promise.all([
               import("zod"),
-              import("@/server/auth/supabase-bearer"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/employees/employee-repository"),
             ]);
