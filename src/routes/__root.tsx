@@ -7,11 +7,10 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -32,9 +31,6 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -77,12 +73,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:image",
         content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c7a274a8-8ad8-4660-b386-7b35fef0879c/id-preview-b94bf71f--9ad79c78-82ff-43bf-919d-c8a37e985679.lovable.app-1781641104178.png",
+          "/logoofc.jpeg",
       },
       {
         name: "twitter:image",
         content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c7a274a8-8ad8-4660-b386-7b35fef0879c/id-preview-b94bf71f--9ad79c78-82ff-43bf-919d-c8a37e985679.lovable.app-1781641104178.png",
+          "/logoofc.jpeg",
       },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },

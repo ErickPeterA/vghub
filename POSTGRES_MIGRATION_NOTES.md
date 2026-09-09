@@ -33,7 +33,7 @@ O codigo ainda depende diretamente do SDK e dos clientes da plataforma anterior:
 
 - `package.json` ainda inclui `@supabase/supabase-js`.
 - Clientes e middleware em `src/integrations/supabase/*`.
-- Auth no frontend: `src/routes/login.tsx`, `src/hooks/use-current-user.ts`, `src/lib/auth-safe.ts`, `src/integrations/lovable/index.ts`, `src/components/AppSidebar.tsx`.
+- Auth no frontend: `src/routes/login.tsx`, `src/hooks/use-current-user.ts`, `src/lib/auth-safe.ts`, `src/components/AppSidebar.tsx`.
 - Operacoes administrativas de usuario em `src/lib/admin.functions.ts`.
 - CRUD via `.from(...)` em componentes como `ActivityLinksPanel`, `ActivityConfigManager`, `AreasManager`, `BaseManager`, `DCListPage`, `EmployeesManager`, `EvaluationScoringSettings`, `PamManager`, `PerformanceReviewManager`, `ProjectConfigPage`, `ProjectListPage`, `FieldCommentButton`, `OrganizationManager` e rotas de projeto.
 - APIs publicas por token em `src/routes/api/public/*` ainda usam o cliente admin antigo.

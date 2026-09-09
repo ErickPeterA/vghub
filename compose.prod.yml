@@ -1,0 +1,38 @@
+services:
+  gestao-pessoas-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: gestao-pessoas-app
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    networks:
+      - infra_backend
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  infra_backend:
+    external: true
+    name: infra_backend
