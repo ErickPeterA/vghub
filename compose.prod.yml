@@ -6,6 +6,10 @@ services:
 
     container_name: gestao-pessoas-app
     restart: unless-stopped
+    
+    mem_limit: 1536m
+    cpus: 1.0
+    pids_limit: 300
 
     env_file:
       - .env.production
