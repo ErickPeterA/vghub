@@ -127,7 +127,7 @@ export function PositionDetailsPanel({
           ) : (
             <FileText className="h-4 w-4" />
           )}
-          {linkedDescription ? "Abrir descriÃ§Ã£o de cargo" : "Criar descriÃ§Ã£o de cargo"}
+          {linkedDescription ? "Abrir descrição de cargo" : "Criar descrição de cargo"}
         </button>
         <button
           type="button"

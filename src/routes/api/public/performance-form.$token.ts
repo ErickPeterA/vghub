@@ -55,7 +55,7 @@ function normalizeLookup(value: string) {
 function isInternalOptionValue(value: string) {
   const normalized = normalizeLookup(value);
   return (
-    /^(sim|nao|nÃ£o)_\d+$/.test(normalized) ||
+    /^(sim|nao|não)_\d+$/.test(normalized) ||
     /^[a-z0-9_-]+_\d{8,}$/.test(normalized) ||
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
   );
@@ -73,7 +73,7 @@ function isNonTitleValue(value: string) {
     !normalized ||
     /^atividade\s+\d+$/.test(normalized) ||
     /^item\s+\d+$/.test(normalized) ||
-    ["sim", "nao", "nÃ£o"].includes(normalized) ||
+    ["sim", "nao", "não"].includes(normalized) ||
     [
       "diariamente",
       "semanalmente",
@@ -84,7 +84,7 @@ function isNonTitleValue(value: string) {
       "semestralmente",
       "anualmente",
       "sempre que necessario",
-      "sempre que necessÃ¡rio",
+      "sempre que necessário",
     ].includes(normalized) ||
     isInternalOptionValue(value)
   );
@@ -193,7 +193,7 @@ function pickLongestText(item: JsonRecord, preferredKeys: string[]) {
       .filter(
         (value) =>
           value &&
-          !["sim", "nao", "nÃ£o"].includes(normalizeLookup(value)) &&
+          !["sim", "nao", "não"].includes(normalizeLookup(value)) &&
           !isInternalOptionValue(value),
       )
       .sort((a, b) => b.length - a.length)[0] ?? ""
@@ -227,7 +227,7 @@ function titleForQuestion(
       pickItemValueFromExactKey(item, ["atividade"]) ||
       pickItemValueFromExactField(item, sourceFields, ["atividade"]) ||
       pickItemValueFromFields(item, sourceFields, ["atividade"], ["principal"]) ||
-      pickLongestText(item, ["atividade", "descricao", "descriÃ§Ã£o", "texto", "nome"]) ||
+      pickLongestText(item, ["atividade", "descricao", "descrição", "texto", "nome"]) ||
       (question.groupTitle && !isNonTitleValue(question.groupTitle) ? question.groupTitle : null)
     );
   }
@@ -253,13 +253,13 @@ function titleForQuestion(
     );
   }
   const titleLabels: Record<string, string[]> = {
-    culture_skills: ["Habilidade cultural", "Habilidade", "CompetÃªncia", "Competencia"],
+    culture_skills: ["Habilidade cultural", "Habilidade", "Competência", "Competencia"],
     role_skills: [
       "Habilidade do cargo",
-      "Habilidade especÃ­fica do cargo",
+      "Habilidade específica do cargo",
       "Habilidade especifica do cargo",
       "Habilidade",
-      "CompetÃªncia",
+      "Competência",
       "Competencia",
     ],
     behavior: ["Postura e comportamento", "Postura", "Comportamento"],
@@ -277,20 +277,20 @@ function titleForQuestion(
       "postura",
       "comportamento",
       "competencia",
-      "competÃªncia",
+      "competência",
       "nome",
       "descricao",
-      "descriÃ§Ã£o",
+      "descrição",
     ]) ||
     pickLongestText(item, [
       "habilidade",
       "postura",
       "comportamento",
       "competencia",
-      "competÃªncia",
+      "competência",
       "nome",
       "descricao",
-      "descriÃ§Ã£o",
+      "descrição",
     ]) ||
     (question.groupTitle && !isNonTitleValue(question.groupTitle) ? question.groupTitle : null)
   );
@@ -314,13 +314,13 @@ function descriptionForQuestion(
   const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
   const expectedLabels =
     question.dynamicSource === "culture_skills"
-      ? ["Habilidade cultural", "Habilidade", "CompetÃƒÂªncia", "Competencia"]
+      ? ["Habilidade cultural", "Habilidade", "CompetҪncia", "Competencia"]
       : [
           "Habilidade do cargo",
-          "Habilidade especÃƒÂ­fica do cargo",
+          "Habilidade especҭfica do cargo",
           "Habilidade especifica do cargo",
           "Habilidade",
-          "CompetÃƒÂªncia",
+          "CompetҪncia",
           "Competencia",
         ];
   const expectedKeys =

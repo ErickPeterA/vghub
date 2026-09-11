@@ -240,7 +240,7 @@ function EditDC() {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-4xl">
-          {readOnly ? "DescriÃ§Ã£o (leitura)" : "Editar descriÃ§Ã£o"}
+          {readOnly ? "Descrição (leitura)" : "Editar descrição"}
         </h1>
         <button
           type="button"
@@ -250,21 +250,21 @@ function EditDC() {
           }}
           className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <HistoryIcon className="h-4 w-4" /> VersÃµes ({versions.length})
+          <HistoryIcon className="h-4 w-4" /> Versões ({versions.length})
         </button>
       </div>
 
       {viewingVersion && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           <span>
-            Visualizando versÃ£o {viewingVersion.version_number} de {versions.length}
+            Visualizando versão {viewingVersion.version_number} de {versions.length}
           </span>
           <button
             type="button"
             onClick={() => setViewingVersionId(null)}
             className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-3 py-1 text-xs font-medium hover:bg-amber-200"
           >
-            <ArrowLeft className="h-3 w-3" /> Voltar Ã  versÃ£o atual
+            <ArrowLeft className="h-3 w-3" /> Voltar à versão atual
           </button>
         </div>
       )}
@@ -273,7 +273,7 @@ function EditDC() {
         projectId={projectId}
         initial={displayedInitial}
         onSubmit={onSubmit}
-        submitLabel="Salvar alteraÃ§Ãµes"
+        submitLabel="Salvar alterações"
         readOnly={readOnly}
         focusFieldKey={focusFieldKey}
         commentTarget={{
@@ -301,11 +301,11 @@ function EditDC() {
       <Dialog open={openVersions} onOpenChange={setOpenVersions}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>VersÃµes</DialogTitle>
+            <DialogTitle>Versões</DialogTitle>
           </DialogHeader>
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {versions.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhuma versÃ£o registrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma versão registrada.</p>
             )}
             {versions
               .slice()
@@ -324,7 +324,7 @@ function EditDC() {
                     className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${isViewing ? "border-amber-400 bg-amber-50" : "border-border hover:bg-secondary"}`}
                   >
                     <span className="font-medium">
-                      VersÃ£o {v.version_number}
+                      Versão {v.version_number}
                       {isCurrent ? " (atual)" : ""}
                     </span>
                     <span className="text-xs text-muted-foreground">

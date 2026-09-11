@@ -45,7 +45,7 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   { id: "nome", label: "Nome", type: "text", required: true, active: true, filledBy: "gp" },
   {
     id: "area",
-    label: "Ãrea",
+    label: "Área",
     type: "select",
     required: true,
     active: true,
@@ -63,7 +63,7 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   },
   {
     id: "data_inicio",
-    label: "Data de inÃ­cio",
+    label: "Data de início",
     type: "date",
     required: true,
     active: true,
@@ -71,7 +71,7 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   },
   {
     id: "data_finalizacao",
-    label: "Data de finalizaÃ§Ã£o",
+    label: "Data de finalização",
     type: "date",
     required: true,
     active: true,
@@ -83,11 +83,11 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
 export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
   {
     id: "inicio_dependencia",
-    label: "Para iniciar essa tarefa, depende de algum documento ou algo de alguÃ©m?",
+    label: "Para iniciar essa tarefa, depende de algum documento ou algo de alguém?",
     type: "textarea",
     required: false,
     active: true,
-    helpText: "Informe o que Ã© necessÃ¡rio e de quem vem.",
+    helpText: "Informe o que é necessário e de quem vem.",
   },
   {
     id: "periodicidade",
@@ -95,9 +95,9 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "select",
     required: true,
     active: true,
-    helpText: "Com qual frequÃªncia normalmente vocÃª executa a atividade a seguir.",
+    helpText: "Com qual frequência normalmente você executa a atividade a seguir.",
     options: [
-      "Sempre que necessÃ¡rio",
+      "Sempre que necessário",
       "Diariamente",
       "Semanalmente",
       "Quinzenalmente",
@@ -114,7 +114,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "textarea",
     required: true,
     active: true,
-    helpText: "Descrever apenas o que vocÃª faz, nÃ£o o como. Use verbo + objeto.",
+    helpText: "Descrever apenas o que você faz, não o como. Use verbo + objeto.",
   },
   {
     id: "complexidade",
@@ -122,7 +122,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "select",
     required: true,
     active: true,
-    options: ["Alta Complexidade", "MÃ©dia Complexidade", "Baixa Complexidade"],
+    options: ["Alta Complexidade", "Média Complexidade", "Baixa Complexidade"],
   },
   {
     id: "autonomia_responsabilidade",
@@ -138,7 +138,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "textarea",
     required: false,
     active: true,
-    helpText: "Cite o que vocÃª usa de recurso para executar esta atividade.",
+    helpText: "Cite o que você usa de recurso para executar esta atividade.",
   },
   {
     id: "fim_atividade",
@@ -146,7 +146,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "textarea",
     required: false,
     active: true,
-    helpText: "Informe o que Ã© entregue e para quem.",
+    helpText: "Informe o que é entregue e para quem.",
   },
   {
     id: "indicador_relacionado",
@@ -154,7 +154,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
     type: "textarea",
     required: false,
     active: true,
-    helpText: "Existe alguma forma de controlar que esta atividade estÃ¡ sendo feita corretamente?",
+    helpText: "Existe alguma forma de controlar que esta atividade está sendo feita corretamente?",
   },
 ];
 
@@ -162,7 +162,7 @@ const types: Array<{ value: FieldType; label: string }> = [
   { value: "text", label: "Texto" },
   { value: "textarea", label: "Texto longo" },
   { value: "date", label: "Data" },
-  { value: "select", label: "SeleÃ§Ã£o Ãºnica" },
+  { value: "select", label: "Seleção única" },
 ];
 
 const filledByOptions: Array<{ value: FilledBy; label: string }> = [
@@ -191,7 +191,7 @@ export const normalizeActivityFields = (fields: ActivityField[]) =>
         {
           ...normalized,
           id: "area",
-          label: "Ãrea",
+          label: "Área",
           type: "select" as FieldType,
           dataSource: "areas" as ActivityDataSource,
         },
@@ -265,7 +265,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
   const restoreDefault = () => {
     if (
       (header.length || questions.length) &&
-      !confirm("Isso substituirÃ¡ os campos atuais pelo padrÃ£o de atividades. Continuar?")
+      !confirm("Isso substituirá os campos atuais pelo padrão de atividades. Continuar?")
     )
       return;
     setHeader(cloneDefaults(DEFAULT_ACTIVITY_HEADER));
@@ -293,7 +293,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
       <div className="flex h-40 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
-          <p className="text-sm text-[#042558]/60">Carregando configuraÃ§Ãµes...</p>
+          <p className="text-sm text-[#042558]/60">Carregando configurações...</p>
         </div>
       </div>
     );
@@ -304,7 +304,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#042558]">
-              FormulÃ¡rio de atividades
+              Formulário de atividades
             </h2>
             <p className="mt-1 text-sm text-[#042558]/60">
               Configure os campos do mesmo jeito da Base do Projeto.
@@ -324,7 +324,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
               onClick={restoreDefault}
               className="rounded-lg border border-[#042558]/20 bg-white/50 px-4 py-2 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5 hover:shadow-md"
             >
-              Restaurar padrÃ£o
+              Restaurar padrão
             </button>
             <button
               onClick={save}
@@ -338,9 +338,9 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
       </div>
 
       <FieldsEditor
-        title="CabeÃ§alho"
+        title="Cabeçalho"
         blockNumber="01"
-        addPlaceholder="Novo campo em CabeÃ§alho"
+        addPlaceholder="Novo campo em Cabeçalho"
         fields={header}
         setFields={setHeader}
         newLabel={newLabel.header}
@@ -416,7 +416,7 @@ function FieldsEditor({
             </p>
             <h3 className="text-xl font-bold text-[#042558]">{title}</h3>
             <p className="mt-0.5 text-xs text-[#042558]/40">
-              Arraste os campos pela alÃ§a <GripVertical className="inline h-3 w-3" /> para reordenar
+              Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
             </p>
           </div>
           <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
@@ -589,7 +589,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
       <div className="mt-3 flex flex-wrap gap-5 text-sm">
         {(field.dataSource === "areas" || field.dataSource === "setores") && (
           <span className="rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
-            OpÃ§Ãµes da Base do Projeto
+            Opções da Base do Projeto
           </span>
         )}
         <label className="flex cursor-pointer items-center gap-1.5 text-[#042558]/60 transition-colors hover:text-[#042558]">
@@ -599,7 +599,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
             onChange={(e) => onPatch(field.id, { required: e.target.checked })}
             className="rounded border-[#042558]/30 text-[#042558] focus:ring-[#042558]/20"
           />{" "}
-          ObrigatÃ³rio
+          Obrigatório
         </label>
         <label className="flex cursor-pointer items-center gap-1.5 text-[#042558]/60 transition-colors hover:text-[#042558]">
           <input
@@ -619,7 +619,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
             onClick={() => setOptionsOpen((value) => !value)}
             className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#042558]/50 transition-colors hover:text-[#042558]"
           >
-            OpÃ§Ãµes ({options.length})
+            Opções ({options.length})
             {optionsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
 
@@ -630,7 +630,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
                   value={newOption}
                   onChange={(e) => setNewOption(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addOption())}
-                  placeholder="Nova opÃ§Ã£o..."
+                  placeholder="Nova opção..."
                   className={inputClass}
                 />
                 <button
@@ -651,10 +651,10 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
                     <button
                       type="button"
                       onClick={() => removeOption(option)}
-                      aria-label="Excluir opÃ§Ã£o"
+                      aria-label="Excluir opção"
                       className="text-[#042558]/40 transition-colors hover:text-red-600"
                     >
-                      Ã—
+                      ×
                     </button>
                   </span>
                 ))}

@@ -118,7 +118,7 @@ export function FieldCommentButton({
                 ? "border-amber-200 bg-amber-50 text-amber-700"
                 : "border-border text-muted-foreground hover:bg-secondary"
           }`}
-          title="ComentÃ¡rios"
+          title="Comentários"
         >
           <MessageSquare className="h-3 w-3" />
           {hasPending ? (
@@ -132,11 +132,11 @@ export function FieldCommentButton({
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="end">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          ComentÃ¡rios
+          Comentários
         </p>
         <div className="max-h-56 space-y-2 overflow-y-auto">
           {comments.length === 0 && (
-            <p className="text-xs italic text-muted-foreground">Sem comentÃ¡rios.</p>
+            <p className="text-xs italic text-muted-foreground">Sem comentários.</p>
           )}
           {comments.map((c) => (
             <div
@@ -148,7 +148,7 @@ export function FieldCommentButton({
               }`}
             >
               <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                <span className="font-medium">{authors[c.author_id] ?? "â€”"}</span>
+                <span className="font-medium">{authors[c.author_id] ?? "—"}</span>
                 <span>{new Date(c.created_at).toLocaleString("pt-BR")}</span>
               </div>
               <p className="whitespace-pre-wrap">{c.content}</p>
@@ -198,7 +198,7 @@ export function FieldCommentButton({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={3}
-              placeholder="Escreva um comentÃ¡rio..."
+              placeholder="Escreva um comentário..."
               className="w-full rounded-md border border-border bg-background p-2 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
             <button
@@ -207,7 +207,7 @@ export function FieldCommentButton({
               disabled={loading || !text.trim()}
               className="w-full rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
             >
-              {loading ? "Enviando..." : "Adicionar comentÃ¡rio"}
+              {loading ? "Enviando..." : "Adicionar comentário"}
             </button>
           </div>
         )}

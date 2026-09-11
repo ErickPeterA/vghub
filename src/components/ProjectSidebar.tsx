@@ -49,18 +49,20 @@ export function ProjectSidebar({
   projectName,
   isAdmin,
   fixed = false,
+  embedded = false,
 }: {
   projectId: string;
   projectName: string;
   isAdmin?: boolean;
   fixed?: boolean;
+  embedded?: boolean;
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const [unreviewed, setUnreviewed] = useState(0);
   const [projectRole, setProjectRole] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<SidebarGroup, boolean>>(() =>
     SIDEBAR_GROUPS.reduce(
-      (acc, group) => ({ ...acc, [group]: true }),
+      (acc, group) => ({ ...acc, [group]: false }),
       {} as Record<SidebarGroup, boolean>,
     ),
   );
@@ -199,19 +201,18 @@ export function ProjectSidebar({
     }));
   };
 
-  return (
-    <aside
-      className={`w-64 shrink-0 border-r border-border bg-card/30 ${fixed ? "sticky top-12 h-[calc(100vh-3rem)] overflow-y-auto" : ""}`}
-    >
+  const content = (
+    <>
       <div className="border-b border-border p-4">
         <Link
           to="/projetos"
           className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-3 w-3" /> Todos os projetos
+          <ArrowLeft className="h-3 w-3" />
+          <span>Todos os projetos</span>
         </Link>
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Projeto</p>
-        <h2 className="mt-1 font-display text-xl leading-tight">{projectName}</h2>
+        <h2 className="mt-1 font-display text-sm font-medium leading-tight">{projectName}</h2>
       </div>
       <nav className="space-y-2 p-2">
         {groupedItems.map((section) => (
@@ -238,7 +239,7 @@ export function ProjectSidebar({
                       key={it.to}
                       to={it.to}
                       params={{ projectId }}
-                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition ${
+                      className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition ${
                         active
                           ? "bg-secondary text-foreground"
                           : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -259,6 +260,22 @@ export function ProjectSidebar({
           </div>
         ))}
       </nav>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="w-full text-white [&_.border-border]:border-white/10 [&_.bg-secondary]:bg-white/15 [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-white/50 [&_a:hover]:bg-white/10 [&_button:hover]:bg-white/10 group-data-[collapsible=icon]:[&_h2]:hidden group-data-[collapsible=icon]:[&_nav_button]:hidden group-data-[collapsible=icon]:[&_p]:hidden group-data-[collapsible=icon]:[&_span]:hidden group-data-[collapsible=icon]:[&_.border-b]:px-2 group-data-[collapsible=icon]:[&_a]:justify-center group-data-[collapsible=icon]:[&_a]:px-2">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <aside
+      className={`w-64 shrink-0 border-r border-border bg-card/30 ${fixed ? "sticky top-12 h-[calc(100vh-3rem)] overflow-y-auto" : ""}`}
+    >
+      {content}
     </aside>
   );
 }

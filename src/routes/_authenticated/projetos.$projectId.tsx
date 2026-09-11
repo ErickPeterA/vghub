@@ -1,8 +1,6 @@
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ProjectSidebar } from "@/components/ProjectSidebar";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { apiJson } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
@@ -11,9 +9,6 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
 
 function ProjectLayout() {
   const { projectId } = Route.useParams();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { isAdmin } = useCurrentUser();
-  const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const projectIdRef = useRef(projectId);
@@ -27,9 +22,8 @@ function ProjectLayout() {
     apiJson<{ ok: boolean; project: { id: string; nome: string } }>(
       `/api/projects/${projectIdRef.current}`,
     )
-      .then((payload) => {
+      .then(() => {
         if (cancelled) return;
-        setName(payload.project.nome);
         setLoading(false);
       })
       .catch((error) => {
@@ -61,16 +55,8 @@ function ProjectLayout() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)]">
-      <ProjectSidebar
-        projectId={projectId}
-        projectName={name}
-        isAdmin={isAdmin}
-        fixed={!pathname.includes("/organograma")}
-      />
-      <div className="min-w-0 flex-1 overflow-x-hidden">
-        <Outlet />
-      </div>
+    <div className="min-w-0 overflow-x-hidden">
+      <Outlet />
     </div>
   );
 }

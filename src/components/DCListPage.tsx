@@ -32,13 +32,13 @@ type Area = { id: string; nome: string; cor: string | null; parent_id: string | 
 type Profile = { id: string; nome: string };
 
 const STAGES: { key: Stage; label: string; icon: React.ReactNode }[] = [
-  { key: "em_criacao", label: "Em CriaÃ§Ã£o", icon: <Clock className="h-4 w-4 text-blue-500" /> },
+  { key: "em_criacao", label: "Em Criação", icon: <Clock className="h-4 w-4 text-blue-500" /> },
   {
     key: "em_aprovacao",
-    label: "Em AprovaÃ§Ã£o",
+    label: "Em Aprovação",
     icon: <Users className="h-4 w-4 text-yellow-500" />,
   },
-  { key: "concluido", label: "ConcluÃ­dos", icon: <Check className="h-4 w-4 text-green-500" /> },
+  { key: "concluido", label: "Concluídos", icon: <Check className="h-4 w-4 text-green-500" /> },
 ];
 
 const stageOrder = (s: Stage): number => STAGES.findIndex((x) => x.key === s);
@@ -149,10 +149,10 @@ export function DCListPage({ projectId }: { projectId: string }) {
               <div className=""></div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-[#042558]">
-                  AprovaÃ§Ãµes e acompanhamento
+                  Aprovações e acompanhamento
                 </h1>
                 <p className="text-sm text-[#042558]/60">
-                  Acompanhe as descriÃ§Ãµes criadas pelo organograma e avance as etapas de revisÃ£o.
+                  Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.
                 </p>
               </div>
             </div>
@@ -172,7 +172,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
           <div className="flex h-64 items-center justify-center rounded-2xl border border-[#042558]/10 bg-white/60">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#042558] border-t-transparent" />
-              <p className="text-sm text-[#042558]/60">Carregando descriÃ§Ãµes...</p>
+              <p className="text-sm text-[#042558]/60">Carregando descrições...</p>
             </div>
           </div>
         ) : (
@@ -203,7 +203,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                   {items.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
                       <FileText className="mb-2 h-8 w-8 text-[#042558]/30" />
-                      <p className="text-xs text-[#042558]/40">Nenhuma descriÃ§Ã£o</p>
+                      <p className="text-xs text-[#042558]/40">Nenhuma descrição</p>
                     </div>
                   ) : (
                     <div className="flex-1 space-y-3">
@@ -300,7 +300,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   <button
                                     onClick={() => moveStage(row, "em_aprovacao")}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
-                                    title="Enviar para aprovaÃ§Ã£o"
+                                    title="Enviar para aprovação"
                                   >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </button>

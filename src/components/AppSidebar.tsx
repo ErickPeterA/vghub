@@ -24,6 +24,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiJson } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { ProjectSidebar } from "@/components/ProjectSidebar";
 
 export function AppSidebar() {
   const { isAdmin, profile, user } = useCurrentUser();
@@ -31,6 +32,8 @@ export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => path === p || path.startsWith(p + "/");
   const [isGp, setIsGp] = useState(false);
+  const projectId = path.match(/^\/projetos\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/|$)/i)?.[1];
+  const [projectName, setProjectName] = useState("");
 
   useEffect(() => {
     if (!user || isAdmin) {
@@ -49,6 +52,27 @@ export function AppSidebar() {
       cancelled = true;
     };
   }, [isAdmin, user]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectName("");
+      return;
+    }
+
+    let cancelled = false;
+    setProjectName("");
+    apiJson<{ ok: boolean; project: { id: string; nome: string } }>(`/api/projects/${projectId}`)
+      .then(({ project }) => {
+        if (!cancelled) setProjectName(project.nome);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectName("Projeto");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   return (
     <Sidebar
@@ -70,7 +94,16 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className={projectId ? "px-0" : "px-2"}>
+        {projectId ? (
+          <ProjectSidebar
+            projectId={projectId}
+            projectName={projectName || "Carregando..."}
+            isAdmin={isAdmin}
+            embedded
+          />
+        ) : (
+          <>
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-white/40 group-data-[collapsible=icon]:hidden">
             Principal
@@ -163,19 +196,23 @@ export function AppSidebar() {
             </SidebarGroup>
           </Collapsible>
         )}
+          </>
+        )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-white/10">
-        <div className="flex items-center justify-between gap-2 px-2 py-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
-              <span className="text-xs font-medium text-white">
+      <SidebarFooter className="border-t border-white/10 p-1.5">
+        <div className="flex items-center justify-between gap-1.5 px-1 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 group-data-[collapsible=icon]:hidden">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10">
+              <span className="text-[10px] font-medium text-white">
                 {profile?.nome ? profile.nome.charAt(0).toUpperCase() : "U"}
               </span>
             </div>
             <div className="min-w-0 flex-1 truncate">
-              <div className="truncate text-sm font-medium text-white">{profile?.nome ?? "-"}</div>
-              <div className="truncate text-xs text-white/40">{profile?.email}</div>
+              <div className="truncate text-xs font-medium leading-tight text-white">
+                {profile?.nome ?? "-"}
+              </div>
+              <div className="truncate text-[10px] leading-tight text-white/40">{profile?.email}</div>
             </div>
           </div>
 
@@ -185,10 +222,10 @@ export function AppSidebar() {
               await navigate({ to: "/login" });
               window.location.reload();
             }}
-            className="rounded-lg bg-white/5 p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white/80 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center"
+            className="rounded-lg bg-white/5 p-1.5 text-white/40 transition-all hover:bg-white/10 hover:text-white/80 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center"
             title="Sair"
           >
-            <LogOut className="h-4 w-4" strokeWidth={1.5} />
+            <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
         </div>
       </SidebarFooter>

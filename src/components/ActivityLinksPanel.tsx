@@ -66,8 +66,8 @@ const ACTIVITY_STAGES: Array<{
 }> = [
   {
     key: "creating",
-    label: "Em criaÃ§Ã£o",
-    empty: "Nenhuma atividade em criaÃ§Ã£o",
+    label: "Em criação",
+    empty: "Nenhuma atividade em criação",
     icon: Clock3,
     iconClass: "text-blue-500",
   },
@@ -237,7 +237,7 @@ export function ActivityLinksPanel({
       await navigator.clipboard.writeText(url);
       toast.success("Link copiado");
     } catch {
-      toast.error("NÃ£o foi possÃ­vel copiar");
+      toast.error("Não foi possível copiar");
     }
   };
 
@@ -289,7 +289,7 @@ export function ActivityLinksPanel({
           <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
         </div>
         {!configId && (
-          <p className="mb-2 text-xs text-amber-700">Salve a configuraÃ§Ã£o antes de gerar links.</p>
+          <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>
         )}
 
         {loading ? (
@@ -304,11 +304,11 @@ export function ActivityLinksPanel({
               <thead className="bg-[#042558]/5 text-left text-xs uppercase tracking-wider text-[#042558]/60">
                 <tr>
                   <th className="px-3 py-2">Nome</th>
-                  <th className="px-3 py-2">Ãrea</th>
+                  <th className="px-3 py-2">Área</th>
                   <th className="px-3 py-2">Setor</th>
                   <th className="px-3 py-2">Cargo</th>
                   <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2 text-right">AÃ§Ãµes</th>
+                  <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#042558]/10 bg-white/60">
@@ -320,13 +320,13 @@ export function ActivityLinksPanel({
                     <tr key={emp.id} className="text-[#042558]">
                       <td className="px-3 py-2 font-medium">{emp.nome}</td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {(emp.area_id && areaById.get(emp.area_id)?.nome) || "â€”"}
+                        {(emp.area_id && areaById.get(emp.area_id)?.nome) || "—"}
                       </td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "â€”"}
+                        {(emp.sector_id && areaById.get(emp.sector_id)?.nome) || "—"}
                       </td>
                       <td className="px-3 py-2 text-[#042558]/70">
-                        {positionById.get(emp.position_id)?.nome ?? "â€”"}
+                        {positionById.get(emp.position_id)?.nome ?? "—"}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
@@ -497,7 +497,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
 
   const previewCompilation = () => {
     if (!completedResponses.length) {
-      toast.error("Ainda nÃ£o hÃ¡ atividades concluÃ­das para compilar.");
+      toast.error("Ainda não há atividades concluídas para compilar.");
       return;
     }
     setPreviewOpen(true);
@@ -512,7 +512,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
       blob,
       `compilacao-respostas-atividades-${new Date().toISOString().slice(0, 10)}.pdf`,
     );
-    toast.success("PDF da compilaÃ§Ã£o baixado");
+    toast.success("PDF da compilação baixado");
   };
 
   return (
@@ -521,7 +521,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Atividades concluÃ­das
+              Atividades concluídas
             </h3>
             <p className="mt-1 text-sm text-[#042558]/60">
               {completedResponses.length} resposta(s) pronta(s) para compilar
@@ -533,7 +533,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Eye className="h-4 w-4" />
-            Gerar compilaÃ§Ã£o
+            Gerar compilação
           </button>
         </div>
       </div>
@@ -558,14 +558,14 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h4 className="text-sm font-semibold text-[#042558]">
-                      {link?.label ?? "Sem rÃ³tulo"}
+                      {link?.label ?? "Sem rótulo"}
                     </h4>
                     <p className="mt-1 text-xs text-[#042558]/50">
                       Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}
                     </p>
                   </div>
                   <span className="w-fit rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                    ConcluÃ­do
+                    Concluído
                   </span>
                 </div>
               </article>
@@ -607,9 +607,9 @@ function CompilationPreview({
       >
         <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-[#042558]/10 bg-white/95 p-5 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#042558]">PrÃ©-visualizaÃ§Ã£o da compilaÃ§Ã£o</h3>
+            <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da compilação</h3>
             <p className="text-sm text-[#042558]/60">
-              {responses.length} resposta(s) serÃ£o incluÃ­das no PDF
+              {responses.length} resposta(s) serão incluídas no PDF
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -631,7 +631,7 @@ function CompilationPreview({
 
         <div className="bg-slate-100 p-4 md:p-8">
           <div className="mx-auto min-h-[860px] max-w-[760px] bg-white p-8 text-[#042558] shadow-sm">
-            <h1 className="text-2xl font-bold">CompilaÃ§Ã£o de respostas das atividades</h1>
+            <h1 className="text-2xl font-bold">Compilação de respostas das atividades</h1>
             <p className="mt-2 text-sm text-[#042558]/60">Total de respostas: {responses.length}</p>
 
             <div className="mt-8 space-y-8">
@@ -687,7 +687,7 @@ function ActivityLinkCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-[#042558]">
-            {link.label ?? "Sem rÃ³tulo"}
+            {link.label ?? "Sem rótulo"}
           </h4>
           <p className="mt-1 text-xs text-[#042558]/50">
             Criado {new Date(link.created_at).toLocaleDateString("pt-BR")}
@@ -697,7 +697,7 @@ function ActivityLinkCard({
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[link.status]}`}
         >
           {STATUS_LABEL[link.status]}
-          {link.status === "answered" && !link.reviewed_at && " Â· novo"}
+          {link.status === "answered" && !link.reviewed_at && " · novo"}
         </span>
       </div>
 
@@ -917,7 +917,7 @@ function createPdfBlob(lines: Array<{ text: string; size?: number; gap?: number 
 
 function escapePdfText(text: string) {
   return text
-    .replace(/[â€“â€”]/g, "-")
+    .replace(/[–—]/g, "-")
     .replace(/\u00a0/g, " ")
     .split("")
     .map((char) => {
@@ -1029,7 +1029,7 @@ function FieldInput({
           className={base}
           disabled={!parentAreaId}
         >
-          <option value="">{parentAreaId ? "Selecione" : "Selecione a Ãrea primeiro"}</option>
+          <option value="">{parentAreaId ? "Selecione" : "Selecione a Área primeiro"}</option>
           {setorOptions.map((area) => (
             <option key={area.id} value={area.id}>
               {area.nome}
@@ -1082,11 +1082,11 @@ function ResponseDrawer({
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-xl text-[#042558]">Resposta</h3>
           <button onClick={onClose} className="text-[#042558]/60 hover:text-[#042558]">
-            Ã—
+            ×
           </button>
         </div>
         <p className="text-xs text-[#042558]/50">
-          {data.link.label ?? "Sem rÃ³tulo"} Â· Enviado{" "}
+          {data.link.label ?? "Sem rótulo"} · Enviado{" "}
           {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}
         </p>
 
@@ -1095,7 +1095,7 @@ function ResponseDrawer({
         ) : (
           <>
             <Section
-              title="CabeÃ§alho"
+              title="Cabeçalho"
               fields={fields.header.filter((field) => field.active ?? true)}
               answers={data.response.header_answers}
             />
