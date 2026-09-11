@@ -61,9 +61,9 @@ const email = (process.argv[2] ?? (await rl.question("E-mail do administrador: "
 rl.close();
 if (!email) throw new Error("Informe o e-mail do administrador.");
 
-const password = await promptHidden("Nova senha (minimo 10 caracteres): ");
+const password = await promptHidden("Nova senha (minimo 8 caracteres): ");
 const confirmation = await promptHidden("Confirme a nova senha: ");
-if (password.length < 10) throw new Error("A senha deve ter pelo menos 10 caracteres.");
+if (password.length < 8) throw new Error("A senha deve ter pelo menos 8 caracteres.");
 if (password !== confirmation) throw new Error("As senhas nao conferem.");
 
 const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });

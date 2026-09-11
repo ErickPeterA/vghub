@@ -28,7 +28,7 @@ export const createUserAdmin = createServerFn({ method: "POST" })
       .object({
         nome: z.string().min(1).max(255),
         email: z.string().email(),
-        password: z.string().min(10).max(255),
+        password: z.string().min(8).max(255),
         isAdmin: z.boolean().optional(),
       })
       .parse(input),
@@ -78,7 +78,7 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
         userId: z.string().uuid(),
         nome: z.string().min(1).max(255).optional(),
         email: z.string().email().optional(),
-        password: z.string().min(10).max(255).optional(),
+        password: z.string().min(8).max(255).optional(),
         status: z.enum(["ativo", "inativo"]).optional(),
         isAdmin: z.boolean().optional(),
       })

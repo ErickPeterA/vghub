@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/auth/password")({
           const data = z
             .object({
               currentPassword: z.string().max(1024),
-              newPassword: z.string().min(10).max(255),
+              newPassword: z.string().min(8).max(255),
             })
             .parse(await request.json());
           const result = await query<{ password_hash: string | null }>(
@@ -51,4 +51,3 @@ export const Route = createFileRoute("/api/auth/password")({
     },
   },
 });
-
