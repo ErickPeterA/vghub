@@ -265,12 +265,19 @@ export function DCForm({
   } = useSectionLimits(projectId);
   const currentPlan = getCurrentUserPlan();
 
+  // A importação chega depois da primeira renderização da rota. Sincronizar o
+  // estado com o novo rascunho garante que os valores lidos da planilha sejam
+  // refletidos no formulário, inclusive a nomenclatura do cargo.
+  useEffect(() => {
+    setDc(initial);
+  }, [initial]);
+
   useEffect(() => {
     if (!focusFieldKey || readOnly) return;
     const timeout = window.setTimeout(() => {
-      const target = Array.from(
-        document.querySelectorAll<HTMLElement>("[data-dc-field-key]"),
-      ).find((element) => element.dataset.dcFieldKey === focusFieldKey);
+      const target = Array.from(document.querySelectorAll<HTMLElement>("[data-dc-field-key]")).find(
+        (element) => element.dataset.dcFieldKey === focusFieldKey,
+      );
       if (!target) return;
       target.scrollIntoView({ behavior: "smooth", block: "center" });
       target.classList.add("rounded-xl", "ring-2", "ring-amber-400", "ring-offset-2");

@@ -32,6 +32,8 @@ function NovaDC() {
   const [linkedPosition, setLinkedPosition] = useState<LinkedPosition | null>(null);
   const [linkedParentName, setLinkedParentName] = useState("");
   const [loadingLinkedPosition, setLoadingLinkedPosition] = useState(Boolean(positionId));
+  const [importedDraft, setImportedDraft] = useState<DescricaoCargo | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!positionId) return;
@@ -63,14 +65,35 @@ function NovaDC() {
     };
   }, [positionId, projectId]);
 
+  useEffect(() => {
+    if (!positionId) return;
+    const key = `dc-import:${projectId}:${positionId}`;
+    const saved = sessionStorage.getItem(key);
+    if (!saved) return;
+    sessionStorage.removeItem(key);
+    try {
+      const parsed = JSON.parse(saved) as DescricaoCargo & {
+        __import?: { fileName?: string; sheetName?: string; mappedFields?: number };
+      };
+      const { __import, ...draft } = parsed;
+      setImportedDraft(draft);
+      setImportNotice(
+        `Importado de ${__import?.fileName ?? "planilha"} (aba ${__import?.sheetName ?? "DC"}). Confira todos os campos antes de criar.`,
+      );
+    } catch {
+      toast.error("Não foi possível recuperar os dados importados.");
+    }
+  }, [positionId, projectId]);
+
   const initial = useMemo<DescricaoCargo>(
-    () => ({
-      ...emptyDC(),
-      organization_position_id: linkedPosition?.id ?? null,
-      cargo: linkedPosition?.nome ?? "",
-      superior_imediato: linkedParentName,
-    }),
-    [linkedParentName, linkedPosition?.nome],
+    () =>
+      importedDraft ?? {
+        ...emptyDC(),
+        organization_position_id: linkedPosition?.id ?? null,
+        cargo: linkedPosition?.nome ?? "",
+        superior_imediato: linkedParentName,
+      },
+    [importedDraft, linkedParentName, linkedPosition?.id, linkedPosition?.nome],
   );
 
   const onSubmit = async (dc: DescricaoCargo) => {
@@ -113,14 +136,21 @@ function NovaDC() {
           Carregando cargo vinculado...
         </div>
       ) : (
-        <DCForm
-          projectId={projectId}
-          initial={initial}
-          onSubmit={onSubmit}
-          submitLabel="Criar descricao"
-        />
+        <>
+          {importNotice && (
+            <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              {importNotice}
+            </div>
+          )}
+          <DCForm
+            key={importedDraft ? `import:${positionId}` : `new:${positionId ?? ""}`}
+            projectId={projectId}
+            initial={initial}
+            onSubmit={onSubmit}
+            submitLabel="Criar descricao"
+          />
+        </>
       )}
     </main>
   );
 }
-

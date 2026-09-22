@@ -106,6 +106,18 @@ function normalizeText(raw: string) {
     .trim();
 }
 
+function resolveConfiguredOptionValue(
+  value: string | number | boolean | string[] | undefined,
+  options: DynamicField["options"],
+) {
+  if (typeof value !== "string" || !value) return "";
+  const normalized = normalizeText(value);
+  const option = options.find(
+    (item) => normalizeText(item.value) === normalized || normalizeText(item.label) === normalized,
+  );
+  return option?.value ?? value;
+}
+
 function semanticFieldKey(field: { field_key: string; label: string }) {
   const key = field.field_key.toLowerCase();
   const label = normalizeText(field.label);
@@ -115,19 +127,27 @@ function semanticFieldKey(field: { field_key: string; label: string }) {
   if (key === "nivelamento") return "nivelamento";
   if (key === "unidade_negocio" || key === "area" || label === "area") return "area";
   if (key === "departamento" || key === "setor" || label === "setor") return "setor";
-  return key;
+  return label || key;
 }
 
-function dedupeFields<T extends { field_key: string; label: string; section: string }>(
-  fields: T[],
-) {
-  const seen = new Set<string>();
-  return fields.filter((field) => {
-    const semanticKey = `${field.section ?? ""}:${semanticFieldKey(field)}`;
-    if (seen.has(semanticKey)) return false;
-    seen.add(semanticKey);
-    return true;
+function dedupeFields<
+  T extends { field_key: string; label: string; section: string; field_type?: string },
+>(fields: T[]) {
+  const result: T[] = [];
+  const indexes = new Map<string, number>();
+  const priority = (field: T) =>
+    field.field_type === "competency_description" || field.field_type === "single_select" ? 2 : 1;
+  fields.forEach((field) => {
+    const semanticKey = `${normalizeText(field.section ?? "")}:${semanticFieldKey(field)}`;
+    const existingIndex = indexes.get(semanticKey);
+    if (existingIndex === undefined) {
+      indexes.set(semanticKey, result.length);
+      result.push(field);
+      return;
+    }
+    if (priority(field) > priority(result[existingIndex])) result[existingIndex] = field;
   });
+  return result;
 }
 
 export function useProjectFields(projectId: string) {
@@ -144,6 +164,7 @@ export function useProjectFields(projectId: string) {
         label: string;
         section: string;
         field_type: DynamicField["field_type"];
+        is_active: boolean;
         is_required: boolean;
         allows_free_text: boolean;
         data_source?: string | null;
@@ -157,26 +178,25 @@ export function useProjectFields(projectId: string) {
           display_order: number;
         }>;
       }>;
-    }>(`/api/base?projectId=${projectId}`)
-      .then(({ fields: data }) => {
-        setFields(
-          dedupeFields((data ?? []).filter((field) => field.is_active)).map((field) => ({
-            ...field,
-            label: normalizeCoreFieldLabel(field),
-            data_source: normalizeFieldDataSource(field),
-            options: (field.base_options ?? [])
-              .filter((option) => option.is_active)
-              .sort((a, b) => a.display_order - b.display_order)
-              .map(({ id, label, value, description }) => ({
-                id,
-                label,
-                value,
-                description: description ?? null,
-              })),
-          })) as DynamicField[],
-        );
-        setLoading(false);
-      });
+    }>(`/api/base?projectId=${projectId}`).then(({ fields: data }) => {
+      setFields(
+        dedupeFields((data ?? []).filter((field) => field.is_active)).map((field) => ({
+          ...field,
+          label: normalizeCoreFieldLabel(field),
+          data_source: normalizeFieldDataSource(field),
+          options: (field.base_options ?? [])
+            .filter((option) => option.is_active)
+            .sort((a, b) => a.display_order - b.display_order)
+            .map(({ id, label, value, description }) => ({
+              id,
+              label,
+              value,
+              description: description ?? null,
+            })),
+        })) as DynamicField[],
+      );
+      setLoading(false);
+    });
   }, [projectId]);
 
   return { fields, loading };
@@ -196,21 +216,20 @@ export function useSectionLimits(projectId: string) {
     apiJson<{
       ok: boolean;
       sectionSettings: Array<{ section: string; max_items: number; is_enabled: boolean }>;
-    }>(`/api/base?projectId=${projectId}`)
-      .then(({ sectionSettings: data }) => {
-        const map: Record<string, number> = {};
-        const enabledMap: Record<string, boolean> = {};
-        DC_SECTIONS.filter((section) => section.repeater).forEach((section) => {
-          map[section.key] = DEFAULT_REPEATER_LIMIT;
-        });
-        (data ?? []).forEach((row) => {
-          map[row.section] = row.max_items;
-          enabledMap[row.section] = row.is_enabled ?? true;
-        });
-        setLimits(map);
-        setEnabledSections(enabledMap);
-        setLoading(false);
+    }>(`/api/base?projectId=${projectId}`).then(({ sectionSettings: data }) => {
+      const map: Record<string, number> = {};
+      const enabledMap: Record<string, boolean> = {};
+      DC_SECTIONS.filter((section) => section.repeater).forEach((section) => {
+        map[section.key] = DEFAULT_REPEATER_LIMIT;
       });
+      (data ?? []).forEach((row) => {
+        map[row.section] = row.max_items;
+        enabledMap[row.section] = row.is_enabled ?? true;
+      });
+      setLimits(map);
+      setEnabledSections(enabledMap);
+      setLoading(false);
+    });
   }, [projectId]);
 
   return { limits, enabledSections, loading };
@@ -483,17 +502,19 @@ export function DynamicFieldControl({
     );
   }
   if (field.field_type === "competency_description") {
-    const selected = localOptions.find((o) => o.value === value);
+    const selectedValue = resolveConfiguredOptionValue(value, localOptions);
+    const selected = localOptions.find((o) => o.value === selectedValue);
     return (
       <div className="grid gap-2 grid-cols-1 md:grid-cols-[1fr_2.5fr]">
         <div className="flex items-center gap-2">
           <select
             {...common}
-            value={String(value ?? "")}
+            value={selectedValue}
             onChange={(e) => onChange(e.target.value)}
             className={`${controlClass} flex-1`}
           >
             <option value="">— Selecione —</option>
+            {selectedValue && !selected && <option value={selectedValue}>{String(value)}</option>}
             {localOptions.map((option) => (
               <option key={option.id} value={option.value}>
                 {option.label}
@@ -515,15 +536,20 @@ export function DynamicFieldControl({
     );
   }
   if (field.field_type === "single_select") {
+    const selectedValue = resolveConfiguredOptionValue(value, localOptions);
+    const hasSelectedOption = localOptions.some((option) => option.value === selectedValue);
     return (
       <div className="flex items-center gap-2">
         <select
           {...common}
-          value={String(value ?? "")}
+          value={selectedValue}
           onChange={(e) => onChange(e.target.value)}
           className={`${controlClass} flex-1`}
         >
           <option value="">— Selecione —</option>
+          {selectedValue && !hasSelectedOption && (
+            <option value={selectedValue}>{String(value)}</option>
+          )}
           {localOptions.map((option) => (
             <option key={option.id} value={option.value}>
               {option.label}
