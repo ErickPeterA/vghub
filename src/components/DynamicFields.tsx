@@ -254,6 +254,7 @@ export function DynamicFieldControl({
   onChange,
   areas,
   parentAreaId,
+  excludedAreaIds = [],
   disabled,
 }: {
   field: DynamicField;
@@ -261,6 +262,8 @@ export function DynamicFieldControl({
   onChange: (value: string | number | boolean | string[]) => void;
   areas?: ProjectArea[];
   parentAreaId?: string | null;
+  /** IDs de setores que já foram escolhidos em outro par Área/Setor. */
+  excludedAreaIds?: string[];
   disabled?: boolean;
 }) {
   const [localOptions, setLocalOptions] = useState(field.options);
@@ -325,7 +328,7 @@ export function DynamicFieldControl({
     toast.success("Opção adicionada à base do projeto");
   };
 
-  const renderOptionAdder = () => {
+  const renderOptionAdder = (showButton = true) => {
     if (
       disabled ||
       !["single_select", "multi_select", "competency_description"].includes(field.field_type)
@@ -334,14 +337,16 @@ export function DynamicFieldControl({
 
     return (
       <>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-          title="Adicionar opção"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        {showButton && (
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            title="Adicionar opção"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
 
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="sm:max-w-md">
@@ -416,7 +421,9 @@ export function DynamicFieldControl({
   }
   if (field.data_source === "setores") {
     const allSetores = (areas ?? []).filter((a) => a.parent_id);
-    const opts = parentAreaId ? allSetores.filter((a) => a.parent_id === parentAreaId) : [];
+    const opts = parentAreaId
+      ? allSetores.filter((a) => a.parent_id === parentAreaId && !excludedAreaIds.includes(a.id))
+      : [];
     const selectedValue = resolveProjectAreaValue(value, opts);
     return (
       <select
@@ -539,12 +546,18 @@ export function DynamicFieldControl({
     const selectedValue = resolveConfiguredOptionValue(value, localOptions);
     const hasSelectedOption = localOptions.some((option) => option.value === selectedValue);
     return (
-      <div className="flex items-center gap-2">
+      <>
         <select
           {...common}
           value={selectedValue}
-          onChange={(e) => onChange(e.target.value)}
-          className={`${controlClass} flex-1`}
+          onChange={(e) => {
+            if (e.target.value === "__add_new_option__") {
+              setModalOpen(true);
+              return;
+            }
+            onChange(e.target.value);
+          }}
+          className={controlClass}
         >
           <option value="">— Selecione —</option>
           {selectedValue && !hasSelectedOption && (
@@ -555,9 +568,10 @@ export function DynamicFieldControl({
               {option.label}
             </option>
           ))}
+          {!disabled && <option value="__add_new_option__">+ Adicionar nova opcao</option>}
         </select>
-        {renderOptionAdder()}
-      </div>
+        {renderOptionAdder(false)}
+      </>
     );
   }
   return (

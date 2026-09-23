@@ -34,6 +34,9 @@ type HeaderScalarKey = (typeof HEADER_SCALAR_KEYS)[number];
 const isHeaderScalar = (key: string): key is HeaderScalarKey =>
   (HEADER_SCALAR_KEYS as readonly string[]).includes(key);
 
+type AreaSetorPair = { areaId: string; setorId: string };
+const AREA_SETOR_PAIRS_KEY = "__area_setor_pairs";
+
 const SectionShell = memo(function SectionShell({
   num,
   title,
@@ -93,7 +96,9 @@ const SingleField = memo(function SingleField({
   onChange,
   areas,
   parentAreaId,
+  excludedAreaIds,
   action,
+  controlAction,
   disabled,
 }: {
   field: DynamicField;
@@ -101,7 +106,9 @@ const SingleField = memo(function SingleField({
   onChange: (key: string, val: DynamicItem[string]) => void;
   areas: ProjectArea[];
   parentAreaId?: string | null;
+  excludedAreaIds?: string[];
   action?: React.ReactNode;
+  controlAction?: React.ReactNode;
   disabled?: boolean;
 }) {
   const handleChange = useCallback(
@@ -110,14 +117,20 @@ const SingleField = memo(function SingleField({
   );
   return (
     <FieldWrap label={`${field.label}${field.is_required ? " *" : ""}`} action={action}>
-      <DynamicFieldControl
-        field={field}
-        value={value}
-        onChange={handleChange}
-        areas={areas}
-        parentAreaId={parentAreaId}
-        disabled={disabled}
-      />
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <DynamicFieldControl
+            field={field}
+            value={value}
+            onChange={handleChange}
+            areas={areas}
+            parentAreaId={parentAreaId}
+            excludedAreaIds={excludedAreaIds}
+            disabled={disabled}
+          />
+        </div>
+        {controlAction}
+      </div>
     </FieldWrap>
   );
 });
@@ -141,6 +154,16 @@ function resolveAreaId(raw: DynamicItem[string] | undefined, areas: ProjectArea[
   return byName?.id ?? null;
 }
 
+function resolveSetorId(raw: DynamicItem[string] | undefined, areas: ProjectArea[]) {
+  if (typeof raw !== "string" || !raw) return null;
+  const direct = areas.find((area) => area.id === raw && area.parent_id);
+  if (direct) return direct.id;
+  const byName = areas.find(
+    (area) => area.parent_id && normalizeAreaName(area.nome) === normalizeAreaName(raw),
+  );
+  return byName?.id ?? null;
+}
+
 function findAreaValue(
   fields: DynamicField[],
   getter: (key: string) => DynamicItem[string] | undefined,
@@ -149,6 +172,25 @@ function findAreaValue(
   const f = fields.find((x) => x.data_source === "areas");
   if (!f) return null;
   return resolveAreaId(getter(f.field_key), areas);
+}
+
+function parseAreaSetorPairs(raw: DynamicItem[string] | undefined): AreaSetorPair[] | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed
+      .filter(
+        (item): item is AreaSetorPair =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof (item as AreaSetorPair).areaId === "string" &&
+          typeof (item as AreaSetorPair).setorId === "string",
+      )
+      .map(({ areaId, setorId }) => ({ areaId, setorId }));
+  } catch {
+    return null;
+  }
 }
 
 function ensureAreaFieldBeforeSetor(sectionFields: DynamicField[]) {
@@ -428,9 +470,166 @@ export function DCForm({
       );
     }
     const parentAreaId = findAreaValue(visibleFields, headerGetter, areas);
+    const areaField = visibleFields.find((field) => field.data_source === "areas");
+    const setorField = visibleFields.find((field) => field.data_source === "setores");
+    const savedPairs = parseAreaSetorPairs(dc.dynamic_values[AREA_SETOR_PAIRS_KEY]);
+    const areaSetorPairs: AreaSetorPair[] = savedPairs ?? [
+      {
+        areaId: areaField ? (resolveAreaId(headerGetter(areaField.field_key), areas) ?? "") : "",
+        setorId: setorField
+          ? (resolveSetorId(headerGetter(setorField.field_key), areas) ?? "")
+          : "",
+      },
+    ];
+
+    const updateAreaSetorPair = (index: number, key: keyof AreaSetorPair, value: string) => {
+      if (!areaField || !setorField) return;
+      setDc((previous) => {
+        const currentPairs = parseAreaSetorPairs(previous.dynamic_values[AREA_SETOR_PAIRS_KEY]) ?? [
+          {
+            areaId:
+              resolveAreaId(
+                isHeaderScalar(areaField.field_key)
+                  ? previous[areaField.field_key]
+                  : previous.dynamic_values[areaField.field_key],
+                areas,
+              ) ?? "",
+            setorId:
+              resolveSetorId(
+                isHeaderScalar(setorField.field_key)
+                  ? previous[setorField.field_key]
+                  : previous.dynamic_values[setorField.field_key],
+                areas,
+              ) ?? "",
+          },
+        ];
+        const nextPairs = currentPairs.map((pair, pairIndex) =>
+          pairIndex === index
+            ? { ...pair, [key]: value, ...(key === "areaId" ? { setorId: "" } : {}) }
+            : pair,
+        );
+        const firstPair = nextPairs[0] ?? { areaId: "", setorId: "" };
+        const next = {
+          ...previous,
+          dynamic_values: {
+            ...previous.dynamic_values,
+            [AREA_SETOR_PAIRS_KEY]: JSON.stringify(nextPairs),
+          },
+        };
+        if (isHeaderScalar(areaField.field_key)) next[areaField.field_key] = firstPair.areaId;
+        else next.dynamic_values[areaField.field_key] = firstPair.areaId;
+        if (isHeaderScalar(setorField.field_key)) next[setorField.field_key] = firstPair.setorId;
+        else next.dynamic_values[setorField.field_key] = firstPair.setorId;
+        return next;
+      });
+    };
+
+    const addAreaSetorPair = () => {
+      if (!areaField || !setorField) return;
+      setDc((previous) => {
+        const pairs =
+          parseAreaSetorPairs(previous.dynamic_values[AREA_SETOR_PAIRS_KEY]) ?? areaSetorPairs;
+        return {
+          ...previous,
+          dynamic_values: {
+            ...previous.dynamic_values,
+            [AREA_SETOR_PAIRS_KEY]: JSON.stringify([...pairs, { areaId: "", setorId: "" }]),
+          },
+        };
+      });
+    };
+
+    const removeAreaSetorPair = (index: number) => {
+      setDc((previous) => {
+        const pairs =
+          parseAreaSetorPairs(previous.dynamic_values[AREA_SETOR_PAIRS_KEY]) ?? areaSetorPairs;
+        const nextPairs = pairs.filter((_, pairIndex) => pairIndex !== index);
+        const firstPair = nextPairs[0] ?? { areaId: "", setorId: "" };
+        const next = {
+          ...previous,
+          dynamic_values: {
+            ...previous.dynamic_values,
+            [AREA_SETOR_PAIRS_KEY]: JSON.stringify(nextPairs),
+          },
+        };
+        if (areaField && isHeaderScalar(areaField.field_key))
+          next[areaField.field_key] = firstPair.areaId;
+        else if (areaField) next.dynamic_values[areaField.field_key] = firstPair.areaId;
+        if (setorField && isHeaderScalar(setorField.field_key))
+          next[setorField.field_key] = firstPair.setorId;
+        else if (setorField) next.dynamic_values[setorField.field_key] = firstPair.setorId;
+        return next;
+      });
+    };
+
     return (
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 auto-rows-min">
         {visibleFields.map((field) => {
+          if (field.data_source === "setores") return null;
+          if (field.data_source === "areas" && areaField && setorField) {
+            return areaSetorPairs.map((pair, index) => {
+              const usedSetorIds = areaSetorPairs
+                .filter((_, pairIndex) => pairIndex !== index)
+                .map((otherPair) => otherPair.setorId)
+                .filter(Boolean);
+              const suffix = index === 0 ? "" : ` ${index + 1}`;
+              return (
+                <div key={`area-setor-${index}`} className="contents">
+                  <div data-dc-field-key={index === 0 ? areaField.field_key : undefined}>
+                    <SingleField
+                      field={{ ...areaField, label: `${areaField.label}${suffix}` }}
+                      value={pair.areaId}
+                      onChange={(_, value) =>
+                        updateAreaSetorPair(index, "areaId", String(value ?? ""))
+                      }
+                      areas={areas}
+                      disabled={readOnly}
+                      action={index === 0 ? renderCommentButton(areaField.field_key) : null}
+                    />
+                  </div>
+                  <div data-dc-field-key={index === 0 ? setorField.field_key : undefined}>
+                    <SingleField
+                      field={{ ...setorField, label: `${setorField.label}${suffix}` }}
+                      value={pair.setorId}
+                      onChange={(_, value) =>
+                        updateAreaSetorPair(index, "setorId", String(value ?? ""))
+                      }
+                      areas={areas}
+                      parentAreaId={pair.areaId}
+                      excludedAreaIds={usedSetorIds}
+                      disabled={readOnly}
+                      action={index === 0 ? renderCommentButton(setorField.field_key) : null}
+                      controlAction={
+                        !readOnly ? (
+                          <div className="flex items-center gap-1">
+                            {index > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAreaSetorPair(index)}
+                                className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                aria-label={`Remover Área e Setor ${index + 1}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={addAreaSetorPair}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                              aria-label="Adicionar Área e Setor"
+                              title="Adicionar Área e Setor"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : null
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            });
+          }
           const value = headerGetter(field.field_key);
           const orgSuperiorField =
             field.field_key === "superior_imediato" && Boolean(dc.organization_position_id);
