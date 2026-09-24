@@ -7,6 +7,7 @@ export type OrganizationPosition = {
   nome: string;
   descricao: string | null;
   display_order: number;
+  visual_level: number;
   status: PositionStatus;
   created_by: string | null;
   created_at: string;

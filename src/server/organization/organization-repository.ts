@@ -7,6 +7,7 @@ export type OrganizationPositionInput = {
   descricao: string | null;
   parent_id: string | null;
   display_order: number;
+  visual_level: number;
   status: "active" | "inactive";
 };
 
@@ -22,7 +23,8 @@ export async function getOrganizationPageData(userId: string, projectId: string)
   const [positions, descriptions] = await Promise.all([
     query(
       `
-        select id, project_id, parent_id, nome, descricao, display_order, status::text as status,
+        select id, project_id, parent_id, nome, descricao, display_order, visual_level,
+               status::text as status,
                created_by, created_at, updated_at
         from public.project_positions
         where project_id = $1::uuid
@@ -57,8 +59,8 @@ export async function createPosition(
   const result = await query(
     `
       insert into public.project_positions
-        (project_id, parent_id, nome, descricao, display_order, status, created_by)
-      values ($1::uuid, $2::uuid, $3, $4, $5, $6::public.organization_position_status, $7::uuid)
+        (project_id, parent_id, nome, descricao, display_order, visual_level, status, created_by)
+      values ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::public.organization_position_status, $8::uuid)
       returning id
     `,
     [
@@ -67,6 +69,7 @@ export async function createPosition(
       values.nome,
       values.descricao,
       values.display_order,
+      values.visual_level,
       values.status,
       actorUserId,
     ],
@@ -88,7 +91,8 @@ export async function updatePosition(
           descricao = $4,
           parent_id = $5::uuid,
           display_order = $6,
-          status = $7::public.organization_position_status
+          visual_level = $7,
+          status = $8::public.organization_position_status
       where id = $1::uuid and project_id = $2::uuid
       returning id
     `,
@@ -99,6 +103,7 @@ export async function updatePosition(
       values.descricao,
       values.parent_id,
       values.display_order,
+      values.visual_level,
       values.status,
     ],
   );
@@ -113,14 +118,15 @@ export async function shiftPositionOrders(
   await requireCanManageProject(actorUserId, projectId);
   return withTransaction(async (client) => {
     for (const update of updates) {
+      const changesParent = Object.prototype.hasOwnProperty.call(update, "parentId");
       await client.query(
         `
           update public.project_positions
           set display_order = $3,
-              parent_id = $4::uuid
+              parent_id = case when $4::boolean then $5::uuid else parent_id end
           where id = $1::uuid and project_id = $2::uuid
         `,
-        [update.id, projectId, update.displayOrder, update.parentId ?? null],
+        [update.id, projectId, update.displayOrder, changesParent, update.parentId ?? null],
       );
     }
     return { ok: true };

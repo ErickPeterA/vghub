@@ -170,8 +170,20 @@ export function OrganizationNode({
       </div>
 
       {hasChildren && (
-        <span className="absolute -bottom-3 left-1/2 inline-flex min-w-6 -translate-x-1/2 items-center justify-center rounded-full bg-[#042558] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+        <span
+          className="group/subordinates absolute -bottom-3 left-1/2 z-20 inline-flex min-w-6 -translate-x-1/2 cursor-help items-center justify-center rounded-full bg-[#042558] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm"
+          title={`Subordinados diretos: ${node.children.map((child) => child.nome).join(", ")}`}
+          aria-label={`${node.children.length} subordinados diretos: ${node.children.map((child) => child.nome).join(", ")}`}
+        >
           {node.children.length}
+          <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden w-56 -translate-x-1/2 rounded-lg bg-[#042558] p-2 text-left text-[11px] font-medium leading-4 text-white shadow-lg group-hover/subordinates:block">
+            <span className="mb-1 block font-bold">Subordinados diretos</span>
+            {node.children.map((child) => (
+              <span key={child.id} className="block truncate">
+                • {child.nome} · camada {child.visual_level}
+              </span>
+            ))}
+          </span>
         </span>
       )}
     </div>

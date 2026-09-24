@@ -4,9 +4,10 @@ const positionSchema = async () => {
   const { z } = await import("zod");
   return z.object({
     nome: z.string().trim().min(1),
-    descricao: z.string().nullable().optional(),
-    parent_id: z.string().uuid().nullable().optional(),
+    descricao: z.string().nullable().default(null),
+    parent_id: z.string().uuid().nullable().default(null),
     display_order: z.number().int(),
+    visual_level: z.number().int().min(1),
     status: z.enum(["active", "inactive"]),
   });
 };

@@ -15,7 +15,7 @@ type OrganizationChartProps = {
   onZoomChange: (zoom: number) => void;
   onSelect: (position: OrganizationPosition) => void;
   onToggle: (id: string) => void;
-  onAddAt: (parentId: string | null, displayOrder: number) => void;
+  onAddAt: (parentId: string | null, displayOrder: number, visualLevel: number) => void;
   onAddChild: (position: OrganizationPosition) => void;
   onAddSibling: (position: OrganizationPosition) => void;
   onInsertAbove: (position: OrganizationPosition) => void;
@@ -188,6 +188,42 @@ function OrganizationSiblingRow({
   nodes: OrganizationNodeData[];
   withIncomingLine?: boolean;
 }) {
+  const rows = Array.from(
+    nodes.reduce((levels, node) => {
+      const row = levels.get(node.visual_level) ?? [];
+      row.push(node);
+      levels.set(node.visual_level, row);
+      return levels;
+    }, new Map<number, OrganizationNodeData[]>()),
+  )
+    .sort(([left], [right]) => left - right)
+    .map(([, row]) => row);
+
+  return (
+    <div className="flex flex-col items-center gap-5">
+      {rows.map((row) => (
+        <OrganizationSiblingGroup
+          key={row[0].id}
+          parentId={parentId}
+          nodes={row}
+          withIncomingLine={withIncomingLine}
+          {...props}
+        />
+      ))}
+    </div>
+  );
+}
+
+function OrganizationSiblingGroup({
+  parentId,
+  nodes,
+  withIncomingLine = false,
+  ...props
+}: Omit<OrganizationChartProps, "nodes"> & {
+  parentId: string | null;
+  nodes: OrganizationNodeData[];
+  withIncomingLine?: boolean;
+}) {
   const hasMultipleNodes = nodes.length > 1;
   const addButtonTopClass = withIncomingLine ? "top-[5.25rem]" : "top-16";
 
@@ -221,6 +257,7 @@ function OrganizationSiblingRow({
                   index === nodes.length - 1
                     ? getAppendDisplayOrder(nodes)
                     : getInsertDisplayOrder(child),
+                  child.visual_level,
                 )
               }
             />
@@ -276,7 +313,7 @@ function OrganizationBranch({
           <div className="h-5 border-l border-[#042558]/25" />
           <AddPositionButton
             title="Adicionar subordinado"
-            onClick={() => props.onAddAt(node.id, 10)}
+            onClick={() => props.onAddAt(node.id, 10, 1)}
           />
         </div>
       )}

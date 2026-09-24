@@ -12,12 +12,14 @@ type PositionFormModalProps = {
   position?: OrganizationPosition | null;
   defaultParentId?: string | null;
   defaultDisplayOrder?: number | null;
+  defaultVisualLevel?: number;
   onClose: () => void;
   onSubmit: (values: {
     nome: string;
     descricao: string | null;
     parent_id: string | null;
     display_order: number;
+    visual_level: number;
     status: PositionStatus;
   }) => void;
 };
@@ -32,17 +34,20 @@ export function PositionFormModal({
   position,
   defaultParentId,
   defaultDisplayOrder,
+  defaultVisualLevel = 1,
   onClose,
   onSubmit,
 }: PositionFormModalProps) {
   const [nome, setNome] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
+  const [visualLevel, setVisualLevel] = useState(1);
 
   useEffect(() => {
     if (!open) return;
     setNome(position?.nome ?? "");
     setParentId(mode === "edit" ? (position?.parent_id ?? null) : (defaultParentId ?? null));
-  }, [defaultParentId, mode, open, position]);
+    setVisualLevel(mode === "edit" ? (position?.visual_level ?? 1) : defaultVisualLevel);
+  }, [defaultParentId, defaultVisualLevel, mode, open, position]);
 
   const parentOptions = availableParents(positions, mode === "edit" ? position : null);
   const title =
@@ -70,6 +75,7 @@ export function PositionFormModal({
               descricao: position?.descricao ?? null,
               parent_id: parentId,
               display_order: hiddenDisplayOrder,
+              visual_level: visualLevel,
               status: hiddenStatus,
             });
           }}
@@ -84,6 +90,24 @@ export function PositionFormModal({
               className={inputClass}
               autoFocus
             />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
+              Nível
+            </span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={visualLevel}
+              onChange={(event) => setVisualLevel(Math.max(1, Number(event.target.value) || 1))}
+              className={inputClass}
+            />
+            <span className="mt-1 block text-[11px] leading-4 text-[#042558]/45">
+              Cargos com o mesmo superior e a mesma camada ficam lado a lado. Camadas maiores
+              aparecem abaixo, sem alterar o líder.
+            </span>
           </label>
 
           <label className="block">

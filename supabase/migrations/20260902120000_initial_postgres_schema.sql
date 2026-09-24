@@ -216,6 +216,7 @@ CREATE TABLE public.project_positions (
   nome text NOT NULL,
   descricao text,
   display_order integer NOT NULL DEFAULT 0,
+  visual_level integer NOT NULL DEFAULT 1 CHECK (visual_level >= 1),
   status public.organization_position_status NOT NULL DEFAULT 'active',
   created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),

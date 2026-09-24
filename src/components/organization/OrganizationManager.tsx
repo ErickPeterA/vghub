@@ -25,6 +25,7 @@ type FormState = {
   position: OrganizationPosition | null;
   defaultParentId: string | null;
   defaultDisplayOrder: number | null;
+  defaultVisualLevel: number;
 };
 
 const initialFormState: FormState = {
@@ -33,6 +34,7 @@ const initialFormState: FormState = {
   position: null,
   defaultParentId: null,
   defaultDisplayOrder: null,
+  defaultVisualLevel: 1,
 };
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.6;
@@ -117,13 +119,25 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       : 10;
   };
 
-  const openCreate = (parentId: string | null = null, displayOrder: number | null = null) => {
+  const getNextVisualLevel = (parentId: string | null) => {
+    const siblings = getChildren(positions, parentId);
+    return siblings.length > 0
+      ? Math.max(...siblings.map((sibling) => sibling.visual_level)) + 1
+      : 1;
+  };
+
+  const openCreate = (
+    parentId: string | null = null,
+    displayOrder: number | null = null,
+    visualLevel?: number,
+  ) => {
     setFormState({
       open: true,
       mode: "create",
       position: null,
       defaultParentId: parentId,
       defaultDisplayOrder: displayOrder ?? getAppendDisplayOrder(parentId),
+      defaultVisualLevel: visualLevel ?? getNextVisualLevel(parentId),
     });
   };
 
@@ -133,7 +147,8 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       mode: "create",
       position: null,
       defaultParentId: position.parent_id,
-      defaultDisplayOrder: getAppendDisplayOrder(position.parent_id),
+      defaultDisplayOrder: position.display_order + 1,
+      defaultVisualLevel: position.visual_level,
     });
   };
 
@@ -144,6 +159,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       position,
       defaultParentId: position.parent_id,
       defaultDisplayOrder: position.display_order,
+      defaultVisualLevel: position.visual_level,
     });
   };
 
@@ -154,6 +170,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
       position,
       defaultParentId: position.parent_id,
       defaultDisplayOrder: position.display_order,
+      defaultVisualLevel: position.visual_level,
     });
   };
 
@@ -162,6 +179,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
     descricao: string | null;
     parent_id: string | null;
     display_order: number;
+    visual_level: number;
     status: PositionStatus;
   }) => {
     if (!values.nome) {
@@ -217,7 +235,11 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         method: "POST",
         body: {
           action: "create",
-          values: { ...values, display_order: displayOrder },
+          values: {
+            ...values,
+            display_order: displayOrder,
+            visual_level: values.visual_level,
+          },
         },
       });
       toast.success("Cargo cadastrado");
@@ -413,7 +435,9 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
               })
             }
             onAddChild={(position) => openCreate(position.id)}
-            onAddAt={(parentId, displayOrder) => openCreate(parentId, displayOrder)}
+            onAddAt={(parentId, displayOrder, visualLevel) =>
+              openCreate(parentId, displayOrder, visualLevel)
+            }
             onAddSibling={openSibling}
             onInsertAbove={openInsertAbove}
             onEdit={openEdit}
@@ -447,6 +471,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
         position={formState.position}
         defaultParentId={formState.defaultParentId}
         defaultDisplayOrder={formState.defaultDisplayOrder}
+        defaultVisualLevel={formState.defaultVisualLevel}
         onClose={() => setFormState(initialFormState)}
         onSubmit={savePosition}
       />
