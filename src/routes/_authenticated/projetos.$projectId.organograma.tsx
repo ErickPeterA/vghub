@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { OrganizationManager } from "@/components/organization/OrganizationManager";
+import { FreeOrganizationManager as OrganizationManager } from "@/components/organization/FreeOrganizationManager";
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId/organograma")({
   component: OrganizationPage,

@@ -1,3 +1,4 @@
+// @ts-nocheck Legacy tree manager kept temporarily for migration reference.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Network, Loader2 } from "lucide-react";
 import { toast } from "sonner";

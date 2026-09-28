@@ -1,4 +1,5 @@
 export type PositionStatus = "active" | "inactive";
+export type ConnectionHandle = "top" | "right" | "bottom" | "left";
 
 export type OrganizationPosition = {
   id: string;
@@ -8,6 +9,10 @@ export type OrganizationPosition = {
   descricao: string | null;
   display_order: number;
   visual_level: number;
+  layout_x: number | null;
+  layout_y: number | null;
+  connection_source_handle: ConnectionHandle;
+  connection_target_handle: ConnectionHandle;
   status: PositionStatus;
   created_by: string | null;
   created_at: string;

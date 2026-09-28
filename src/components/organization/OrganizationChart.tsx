@@ -1,322 +1,410 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { OrganizationNodeData, OrganizationPosition } from "@/lib/organization";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  ConnectionMode,
+  Controls,
+  Handle,
+  MarkerType,
+  MiniMap,
+  Panel,
+  Position,
+  ReactFlow,
+  type Connection,
+  type Edge,
+  type Node,
+  type NodeProps,
+  type ReactFlowInstance,
+  useEdgesState,
+  useNodesState,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { CheckCircle2, FileText, GripHorizontal, Pencil, Plus, Trash2, Unlink } from "lucide-react";
+import type { ConnectionHandle, OrganizationPosition } from "@/lib/organization";
 import { countDescendants } from "@/lib/organization";
-import { Plus } from "lucide-react";
-import { OrganizationNode } from "./OrganizationNode";
 
-type OrganizationChartProps = {
-  nodes: OrganizationNodeData[];
-  positions: OrganizationPosition[];
-  positionsWithDescription: Set<string>;
-  zoom: number;
-  collapsed: Set<string>;
-  selectedId: string | null;
-  highlightedId: string | null;
-  onZoomChange: (zoom: number) => void;
+type CanvasNodeData = {
+  position: OrganizationPosition;
+  hasDescription: boolean;
+  highlighted: boolean;
+  descendants: number;
   onSelect: (position: OrganizationPosition) => void;
-  onToggle: (id: string) => void;
-  onAddAt: (parentId: string | null, displayOrder: number, visualLevel: number) => void;
-  onAddChild: (position: OrganizationPosition) => void;
-  onAddSibling: (position: OrganizationPosition) => void;
-  onInsertAbove: (position: OrganizationPosition) => void;
   onEdit: (position: OrganizationPosition) => void;
-  onMove: (position: OrganizationPosition) => void;
+  onAddChild: (position: OrganizationPosition) => void;
   onDelete: (position: OrganizationPosition) => void;
-  onReorder: (position: OrganizationPosition, direction: "up" | "down") => void;
-  onDropOn: (
-    sourceId: string,
-    target: OrganizationPosition,
-    placement: "before" | "inside" | "after",
-  ) => void;
 };
 
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 1.6;
+type CanvasNode = Node<CanvasNodeData, "position">;
 
-function clampZoom(value: number) {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
-}
+type OrganizationChartProps = {
+  positions: OrganizationPosition[];
+  positionsWithDescription: Set<string>;
+  highlightedId: string | null;
+  onSelect: (position: OrganizationPosition) => void;
+  onEdit: (position: OrganizationPosition) => void;
+  onAddChild: (position: OrganizationPosition) => void;
+  onDelete: (position: OrganizationPosition) => void;
+  onCreateAt: (x: number, y: number) => void;
+  onMovePositions: (updates: Array<{ id: string; x: number; y: number }>) => Promise<void>;
+  onConnect: (
+    parentId: string,
+    childId: string,
+    sourceHandle: ConnectionHandle,
+    targetHandle: ConnectionHandle,
+  ) => Promise<void>;
+  onDisconnect: (childId: string) => Promise<void>;
+};
 
-function getPageScroller() {
-  const scroller = document.scrollingElement as HTMLElement | null;
-  if (!scroller || scroller.scrollWidth <= scroller.clientWidth) return null;
-  return scroller;
-}
+const NODE_WIDTH = 272;
+const NODE_HEIGHT = 138;
+const defaultEdgeStyle = { stroke: "#54739b", strokeWidth: 1.6 };
+const selectedEdgeStyle = {
+  stroke: "#f59e0b",
+  strokeWidth: 4,
+  filter: "drop-shadow(0 0 4px rgba(245, 158, 11, 0.65))",
+};
+const connectionHandles: Array<{ id: ConnectionHandle; position: Position; title: string }> = [
+  { id: "top", position: Position.Top, title: "Conectar por cima" },
+  { id: "right", position: Position.Right, title: "Conectar pela direita" },
+  { id: "bottom", position: Position.Bottom, title: "Conectar por baixo" },
+  { id: "left", position: Position.Left, title: "Conectar pela esquerda" },
+];
 
-export function OrganizationChart(props: OrganizationChartProps) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const dragStateRef = useRef<{
-    x: number;
-    y: number;
-    scrollLeft: number;
-    scrollTop: number;
-    pageScrollLeft: number | null;
-  } | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const nodesKey = useMemo(() => props.nodes.map((node) => node.id).join("|"), [props.nodes]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    window.requestAnimationFrame(() => {
-      viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
-      viewport.scrollTop = 0;
-    });
-  }, [nodesKey]);
-
-  const canStartPan = (target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
-    return !target.closest(
-      "[data-position-id], button, input, textarea, select, a, [role='menuitem']",
-    );
+function fallbackPositions(positions: OrganizationPosition[]) {
+  const byId = new Map(positions.map((position) => [position.id, position]));
+  const depthCache = new Map<string, number>();
+  const depthOf = (position: OrganizationPosition, seen = new Set<string>()): number => {
+    const cached = depthCache.get(position.id);
+    if (cached !== undefined) return cached;
+    if (!position.parent_id || seen.has(position.id)) return 0;
+    const parent = byId.get(position.parent_id);
+    if (!parent) return 0;
+    seen.add(position.id);
+    const depth = depthOf(parent, seen) + 1;
+    depthCache.set(position.id, depth);
+    return depth;
   };
-  const { nodes, ...rowProps } = props;
 
+  const rows = new Map<number, OrganizationPosition[]>();
+  positions.forEach((position) => {
+    const depth = depthOf(position);
+    const row = rows.get(depth) ?? [];
+    row.push(position);
+    rows.set(depth, row);
+  });
+
+  const result = new Map<string, { x: number; y: number }>();
+  rows.forEach((row, depth) => {
+    row
+      .sort((left, right) => left.display_order - right.display_order)
+      .forEach((position, index) => {
+        result.set(position.id, { x: index * 340 + 80, y: depth * 220 + 80 });
+      });
+  });
+  return result;
+}
+
+function PositionCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
+  const position = data.position;
   return (
     <div
-      ref={viewportRef}
-      onWheel={(event) => {
-        event.preventDefault();
-        const viewport = viewportRef.current;
-        if (!viewport) return;
-
-        const nextZoom = clampZoom(props.zoom + (event.deltaY > 0 ? -0.08 : 0.08));
-        if (nextZoom === props.zoom) return;
-
-        const rect = viewport.getBoundingClientRect();
-        const pointerX = event.clientX - rect.left;
-        const pointerY = event.clientY - rect.top;
-        const contentX = viewport.scrollLeft + pointerX;
-        const contentY = viewport.scrollTop + pointerY;
-        const ratio = nextZoom / props.zoom;
-
-        props.onZoomChange(nextZoom);
-        window.requestAnimationFrame(() => {
-          viewport.scrollLeft = contentX * ratio - pointerX;
-          viewport.scrollTop = contentY * ratio - pointerY;
-        });
-      }}
-      onPointerDown={(event) => {
-        if (event.button !== 0 || !canStartPan(event.target)) return;
-        const viewport = viewportRef.current;
-        if (!viewport) return;
-
-        dragStateRef.current = {
-          x: event.clientX,
-          y: event.clientY,
-          scrollLeft: viewport.scrollLeft,
-          scrollTop: viewport.scrollTop,
-          pageScrollLeft: getPageScroller()?.scrollLeft ?? null,
-        };
-        setIsPanning(true);
-        viewport.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        const viewport = viewportRef.current;
-        const dragState = dragStateRef.current;
-        if (!viewport || !dragState) return;
-
-        event.preventDefault();
-        const deltaX = event.clientX - dragState.x;
-        const pageScroller = getPageScroller();
-        if (pageScroller && dragState.pageScrollLeft !== null) {
-          pageScroller.scrollLeft = dragState.pageScrollLeft - deltaX;
-        } else {
-          viewport.scrollLeft = dragState.scrollLeft - deltaX;
-        }
-        viewport.scrollTop = dragState.scrollTop - (event.clientY - dragState.y);
-      }}
-      onPointerUp={(event) => {
-        const viewport = viewportRef.current;
-        dragStateRef.current = null;
-        setIsPanning(false);
-        if (viewport?.hasPointerCapture(event.pointerId))
-          viewport.releasePointerCapture(event.pointerId);
-      }}
-      onPointerCancel={(event) => {
-        const viewport = viewportRef.current;
-        dragStateRef.current = null;
-        setIsPanning(false);
-        if (viewport?.hasPointerCapture(event.pointerId))
-          viewport.releasePointerCapture(event.pointerId);
-      }}
-      className={`min-h-0 flex-1 overflow-auto rounded-xl border border-[#042558]/10 bg-white/55 p-4 shadow-inner sm:p-6 ${
-        isPanning ? "cursor-grabbing select-none" : "cursor-grab"
+      data-position-id={position.id}
+      className={`relative w-[272px] rounded-2xl border bg-white shadow-md transition-shadow ${
+        selected
+          ? "border-[#042558] shadow-lg ring-4 ring-[#042558]/10"
+          : data.highlighted
+            ? "border-amber-400 ring-4 ring-amber-200/60"
+            : "border-[#042558]/15 hover:shadow-lg"
       }`}
     >
-      <div
-        className="mx-auto flex min-h-full min-w-max justify-center px-6 py-6 transition-transform sm:px-10"
-        style={{ transform: `scale(${props.zoom})`, transformOrigin: "top center" }}
+      {connectionHandles.map((handle) => (
+        <Handle
+          key={handle.id}
+          id={handle.id}
+          type="source"
+          position={handle.position}
+          className="!h-3.5 !w-3.5 !border-2 !border-white !bg-[#2f6fed] transition-transform hover:!scale-150"
+          title={handle.title}
+        />
+      ))}
+
+      <div className="position-drag-handle flex cursor-grab items-center justify-between rounded-t-2xl border-b border-[#042558]/10 bg-[#f4f7fb] px-3 py-2 active:cursor-grabbing">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#042558]/45">
+          Cargo
+        </span>
+        <GripHorizontal className="h-4 w-4 text-[#042558]/35" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => data.onSelect(position)}
+        className="block w-full px-4 py-3 text-left"
       >
-        <div className="flex items-start justify-center gap-4">
-          <OrganizationSiblingRow parentId={null} nodes={nodes} {...rowProps} />
-        </div>
+        <span className="block truncate text-sm font-bold text-[#042558]" title={position.nome}>
+          {position.nome}
+        </span>
+        <span
+          className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            data.hasDescription
+              ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+              : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+          }`}
+        >
+          {data.hasDescription ? (
+            <CheckCircle2 className="h-3 w-3" />
+          ) : (
+            <FileText className="h-3 w-3" />
+          )}
+          {data.hasDescription ? "Descrição criada" : "Sem descrição"}
+        </span>
+        <span className="mt-2 block text-[11px] text-[#042558]/45">
+          {position.status === "active" ? "Ativo" : "Inativo"} · {data.descendants} abaixo
+        </span>
+      </button>
+
+      <div className="nodrag flex items-center justify-end gap-1 border-t border-[#042558]/10 px-2 py-1.5">
+        <button
+          type="button"
+          onClick={() => data.onAddChild(position)}
+          className="rounded-md p-1.5 text-[#042558]/55 hover:bg-[#042558]/8 hover:text-[#042558]"
+          title="Criar cargo conectado abaixo"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => data.onEdit(position)}
+          className="rounded-md p-1.5 text-[#042558]/55 hover:bg-[#042558]/8 hover:text-[#042558]"
+          title="Editar cargo"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => data.onDelete(position)}
+          className="rounded-md p-1.5 text-red-500/75 hover:bg-red-50 hover:text-red-600"
+          title="Excluir cargo"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
 }
 
-function getAppendDisplayOrder(nodes: OrganizationNodeData[]) {
-  return nodes.length > 0 ? Math.max(...nodes.map((node) => node.display_order)) + 10 : 10;
-}
+const nodeTypes = { position: PositionCanvasNode };
 
-function getInsertDisplayOrder(previous: OrganizationNodeData) {
-  return previous.display_order + 1;
-}
+export function OrganizationChart({
+  positions,
+  positionsWithDescription,
+  highlightedId,
+  onSelect,
+  onEdit,
+  onAddChild,
+  onDelete,
+  onCreateAt,
+  onMovePositions,
+  onConnect,
+  onDisconnect,
+}: OrganizationChartProps) {
+  const instanceRef = useRef<ReactFlowInstance<CanvasNode, Edge> | null>(null);
+  const fallback = useMemo(() => fallbackPositions(positions), [positions]);
 
-function AddPositionButton({ title, onClick }: { title: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#042558]/20 bg-white text-[#042558] shadow-sm transition hover:border-[#042558] hover:bg-[#042558] hover:text-white"
-    >
-      <Plus className="h-4 w-4" />
-    </button>
+  const mappedNodes = useMemo<CanvasNode[]>(
+    () =>
+      positions.map((position) => ({
+        id: position.id,
+        type: "position",
+        position: {
+          x: position.layout_x ?? fallback.get(position.id)?.x ?? 0,
+          y: position.layout_y ?? fallback.get(position.id)?.y ?? 0,
+        },
+        data: {
+          position,
+          hasDescription: positionsWithDescription.has(position.id),
+          highlighted: highlightedId === position.id,
+          descendants: countDescendants(positions, position.id),
+          onSelect,
+          onEdit,
+          onAddChild,
+          onDelete,
+        },
+        dragHandle: ".position-drag-handle",
+        deletable: false,
+      })),
+    [
+      fallback,
+      highlightedId,
+      onAddChild,
+      onDelete,
+      onEdit,
+      onSelect,
+      positions,
+      positionsWithDescription,
+    ],
   );
-}
 
-function OrganizationSiblingRow({
-  parentId,
-  nodes,
-  withIncomingLine = false,
-  ...props
-}: Omit<OrganizationChartProps, "nodes"> & {
-  parentId: string | null;
-  nodes: OrganizationNodeData[];
-  withIncomingLine?: boolean;
-}) {
-  const rows = Array.from(
-    nodes.reduce((levels, node) => {
-      const row = levels.get(node.visual_level) ?? [];
-      row.push(node);
-      levels.set(node.visual_level, row);
-      return levels;
-    }, new Map<number, OrganizationNodeData[]>()),
-  )
-    .sort(([left], [right]) => left - right)
-    .map(([, row]) => row);
+  const mappedEdges = useMemo<Edge[]>(
+    () =>
+      positions
+        .filter((position) => position.parent_id)
+        .map((position) => ({
+          id: `leader-${position.id}`,
+          source: position.parent_id!,
+          target: position.id,
+          sourceHandle: position.connection_source_handle ?? "right",
+          targetHandle: position.connection_target_handle ?? "left",
+          type: "smoothstep",
+          markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+          style: defaultEdgeStyle,
+          interactionWidth: 28,
+        })),
+    [positions],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(mappedNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(mappedEdges);
+
+  useEffect(() => setNodes(mappedNodes), [mappedNodes, setNodes]);
+  useEffect(() => setEdges(mappedEdges), [mappedEdges, setEdges]);
+
+  const highlightEdge = useCallback(
+    (edgeId: string | null) => {
+      setEdges((current) =>
+        current.map((edge) => {
+          const isSelected = edge.id === edgeId;
+          return {
+            ...edge,
+            selected: isSelected,
+            animated: isSelected,
+            style: isSelected ? selectedEdgeStyle : defaultEdgeStyle,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: isSelected ? 22 : 18,
+              height: isSelected ? 22 : 18,
+              color: isSelected ? "#f59e0b" : "#54739b",
+            },
+          };
+        }),
+      );
+    },
+    [setEdges],
+  );
+
+  useEffect(() => {
+    if (!highlightedId) return;
+    const node = nodes.find((candidate) => candidate.id === highlightedId);
+    if (!node) return;
+    instanceRef.current?.setCenter(
+      node.position.x + NODE_WIDTH / 2,
+      node.position.y + NODE_HEIGHT / 2,
+      { zoom: 1.15, duration: 500 },
+    );
+  }, [highlightedId, nodes]);
+
+  const handleConnect = useCallback(
+    async (connection: Connection) => {
+      if (!connection.source || !connection.target || connection.source === connection.target)
+        return;
+      await onConnect(
+        connection.source,
+        connection.target,
+        (connection.sourceHandle as ConnectionHandle | null) ?? "right",
+        (connection.targetHandle as ConnectionHandle | null) ?? "left",
+      );
+    },
+    [onConnect],
+  );
 
   return (
-    <div className="flex flex-col items-center gap-5">
-      {rows.map((row) => (
-        <OrganizationSiblingGroup
-          key={row[0].id}
-          parentId={parentId}
-          nodes={row}
-          withIncomingLine={withIncomingLine}
-          {...props}
+    <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-[#042558]/10 bg-[#f8fafc] shadow-inner">
+      <ReactFlow<CanvasNode, Edge>
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onInit={(instance) => {
+          instanceRef.current = instance;
+          window.requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 1 }));
+        }}
+        onNodeClick={(_, node) => onSelect(node.data.position)}
+        onNodeDragStop={(_, node) => {
+          const movedNodes = nodes.filter(
+            (candidate) => candidate.selected || candidate.id === node.id,
+          );
+          void onMovePositions(
+            movedNodes.map((candidate) => ({
+              id: candidate.id,
+              x: candidate.id === node.id ? node.position.x : candidate.position.x,
+              y: candidate.id === node.id ? node.position.y : candidate.position.y,
+            })),
+          );
+        }}
+        onConnect={(connection) => void handleConnect(connection)}
+        onEdgeClick={(event, edge) => {
+          event.stopPropagation();
+          highlightEdge(edge.id);
+        }}
+        onEdgesDelete={(deleted) => deleted.forEach((edge) => void onDisconnect(edge.target))}
+        onPaneClick={(event) => {
+          if (event.detail === 1) {
+            highlightEdge(null);
+            return;
+          }
+          if (event.detail !== 2) return;
+          const point = instanceRef.current?.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+          if (point) onCreateAt(point.x, point.y);
+        }}
+        fitView
+        minZoom={0.2}
+        maxZoom={2}
+        snapToGrid
+        snapGrid={[16, 16]}
+        deleteKeyCode={["Backspace", "Delete"]}
+        panOnScroll
+        multiSelectionKeyCode="Shift"
+        defaultEdgeOptions={{ type: "smoothstep" }}
+        connectionMode={ConnectionMode.Loose}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1.25} color="#b8c5d6" />
+        <Controls position="bottom-left" showInteractive={false} />
+        <MiniMap
+          position="bottom-right"
+          pannable
+          zoomable
+          nodeColor={(node) =>
+            (node.data as CanvasNodeData).position.status === "active" ? "#2f6fed" : "#94a3b8"
+          }
+          maskColor="rgba(241, 245, 249, 0.75)"
         />
-      ))}
-    </div>
-  );
-}
-
-function OrganizationSiblingGroup({
-  parentId,
-  nodes,
-  withIncomingLine = false,
-  ...props
-}: Omit<OrganizationChartProps, "nodes"> & {
-  parentId: string | null;
-  nodes: OrganizationNodeData[];
-  withIncomingLine?: boolean;
-}) {
-  const hasMultipleNodes = nodes.length > 1;
-  const addButtonTopClass = withIncomingLine ? "top-[5.25rem]" : "top-16";
-
-  return (
-    <div className="flex items-start justify-center gap-10">
-      {nodes.map((child, index) => (
-        <div key={child.id} className="relative flex flex-col items-center">
-          {withIncomingLine && (
-            <div className="relative h-5 w-full">
-              {hasMultipleNodes && index > 0 && (
-                <div className="absolute -left-5 right-1/2 top-0 border-t border-[#042558]/25" />
-              )}
-              {hasMultipleNodes && index < nodes.length - 1 && (
-                <div className="absolute left-1/2 -right-5 top-0 border-t border-[#042558]/25" />
-              )}
-              <div className="absolute left-1/2 top-0 h-5 -translate-x-1/2 border-l border-[#042558]/25" />
-            </div>
-          )}
-          <OrganizationBranch node={child} {...props} />
-
-          <div className={`absolute -right-9 ${addButtonTopClass} z-10 flex h-8 items-center`}>
-            <AddPositionButton
-              title={
-                index === nodes.length - 1
-                  ? "Adicionar cargo no final"
-                  : "Adicionar cargo entre estes cargos"
-              }
-              onClick={() =>
-                props.onAddAt(
-                  parentId,
-                  index === nodes.length - 1
-                    ? getAppendDisplayOrder(nodes)
-                    : getInsertDisplayOrder(child),
-                  child.visual_level,
-                )
-              }
-            />
+        <Panel position="top-left" className="!m-3">
+          <div className="rounded-lg border border-[#042558]/10 bg-white/90 px-3 py-2 text-[11px] leading-5 text-[#042558]/60 shadow-sm backdrop-blur">
+            <strong className="block text-[#042558]">Canvas livre</strong>
+            Arraste os cargos · conecte pelas bolinhas · duplo clique para criar
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function OrganizationBranch({
-  node,
-  ...props
-}: Omit<OrganizationChartProps, "nodes"> & { node: OrganizationNodeData }) {
-  const isCollapsed = props.collapsed.has(node.id);
-  const visibleChildren = isCollapsed ? [] : node.children;
-
-  return (
-    <div className="flex flex-col items-center">
-      <OrganizationNode
-        node={node}
-        selected={props.selectedId === node.id}
-        highlighted={props.highlightedId === node.id}
-        collapsed={isCollapsed}
-        descendantCount={countDescendants(props.positions, node.id)}
-        hasDescription={props.positionsWithDescription.has(node.id)}
-        onSelect={props.onSelect}
-        onToggle={props.onToggle}
-        onAddChild={props.onAddChild}
-        onAddSibling={props.onAddSibling}
-        onInsertAbove={props.onInsertAbove}
-        onEdit={props.onEdit}
-        onMove={props.onMove}
-        onDelete={props.onDelete}
-        onReorder={props.onReorder}
-        onDropOn={props.onDropOn}
-      />
-
-      {visibleChildren.length > 0 && (
-        <div className="mt-5 flex flex-col items-center">
-          <div className="h-5 border-l border-[#042558]/25" />
-          <OrganizationSiblingRow
-            parentId={node.id}
-            nodes={visibleChildren}
-            withIncomingLine
-            {...props}
-          />
-        </div>
-      )}
-
-      {visibleChildren.length === 0 && !isCollapsed && (
-        <div className="mt-5 flex flex-col items-center">
-          <div className="h-5 border-l border-[#042558]/25" />
-          <AddPositionButton
-            title="Adicionar subordinado"
-            onClick={() => props.onAddAt(node.id, 10, 1)}
-          />
-        </div>
-      )}
+        </Panel>
+        <Panel position="top-right" className="!m-3">
+          <button
+            type="button"
+            onClick={() => {
+              const selectedEdge = edges.find((edge) => edge.selected);
+              if (!selectedEdge) return;
+              setEdges((current) => current.filter((edge) => edge.id !== selectedEdge.id));
+              void onDisconnect(selectedEdge.target);
+            }}
+            disabled={!edges.some((edge) => edge.selected)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/10 bg-white/90 px-3 py-2 text-xs font-semibold text-[#042558] shadow-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+            title="Selecione uma conexão e clique para removê-la"
+          >
+            <Unlink className="h-3.5 w-3.5" /> Remover conexão
+          </button>
+        </Panel>
+      </ReactFlow>
     </div>
   );
 }

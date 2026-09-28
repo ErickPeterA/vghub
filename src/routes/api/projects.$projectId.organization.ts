@@ -8,6 +8,8 @@ const positionSchema = async () => {
     parent_id: z.string().uuid().nullable().default(null),
     display_order: z.number().int(),
     visual_level: z.number().int().min(1),
+    layout_x: z.number().finite().nullable().default(null),
+    layout_y: z.number().finite().nullable().default(null),
     status: z.enum(["active", "inactive"]),
   });
 };
@@ -36,17 +38,13 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
       },
       POST: async ({ request, params }) => {
         try {
-          const [
-            { z },
-            { requireAuthenticatedUser },
-            { requireLocalUser },
-            organization,
-          ] = await Promise.all([
-            import("zod"),
-            import("@/server/auth/session"),
-            import("@/server/auth/local-user"),
-            import("@/server/organization/organization-repository"),
-          ]);
+          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, organization] =
+            await Promise.all([
+              import("zod"),
+              import("@/server/auth/session"),
+              import("@/server/auth/local-user"),
+              import("@/server/organization/organization-repository"),
+            ]);
           const body = await request.json().catch(() => null);
           const schema = await positionSchema();
           const input = z
@@ -68,6 +66,16 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
                 ),
               }),
               z.object({
+                action: z.literal("layout"),
+                updates: z.array(
+                  z.object({
+                    id: z.string().uuid(),
+                    x: z.number().finite(),
+                    y: z.number().finite(),
+                  }),
+                ),
+              }),
+              z.object({
                 action: z.literal("insertAbove"),
                 targetId: z.string().uuid(),
                 values: schema.pick({ nome: true, descricao: true, status: true }),
@@ -76,6 +84,8 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
                 action: z.literal("move"),
                 positionId: z.string().uuid(),
                 parentId: z.string().uuid().nullable(),
+                sourceHandle: z.enum(["top", "right", "bottom", "left"]).optional(),
+                targetHandle: z.enum(["top", "right", "bottom", "left"]).optional(),
               }),
               z.object({
                 action: z.literal("delete"),
@@ -95,7 +105,11 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
           if (input.action === "create") {
             return Response.json({
               ok: true,
-              position: await organization.createPosition(user.userId, params.projectId, input.values),
+              position: await organization.createPosition(
+                user.userId,
+                params.projectId,
+                input.values,
+              ),
             });
           }
           if (input.action === "update") {
@@ -112,19 +126,43 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
           if (input.action === "shift") {
             return Response.json({
               ok: true,
-              result: await organization.shiftPositionOrders(user.userId, params.projectId, input.updates),
+              result: await organization.shiftPositionOrders(
+                user.userId,
+                params.projectId,
+                input.updates,
+              ),
             });
           }
           if (input.action === "insertAbove") {
             return Response.json({
               ok: true,
-              position: await organization.insertPositionAbove(user.userId, input.targetId, input.values),
+              position: await organization.insertPositionAbove(
+                user.userId,
+                input.targetId,
+                input.values,
+              ),
+            });
+          }
+          if (input.action === "layout") {
+            return Response.json({
+              ok: true,
+              result: await organization.updatePositionLayout(
+                user.userId,
+                params.projectId,
+                input.updates,
+              ),
             });
           }
           if (input.action === "move") {
             return Response.json({
               ok: true,
-              result: await organization.movePosition(user.userId, input.positionId, input.parentId),
+              result: await organization.movePosition(
+                user.userId,
+                input.positionId,
+                input.parentId,
+                input.sourceHandle,
+                input.targetHandle,
+              ),
             });
           }
           if (input.action === "delete") {
@@ -139,7 +177,11 @@ export const Route = createFileRoute("/api/projects/$projectId/organization")({
           }
           return Response.json({
             ok: true,
-            result: await organization.reorderPosition(user.userId, input.positionId, input.direction),
+            result: await organization.reorderPosition(
+              user.userId,
+              input.positionId,
+              input.direction,
+            ),
           });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");

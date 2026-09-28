@@ -1,6 +1,9 @@
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "@/server/db/pool";
-import { requireCanManageProject, requireCanReadProject } from "@/server/projects/project-permissions";
+import {
+  requireCanManageProject,
+  requireCanReadProject,
+} from "@/server/projects/project-permissions";
 
 export type OrganizationPositionInput = {
   nome: string;
@@ -8,6 +11,8 @@ export type OrganizationPositionInput = {
   parent_id: string | null;
   display_order: number;
   visual_level: number;
+  layout_x: number | null;
+  layout_y: number | null;
   status: "active" | "inactive";
 };
 
@@ -24,6 +29,7 @@ export async function getOrganizationPageData(userId: string, projectId: string)
     query(
       `
         select id, project_id, parent_id, nome, descricao, display_order, visual_level,
+               layout_x, layout_y, connection_source_handle, connection_target_handle,
                status::text as status,
                created_by, created_at, updated_at
         from public.project_positions
@@ -59,8 +65,10 @@ export async function createPosition(
   const result = await query(
     `
       insert into public.project_positions
-        (project_id, parent_id, nome, descricao, display_order, visual_level, status, created_by)
-      values ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::public.organization_position_status, $8::uuid)
+        (project_id, parent_id, nome, descricao, display_order, visual_level, layout_x, layout_y,
+         status, created_by)
+      values ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8,
+              $9::public.organization_position_status, $10::uuid)
       returning id
     `,
     [
@@ -70,6 +78,8 @@ export async function createPosition(
       values.descricao,
       values.display_order,
       values.visual_level,
+      values.layout_x,
+      values.layout_y,
       values.status,
       actorUserId,
     ],
@@ -92,7 +102,9 @@ export async function updatePosition(
           parent_id = $5::uuid,
           display_order = $6,
           visual_level = $7,
-          status = $8::public.organization_position_status
+          layout_x = $8,
+          layout_y = $9,
+          status = $10::public.organization_position_status
       where id = $1::uuid and project_id = $2::uuid
       returning id
     `,
@@ -104,10 +116,33 @@ export async function updatePosition(
       values.parent_id,
       values.display_order,
       values.visual_level,
+      values.layout_x,
+      values.layout_y,
       values.status,
     ],
   );
   return result.rows[0] ?? null;
+}
+
+export async function updatePositionLayout(
+  actorUserId: string,
+  projectId: string,
+  updates: Array<{ id: string; x: number; y: number }>,
+) {
+  await requireCanManageProject(actorUserId, projectId);
+  return withTransaction(async (client) => {
+    for (const update of updates) {
+      await client.query(
+        `
+          update public.project_positions
+          set layout_x = $3, layout_y = $4
+          where id = $1::uuid and project_id = $2::uuid
+        `,
+        [update.id, projectId, update.x, update.y],
+      );
+    }
+    return { ok: true };
+  });
 }
 
 export async function shiftPositionOrders(
@@ -147,9 +182,26 @@ export async function insertPositionAbove(
   });
 }
 
-export async function movePosition(actorUserId: string, positionId: string, parentId: string | null) {
+export async function movePosition(
+  actorUserId: string,
+  positionId: string,
+  parentId: string | null,
+  sourceHandle: "top" | "right" | "bottom" | "left" = "right",
+  targetHandle: "top" | "right" | "bottom" | "left" = "left",
+) {
   return withActor(actorUserId, async (client) => {
-    await client.query(`select public.move_project_position($1::uuid, $2::uuid)`, [positionId, parentId]);
+    await client.query(`select public.move_project_position($1::uuid, $2::uuid)`, [
+      positionId,
+      parentId,
+    ]);
+    await client.query(
+      `
+        update public.project_positions
+        set connection_source_handle = $2, connection_target_handle = $3
+        where id = $1::uuid
+      `,
+      [positionId, sourceHandle, targetHandle],
+    );
     return { ok: true };
   });
 }
@@ -160,10 +212,10 @@ export async function deletePosition(
   childrenParentId: string | null,
 ) {
   return withActor(actorUserId, async (client) => {
-    await client.query(`select public.delete_project_position_with_reassignment($1::uuid, $2::uuid)`, [
-      positionId,
-      childrenParentId,
-    ]);
+    await client.query(
+      `select public.delete_project_position_with_reassignment($1::uuid, $2::uuid)`,
+      [positionId, childrenParentId],
+    );
     return { ok: true };
   });
 }
@@ -174,7 +226,10 @@ export async function reorderPosition(
   direction: "up" | "down",
 ) {
   return withActor(actorUserId, async (client) => {
-    await client.query(`select public.reorder_project_position($1::uuid, $2)`, [positionId, direction]);
+    await client.query(`select public.reorder_project_position($1::uuid, $2)`, [
+      positionId,
+      direction,
+    ]);
     return { ok: true };
   });
 }

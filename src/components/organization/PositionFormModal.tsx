@@ -13,6 +13,8 @@ type PositionFormModalProps = {
   defaultParentId?: string | null;
   defaultDisplayOrder?: number | null;
   defaultVisualLevel?: number;
+  defaultLayoutX?: number | null;
+  defaultLayoutY?: number | null;
   onClose: () => void;
   onSubmit: (values: {
     nome: string;
@@ -20,6 +22,8 @@ type PositionFormModalProps = {
     parent_id: string | null;
     display_order: number;
     visual_level: number;
+    layout_x: number | null;
+    layout_y: number | null;
     status: PositionStatus;
   }) => void;
 };
@@ -35,19 +39,19 @@ export function PositionFormModal({
   defaultParentId,
   defaultDisplayOrder,
   defaultVisualLevel = 1,
+  defaultLayoutX = null,
+  defaultLayoutY = null,
   onClose,
   onSubmit,
 }: PositionFormModalProps) {
   const [nome, setNome] = useState("");
   const [parentId, setParentId] = useState<string | null>(null);
-  const [visualLevel, setVisualLevel] = useState(1);
 
   useEffect(() => {
     if (!open) return;
     setNome(position?.nome ?? "");
     setParentId(mode === "edit" ? (position?.parent_id ?? null) : (defaultParentId ?? null));
-    setVisualLevel(mode === "edit" ? (position?.visual_level ?? 1) : defaultVisualLevel);
-  }, [defaultParentId, defaultVisualLevel, mode, open, position]);
+  }, [defaultParentId, mode, open, position]);
 
   const parentOptions = availableParents(positions, mode === "edit" ? position : null);
   const title =
@@ -57,6 +61,7 @@ export function PositionFormModal({
         ? "Inserir cargo acima"
         : "Novo cargo";
   const hiddenDisplayOrder = position?.display_order ?? defaultDisplayOrder ?? 10;
+  const hiddenVisualLevel = position?.visual_level ?? defaultVisualLevel;
   const hiddenStatus: PositionStatus = position?.status ?? "active";
 
   return (
@@ -75,7 +80,9 @@ export function PositionFormModal({
               descricao: position?.descricao ?? null,
               parent_id: parentId,
               display_order: hiddenDisplayOrder,
-              visual_level: visualLevel,
+              visual_level: hiddenVisualLevel,
+              layout_x: position?.layout_x ?? defaultLayoutX,
+              layout_y: position?.layout_y ?? defaultLayoutY,
               status: hiddenStatus,
             });
           }}
@@ -92,23 +99,10 @@ export function PositionFormModal({
             />
           </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
-              Nível
-            </span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={visualLevel}
-              onChange={(event) => setVisualLevel(Math.max(1, Number(event.target.value) || 1))}
-              className={inputClass}
-            />
-            <span className="mt-1 block text-[11px] leading-4 text-[#042558]/45">
-              Cargos com o mesmo superior e a mesma camada ficam lado a lado. Camadas maiores
-              aparecem abaixo, sem alterar o líder.
-            </span>
-          </label>
+          <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] leading-4 text-blue-800">
+            A posição deste cargo é livre. Depois de salvar, arraste o bloco para qualquer lugar do
+            canvas sem alterar o superior imediato.
+          </p>
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
