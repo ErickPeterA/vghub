@@ -28,6 +28,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiJson } from "@/lib/api";
+import {
+  leaderOptionsFor,
+  responseOptionForParticipant,
+} from "@/lib/performance-response-labels";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };
 type FieldType = "text" | "textarea" | "select";
@@ -848,14 +852,54 @@ const DEFAULT_EXPERIENCE_90_QUESTIONS: PerformanceQuestion[] = [
     active: true,
     helpText: "Satisfação",
   },
-  {
-    id: "observacoes_adicionais",
-    label: "Observações e comentários adicionais:",
-    type: "textarea",
-    required: false,
-    active: true,
-  },
 ];
+
+function withRequiredPerformanceQuestions(questions: PerformanceQuestion[]) {
+  const normalized = questions.map((question) => ({
+    ...question,
+    leaderOptions: question.leaderOptions ?? leaderOptionsFor(question.options),
+  }));
+  if (normalized.some((question) => question.dynamicSource === "culture_skills")) {
+    return normalized;
+  }
+
+  const culturalSkillQuestion = DEFAULT_AVDP_QUESTIONS.find(
+    (question) => question.dynamicSource === "culture_skills",
+  );
+  if (!culturalSkillQuestion) return normalized;
+
+  const roleSkillsIndex = normalized.findIndex(
+    (question) => question.dynamicSource === "role_skills",
+  );
+  normalized.splice(roleSkillsIndex >= 0 ? roleSkillsIndex : normalized.length, 0, {
+    ...culturalSkillQuestion,
+  });
+  return normalized;
+}
+
+function questionBlockLabel(question: PerformanceQuestion) {
+  const sourceLabels: Partial<Record<NonNullable<PerformanceQuestion["dynamicSource"]>, string>> = {
+    activities: "Atividades",
+    indicators: "Indicadores",
+    culture_skills: "Habilidades culturais",
+    role_skills: "Habilidades especificas do cargo",
+    behavior: "Postura e comportamento",
+  };
+  return (
+    (question.dynamicSource ? sourceLabels[question.dynamicSource] : undefined) ??
+    question.sectionTitle?.trim() ??
+    "Perguntas gerais"
+  );
+}
+
+function questionBlocksForConfiguration(questions: PerformanceQuestion[]) {
+  const blocks = new Map<string, PerformanceQuestion[]>();
+  questions.forEach((question) => {
+    const label = questionBlockLabel(question);
+    blocks.set(label, [...(blocks.get(label) ?? []), question]);
+  });
+  return [...blocks.entries()].map(([label, items]) => ({ label, questions: items }));
+}
 
 const STATUS_LABEL: Record<ParticipantStatus, string> = {
   not_sent: "Não enviado",
@@ -897,11 +941,15 @@ function reviewPeriodOptionsForType(type: ReviewType) {
 function defaultQuestionsForConfig(reviewType: ReviewType) {
   const source =
     reviewType === "experience"
-      ? DEFAULT_EXPERIENCE_30_QUESTIONS
+      ? DEFAULT_EXPERIENCE_90_QUESTIONS
       : DEFAULT_AVDP_QUESTIONS.length
         ? DEFAULT_AVDP_QUESTIONS
         : DEFAULT_PERFORMANCE_QUESTIONS;
-  return source.map((question) => ({ ...question, id: `${question.id}_${uid()}` }));
+  return source.map((question) => ({
+    ...question,
+    id: `${question.id}_${uid()}`,
+    leaderOptions: question.leaderOptions ?? leaderOptionsFor(question.options),
+  }));
 }
 
 function displayQuestionLabel(question: PerformanceQuestion, participantType?: ParticipantType) {
@@ -913,7 +961,7 @@ function displayQuestionLabel(question: PerformanceQuestion, participantType?: P
 function questionOptions(question: PerformanceQuestion, participantType?: ParticipantType) {
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
-    : (question.options ?? []);
+    : (question.options ?? []).map((option) => responseOptionForParticipant(option, participantType));
 }
 
 function normalizeLookup(value: string) {
@@ -998,8 +1046,8 @@ function buildEvaluationConfigSnapshot(
 function hasWeightSnapshot(snapshot: Record<string, unknown> | undefined) {
   return Boolean(
     snapshot?.weights &&
-      typeof snapshot.weights === "object" &&
-      Object.keys(snapshot.weights as Record<string, unknown>).length > 0,
+    typeof snapshot.weights === "object" &&
+    Object.keys(snapshot.weights as Record<string, unknown>).length > 0,
   );
 }
 
@@ -1012,7 +1060,10 @@ function reviewWithEvaluationConfigFallback(
   weightConfigs: EvaluationWeightConfigRow[],
   scoringConfigs: CriterionScoringConfigRow[],
 ) {
-  if (hasWeightSnapshot(review.evaluation_weights_snapshot) && hasScoringSnapshot(review.criterion_scoring_snapshot)) {
+  if (
+    hasWeightSnapshot(review.evaluation_weights_snapshot) &&
+    hasScoringSnapshot(review.criterion_scoring_snapshot)
+  ) {
     return review;
   }
   const snapshots = buildEvaluationConfigSnapshot(
@@ -1103,9 +1154,17 @@ function fieldsForDynamicSource(
 
 function optionLabelForValue(field: BaseFieldRow, value: string) {
   return (
-    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+    field.base_options?.find(
+      (option) =>
+        (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
+        option.is_active !== false,
+    )
       ?.label ?? value
   );
+}
+
+function itemHasFieldValue(item: Record<string, unknown>, field: BaseFieldRow) {
+  return stringsFromUnknown(item[field.field_key]).some((value) => value.trim().length > 0);
 }
 
 function displayValuesForField(field: BaseFieldRow, value: unknown) {
@@ -1123,6 +1182,7 @@ function pickItemValueFromFields(
   const includeTerms = includes.map(normalizeLookup);
   const excludeTerms = excludes.map(normalizeLookup);
   const field = fields.find((candidate) => {
+    if (!itemHasFieldValue(item, candidate)) return false;
     const label = normalizeLookup(candidate.label);
     const key = normalizeLookup(candidate.field_key);
     const searchable = `${label} ${key}`;
@@ -1141,7 +1201,10 @@ function pickItemValueFromExactLabel(
   labels: string[],
 ) {
   const expected = labels.map(normalizeLookup);
-  const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
+  const field = fields.find(
+    (candidate) =>
+      itemHasFieldValue(item, candidate) && expected.includes(normalizeLookup(candidate.label)),
+  );
   if (!field) return "";
   return displayValuesForField(field, item[field.field_key])
     .filter((value) => !isNonTitleValue(value))
@@ -1294,8 +1357,25 @@ function requirementValueForStaticCriterion(
         ];
   const fallbackInclude =
     criterionKey === "instruction"
-      ? ["escolaridade", "formacao", "minimo", "requisito", "pre_requisito", "exigido", "necessario"]
-      : ["experiencia", "tempo", "anos", "minimo", "requisito", "pre_requisito", "exigido", "necessario"];
+      ? [
+          "escolaridade",
+          "formacao",
+          "minimo",
+          "requisito",
+          "pre_requisito",
+          "exigido",
+          "necessario",
+        ]
+      : [
+          "experiencia",
+          "tempo",
+          "anos",
+          "minimo",
+          "requisito",
+          "pre_requisito",
+          "exigido",
+          "necessario",
+        ];
   const values = items.flatMap((item) => {
     const byFields = valuesByFieldTerms(item, sectionFields, strictInclude);
     if (byFields.length) return byFields;
@@ -1311,8 +1391,24 @@ function requirementValueForDynamicItem(
 ) {
   if (!question.dynamicSource) return "";
   const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
-  const include = ["nivel", "minimo", "requisito", "pre_requisito", "exigido", "esperado", "necessario"];
-  const exclude = ["atividade", "indicador", "habilidade", "postura", "comportamento", "descricao", "nome"];
+  const include = [
+    "nivel",
+    "minimo",
+    "requisito",
+    "pre_requisito",
+    "exigido",
+    "esperado",
+    "necessario",
+  ];
+  const exclude = [
+    "atividade",
+    "indicador",
+    "habilidade",
+    "postura",
+    "comportamento",
+    "descricao",
+    "nome",
+  ];
   const values =
     valuesByFieldTerms(item, sourceFields, include, exclude).length > 0
       ? valuesByFieldTerms(item, sourceFields, include, exclude)
@@ -1343,7 +1439,11 @@ function buildReviewQuestions(
   reviewType: ReviewType,
   fields: BaseFieldRow[] = [],
 ): PerformanceQuestion[] {
-  const activeQuestions: PerformanceQuestion[] = (configQuestions ?? [])
+  const modelQuestions =
+    reviewType === "performance"
+      ? withRequiredPerformanceQuestions(configQuestions ?? [])
+      : (configQuestions ?? []);
+  const activeQuestions: PerformanceQuestion[] = modelQuestions
     .filter((question) => question.active ?? true)
     .map((question) =>
       withRequirementFromDescription({ ...question, source: "config" as const }, dc, fields),
@@ -1374,11 +1474,17 @@ function buildReviewQuestions(
 
 function asRecordArray(value: unknown) {
   return Array.isArray(value)
-    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    ? value.filter(
+        (item): item is Record<string, unknown> => Boolean(item) && typeof item === "object",
+      )
     : [];
 }
 
-function valuesByKeyTerms(item: Record<string, unknown>, include: string[], exclude: string[] = []) {
+function valuesByKeyTerms(
+  item: Record<string, unknown>,
+  include: string[],
+  exclude: string[] = [],
+) {
   const includeTerms = include.map(normalizeLookup);
   const excludeTerms = exclude.map(normalizeLookup);
   return Object.entries(item).flatMap(([key, value]) => {
@@ -1444,8 +1550,7 @@ function scoreRulesForCriterion(review: ReviewRow, criterionKey: string) {
   return (rules as Array<Record<string, unknown>>).map((rule) => ({
     id: stringFromUnknown(rule.id),
     label: stringFromUnknown(rule.label),
-    score:
-      rule.score === null || rule.score === undefined ? null : numberFromUnknown(rule.score),
+    score: rule.score === null || rule.score === undefined ? null : numberFromUnknown(rule.score),
     notApplicable: rule.notApplicable === true,
   }));
 }
@@ -1507,14 +1612,18 @@ function scoreFromAnswerText(answer: string) {
 }
 
 function scoreFromQuestionOrder(answer: string, question: PerformanceQuestion) {
-  const options = Array.from(new Set([...(question.options ?? []), ...(question.leaderOptions ?? [])])).filter(
-    (option) => !normalizeLookup(option).includes("nao se aplica"),
-  );
+  const options = Array.from(
+    new Set([...(question.options ?? []), ...(question.leaderOptions ?? [])]),
+  ).filter((option) => !normalizeLookup(option).includes("nao se aplica"));
   const index = options.findIndex((option) => normalizeLookup(option) === normalizeLookup(answer));
   if (index < 0) return null;
   if (options.length <= 1) return 100;
-  const ascending = criterionKeyForQuestion(question) === "instruction" || criterionKeyForQuestion(question) === "experience";
-  const ratio = ascending ? index / (options.length - 1) : (options.length - 1 - index) / (options.length - 1);
+  const ascending =
+    criterionKeyForQuestion(question) === "instruction" ||
+    criterionKeyForQuestion(question) === "experience";
+  const ratio = ascending
+    ? index / (options.length - 1)
+    : (options.length - 1 - index) / (options.length - 1);
   return Math.round(ratio * 100);
 }
 
@@ -1661,10 +1770,9 @@ function scoreAgainstJobRequirement(
     return scoreAnswer(answer, rules, question);
   }
   const answerRank = answerRankForCriterion(answer, criterionKey);
-  const requirementValues =
-    question.requirementValue?.trim()
-      ? [question.requirementValue]
-      : requirementCandidatesFromSnapshot(review, criterionKey);
+  const requirementValues = question.requirementValue?.trim()
+    ? [question.requirementValue]
+    : requirementCandidatesFromSnapshot(review, criterionKey);
   const requirementRank = requirementRankForCriterion(requirementValues, criterionKey);
   if (answerRank === null || requirementRank === null) return scoreAnswer(answer, rules, question);
   return scoreForRequirementDifference(answerRank - requirementRank, criterionKey, rules);
@@ -1781,9 +1889,10 @@ function buildComparisonScoreSummary(
     totalWeight: criteria.reduce((sum, criterion) => sum + criterion.weight, 0),
     matchPercent:
       comparedTotal > 0 ? Math.round((matchesTotal / comparedTotal) * 10000) / 100 : null,
-    collaboratorFinalScore: roundScore(
-      criteria.reduce((sum, criterion) => sum + (criterion.collaboratorPoints ?? 0), 0),
-    ) ?? 0,
+    collaboratorFinalScore:
+      roundScore(
+        criteria.reduce((sum, criterion) => sum + (criterion.collaboratorPoints ?? 0), 0),
+      ) ?? 0,
     leaderFinalScore: 0,
     criteria,
   };
@@ -2372,7 +2481,9 @@ export function PerformanceComparisonPage({
 
 function formatSummaryNumber(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(value)) return "sem dados";
-  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function percentBar(value: number | null | undefined) {
@@ -2413,7 +2524,9 @@ function LegacyPerformanceScoreSummaryPanel({
           <MetricTile
             label="Aderência"
             value={
-              summary.matchPercent === null ? "sem dados" : `${formatSummaryNumber(summary.matchPercent)}%`
+              summary.matchPercent === null
+                ? "sem dados"
+                : `${formatSummaryNumber(summary.matchPercent)}%`
             }
           />
         </div>
@@ -2433,7 +2546,9 @@ function LegacyPerformanceScoreSummaryPanel({
       <div className="mt-5 space-y-3">
         {summary.criteria.map((criterion) => {
           const matchPercent =
-            criterion.compared > 0 ? Math.round((criterion.matches / criterion.compared) * 100) : null;
+            criterion.compared > 0
+              ? Math.round((criterion.matches / criterion.compared) * 100)
+              : null;
           return (
             <div key={criterion.key} className="rounded-xl border border-[#042558]/10 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -2616,7 +2731,10 @@ function PerformanceFinalVisualizationPanel({
             </p>
           </div>
           <div className="grid min-w-full gap-2 sm:grid-cols-3 md:min-w-[520px]">
-            <ResultPill label="Nota total" value={formatSummaryNumber(summary.collaboratorFinalScore)} />
+            <ResultPill
+              label="Nota total"
+              value={formatSummaryNumber(summary.collaboratorFinalScore)}
+            />
             <ResultPill label="Notas positivas" value={String(positiveBlocks.length)} />
             <ResultPill label="Menores que 80%" value={String(lowerBlocks.length)} />
           </div>
@@ -2781,9 +2899,7 @@ function PerformanceBlockScoreCard({
               {item.answer}
             </p>
             {item.requirementLabel && (
-              <p className="mt-2 text-xs text-[#042558]/55">
-                Requisito: {item.requirementLabel}
-              </p>
+              <p className="mt-2 text-xs text-[#042558]/55">Requisito: {item.requirementLabel}</p>
             )}
           </div>
         ))}
@@ -2822,7 +2938,10 @@ function ScoreBar({ label, value, color }: { label: string; value: number | null
         <span>{value === null ? "sem regra" : `${formatSummaryNumber(value)}%`}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${percentBar(value)}%` }} />
+        <div
+          className={`h-full rounded-full ${color}`}
+          style={{ width: `${percentBar(value)}%` }}
+        />
       </div>
     </div>
   );
@@ -2877,13 +2996,15 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
           method: "POST",
           body: {
             projectId,
-            configs: [{
-              name: "Avaliacao de experiencia",
-              periodDays: EXPERIENCE_LIMIT_DAYS,
-              reviewType: "experience",
-              questionsSchema: questions,
-              isActive,
-            }],
+            configs: [
+              {
+                name: "Avaliacao de experiencia",
+                periodDays: EXPERIENCE_LIMIT_DAYS,
+                reviewType: "experience",
+                questionsSchema: questions,
+                isActive,
+              },
+            ],
           },
         });
       }
@@ -3085,9 +3206,13 @@ export function PerformancePeriodConfigPanel({
 
   const hydrate = (config: ConfigRow) => {
     const normalized = normalizeConfigRow(config);
+    const modelQuestions =
+      normalized.review_type === "performance"
+        ? withRequiredPerformanceQuestions(normalized.questions_schema ?? [])
+        : (normalized.questions_schema ?? []);
     setModelName(normalized.name ?? periodLabel(normalized));
     setQuestions(
-      (normalized.questions_schema ?? []).map((question) => ({
+      modelQuestions.map((question) => ({
         ...question,
         active: question.active ?? true,
       })),
@@ -3254,8 +3379,9 @@ export function PerformancePeriodConfigPanel({
                 {periodLabel(selectedConfig)}
               </h2>
               <p className="text-sm text-[#042558]/60">
-                As perguntas deste modelo serao usadas em qualquer dia escolhido na criacao da
-                avaliacao.
+                {projectId === null
+                  ? "Configuracao global: estas perguntas serao usadas em todos os projetos, inclusive os ja criados."
+                  : "As perguntas deste modelo serao usadas em qualquer dia escolhido na criacao da avaliacao."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -3315,7 +3441,18 @@ export function PerformancePeriodConfigPanel({
           </div>
 
           <div className="space-y-3">
-            {questions.map((question) => (
+            {questionBlocksForConfiguration(questions).map((block) => (
+              <section key={block.label} className="space-y-3">
+                <div className="flex items-center gap-3 border-b border-[#042558]/10 pb-2">
+                  <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#042558]">
+                    Bloco: {block.label}
+                  </span>
+                  <span className="text-xs text-[#042558]/50">
+                    {block.questions.length} {block.questions.length === 1 ? "pergunta" : "perguntas"}
+                  </span>
+                </div>
+                <div className="space-y-3">
+            {block.questions.map((question) => (
               <div
                 key={question.id}
                 className="rounded-xl border border-[#042558]/10 bg-white/70 p-4"
@@ -3430,6 +3567,9 @@ export function PerformancePeriodConfigPanel({
                 )}
               </div>
             ))}
+                </div>
+              </section>
+            ))}
           </div>
         </section>
       ) : (
@@ -3447,7 +3587,10 @@ function normalizeConfigRow(config: ConfigRow): ConfigRow {
     name: config.name ?? "Padrao",
     period_days: config.period_days ?? 30,
     review_type: config.review_type ?? "experience",
-    questions_schema: config.questions_schema ?? [],
+    questions_schema: (config.questions_schema ?? []).map((question) => ({
+      ...question,
+      leaderOptions: question.leaderOptions ?? leaderOptionsFor(question.options),
+    })),
     is_active: config.is_active ?? true,
   };
 }
@@ -3522,9 +3665,7 @@ function daysBetween(fromDate: unknown, toDate: unknown) {
 function getEmployeeReviewType(employee: PerfEmployeeRow, today: string): ReviewType | null {
   const elapsedDays = daysBetween(employee.admission_date, today);
   if (elapsedDays === null) return null;
-  return elapsedDays > EXPERIENCE_LIMIT_DAYS
-    ? "performance"
-    : "experience";
+  return elapsedDays > EXPERIENCE_LIMIT_DAYS ? "performance" : "experience";
 }
 
 function reviewTypeLabel(type: ReviewType) {
@@ -3736,36 +3877,38 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           configs.find((item) => (item.review_type ?? "experience") === reviewType) ?? null;
         const reviewPeriods = reviewPeriodOptionsForType(reviewType);
         if (!config) return [];
-        return reviewPeriods.map(({ days: periodDays }) => {
-          const baseDate = normalizeDateOnly(
-            employee.last_performance_review_date ?? employee.admission_date,
-          );
-          if (!baseDate) return null;
-          const dueDate = addDaysToDate(baseDate, periodDays);
-          if (!dueDate) return null;
-          const existingReview =
-            reviews.find(
-              (review) =>
-                review.employee_id === employee.id &&
-                (review.config_id === config.id || review.review_type === reviewType) &&
-                (review.review_type ?? reviewType) === reviewType &&
-                review.due_date === dueDate,
-            ) ?? null;
-          return {
-            id: `${employee.id}:${config.id}:${periodDays}:${dueDate}`,
-            employee,
-            leader,
-            employeePosition,
-            description,
-            config,
-            periodDays,
-            baseDate,
-            dueDate,
-            daysUntil: daysBetween(today, dueDate),
-            existingReview,
-            reviewType,
-          };
-        }).filter((item): item is AgendaItem => item !== null);
+        return reviewPeriods
+          .map(({ days: periodDays }) => {
+            const baseDate = normalizeDateOnly(
+              employee.last_performance_review_date ?? employee.admission_date,
+            );
+            if (!baseDate) return null;
+            const dueDate = addDaysToDate(baseDate, periodDays);
+            if (!dueDate) return null;
+            const existingReview =
+              reviews.find(
+                (review) =>
+                  review.employee_id === employee.id &&
+                  (review.config_id === config.id || review.review_type === reviewType) &&
+                  (review.review_type ?? reviewType) === reviewType &&
+                  review.due_date === dueDate,
+              ) ?? null;
+            return {
+              id: `${employee.id}:${config.id}:${periodDays}:${dueDate}`,
+              employee,
+              leader,
+              employeePosition,
+              description,
+              config,
+              periodDays,
+              baseDate,
+              dueDate,
+              daysUntil: daysBetween(today, dueDate),
+              existingReview,
+              reviewType,
+            };
+          })
+          .filter((item): item is AgendaItem => item !== null);
       })
       .sort(
         (a, b) =>
@@ -4322,7 +4465,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     try {
       if (!selectedEmployee || !selectedLeader) return toast.error("Informe colaborador e líder.");
       if (!getEmployeeBaseDate(selectedEmployee)) {
-        return toast.error("O colaborador possui uma data de admissão ou última avaliação inválida.");
+        return toast.error(
+          "O colaborador possui uma data de admissão ou última avaliação inválida.",
+        );
       }
       if (!selectedEmployeeIsBelowLeader)
         return toast.error("Selecione um colaborador que responda diretamente para este lider.");
@@ -4341,11 +4486,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         formReviewType,
         baseFields,
       );
-      const snapshots = buildEvaluationConfigSnapshot(
-        selectedDc,
-        weightConfigs,
-        scoringConfigs,
-      );
+      const snapshots = buildEvaluationConfigSnapshot(selectedDc, weightConfigs, scoringConfigs);
       const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
       await apiJson(`/api/projects/${projectId}/performance`, {
@@ -4765,9 +4906,7 @@ function ParticipantCard({
           Respondido {new Date(participant.submitted_at).toLocaleString("pt-BR")}
         </p>
       )}
-      {participant && !answered && (
-        <LinkValidityBadge expiresAt={participant.expires_at} />
-      )}
+      {participant && !answered && <LinkValidityBadge expiresAt={participant.expires_at} />}
     </div>
   );
 }
@@ -4808,9 +4947,7 @@ function linkValidityInfo(expiresAt?: string | null) {
   const hours = Math.ceil(diffMs / (60 * 60 * 1000));
   const days = Math.floor(hours / 24);
   const remainingLabel =
-    hours < 24
-      ? `Faltam ${hours} hora(s)`
-      : `Faltam ${days} dia(s) e ${hours % 24} hora(s)`;
+    hours < 24 ? `Faltam ${hours} hora(s)` : `Faltam ${days} dia(s) e ${hours % 24} hora(s)`;
 
   if (hours <= 24) {
     return {

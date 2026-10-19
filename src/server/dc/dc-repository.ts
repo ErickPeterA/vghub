@@ -293,41 +293,52 @@ export async function updateDc(input: {
     const result = await client.query(
       `
         update public.descricoes_cargo
-           set cargo = $4::text,
-               unidade_negocio = $5::text,
-               departamento = $6::text,
-               nivelamento = $7::text,
-               superior_imediato = $8::text,
-               tipo_carreira = $9::text,
-               data_versao = $10::date,
-               data_revisao = $11::date,
-               status = $12::text,
-               objetivo = $13::text,
-               instrucao = $14::jsonb,
-               experiencia = $15::jsonb,
-               conhecimento = $16::jsonb,
-               atividades = $17::jsonb,
-               indicadores = $18::jsonb,
-               habilidades_cargo = $19::jsonb,
-               habilidades_culturais = $20::jsonb,
-               postura = $21::jsonb,
-               dynamic_values = $22::jsonb,
-               organization_position_id = $23::uuid
+           set cargo = $3::text,
+               unidade_negocio = $4::text,
+               departamento = $5::text,
+               nivelamento = $6::text,
+               superior_imediato = $7::text,
+               tipo_carreira = $8::text,
+               data_versao = $9::date,
+               data_revisao = $10::date,
+               status = $11::text,
+               objetivo = $12::text,
+               instrucao = $13::jsonb,
+               experiencia = $14::jsonb,
+               conhecimento = $15::jsonb,
+               atividades = $16::jsonb,
+               indicadores = $17::jsonb,
+               habilidades_cargo = $18::jsonb,
+               habilidades_culturais = $19::jsonb,
+               postura = $20::jsonb,
+               dynamic_values = $21::jsonb,
+               organization_position_id = $22::uuid
          where id = $1::uuid
            and project_id = $2::uuid
         returning id
       `,
-      [input.dcId, input.projectId, input.actorUserId, ...payloadValuesOnly(input.payload)],
+      [input.dcId, input.projectId, ...payloadValuesOnly(input.payload)],
     );
     if (!result.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
 
     let versionId: string | null = null;
     if (input.currentVersionId) {
-      const version = await client.query<{ version_id: string | null }>(
-        `select public.finalize_resolved_dc_comments($1::uuid, $2::uuid) as version_id`,
+      const comments = await client.query<{ has_comments: boolean }>(
+        `select exists (
+           select 1
+             from public.field_comments
+            where job_description_id = $1::uuid
+              and version_id = $2::uuid
+         ) as has_comments`,
         [input.dcId, input.currentVersionId],
       );
-      versionId = version.rows[0]?.version_id ?? null;
+      if (comments.rows[0]?.has_comments) {
+        const version = await client.query<{ version_id: string | null }>(
+          `select public.finalize_resolved_dc_comments($1::uuid, $2::uuid) as version_id`,
+          [input.dcId, input.currentVersionId],
+        );
+        versionId = version.rows[0]?.version_id ?? null;
+      }
     }
     return { versionId };
   });

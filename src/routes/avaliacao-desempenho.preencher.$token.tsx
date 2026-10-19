@@ -6,6 +6,7 @@ import {
   validatePerformanceAnswers,
   type PerformanceQuestion,
 } from "@/components/PerformanceReviewManager";
+import { responseOptionForParticipant } from "@/lib/performance-response-labels";
 
 type FormData = {
   ok: true;
@@ -418,7 +419,7 @@ function questionOptions(
 ) {
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
-    : (question.options ?? []);
+    : (question.options ?? []).map((option) => responseOptionForParticipant(option, participantType));
 }
 
 type QuestionBlock =

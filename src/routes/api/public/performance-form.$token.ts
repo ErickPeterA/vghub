@@ -1,5 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 
+import { leaderOptionsFor } from "@/lib/performance-response-labels";
+
 type PerformanceQuestion = {
   id: string;
   label: string;
@@ -114,16 +116,28 @@ function fieldsForDynamicSource(
 
 function optionLabelForValue(field: BaseFieldRow, value: string) {
   return (
-    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+    field.base_options?.find(
+      (option) =>
+        (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
+        option.is_active !== false,
+    )
       ?.label ?? value
   );
 }
 
 function optionDescriptionForValue(field: BaseFieldRow, value: string) {
   return (
-    field.base_options?.find((option) => option.value === value && option.is_active !== false)
+    field.base_options?.find(
+      (option) =>
+        (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
+        option.is_active !== false,
+    )
       ?.description ?? ""
   ).trim();
+}
+
+function itemHasFieldValue(item: JsonRecord, field: BaseFieldRow) {
+  return stringFromUnknown(item[field.field_key]).trim().length > 0;
 }
 
 function pickItemValueFromFields(
@@ -135,6 +149,7 @@ function pickItemValueFromFields(
   const includeTerms = includes.map(normalizeLookup);
   const excludeTerms = excludes.map(normalizeLookup);
   const field = fields.find((candidate) => {
+    if (!itemHasFieldValue(item, candidate)) return false;
     const searchable = `${normalizeLookup(candidate.label)} ${normalizeLookup(candidate.field_key)}`;
     return (
       includeTerms.some((term) => searchable.includes(term)) &&
@@ -151,6 +166,7 @@ function pickItemValueFromFields(
 function pickItemValueFromExactField(item: JsonRecord, fields: BaseFieldRow[], names: string[]) {
   const expected = names.map(normalizeLookup);
   const field = fields.find((candidate) => {
+    if (!itemHasFieldValue(item, candidate)) return false;
     const label = normalizeLookup(candidate.label);
     const key = normalizeLookup(candidate.field_key);
     return expected.includes(label) || expected.includes(key);
@@ -164,7 +180,10 @@ function pickItemValueFromExactField(item: JsonRecord, fields: BaseFieldRow[], n
 
 function pickItemValueFromExactLabel(item: JsonRecord, fields: BaseFieldRow[], labels: string[]) {
   const expected = labels.map(normalizeLookup);
-  const field = fields.find((candidate) => expected.includes(normalizeLookup(candidate.label)));
+  const field = fields.find(
+    (candidate) =>
+      itemHasFieldValue(item, candidate) && expected.includes(normalizeLookup(candidate.label)),
+  );
   if (!field) return "";
   const value = stringFromUnknown(item[field.field_key]);
   const label = value ? optionLabelForValue(field, value) : "";
@@ -209,6 +228,49 @@ function itemsForQuestion(snapshot: JsonRecord, question: PerformanceQuestion) {
     return arrayFromSnapshot(snapshot, "habilidades_cargo");
   if (question.dynamicSource === "behavior") return arrayFromSnapshot(snapshot, "postura");
   return [];
+}
+
+const CULTURAL_SKILL_OPTIONS = [
+  "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
+  "Utilizo na pratica esta habilidade para garantir bons resultados nas minhas atividades",
+  "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
+  "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
+  "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
+  "Nao se aplica.",
+];
+
+function withMissingCulturalSkillQuestions(snapshot: JsonRecord, questions: PerformanceQuestion[]) {
+  if (questions.some((question) => question.dynamicSource === "culture_skills")) {
+    return questions.map((question) => ({
+      ...question,
+      leaderOptions: question.leaderOptions ?? leaderOptionsFor(question.options),
+    }));
+  }
+
+  const culturalSkills = arrayFromSnapshot(snapshot, "habilidades_culturais");
+  if (culturalSkills.length === 0) return questions;
+
+  const generated = culturalSkills.map(
+    (_, index): PerformanceQuestion => ({
+      id: `avdp_habilidade_cultura_${index + 1}`,
+      label: "Avaliacao da habilidade",
+      type: "select",
+      required: true,
+      active: true,
+      options: CULTURAL_SKILL_OPTIONS,
+      leaderOptions: leaderOptionsFor(CULTURAL_SKILL_OPTIONS),
+      source: "job_description",
+      sectionTitle: "Habilidades da cultura organizacional",
+      groupId: `culture_skills_${index + 1}`,
+      dynamicSource: "culture_skills",
+      dynamicRole: "rating",
+    }),
+  );
+  const roleSkillsIndex = questions.findIndex(
+    (question) => question.dynamicSource === "role_skills",
+  );
+  const insertionIndex = roleSkillsIndex >= 0 ? roleSkillsIndex : questions.length;
+  return [...questions.slice(0, insertionIndex), ...generated, ...questions.slice(insertionIndex)];
 }
 
 function titleForQuestion(
@@ -303,7 +365,8 @@ function descriptionForQuestion(
 ) {
   if (
     question.dynamicSource !== "culture_skills" &&
-    question.dynamicSource !== "role_skills"
+    question.dynamicSource !== "role_skills" &&
+    question.dynamicSource !== "behavior"
   ) {
     return question.groupDescription;
   }
@@ -312,31 +375,40 @@ function descriptionForQuestion(
   const item = itemsForQuestion(snapshot, question)[index];
   if (!item) return question.groupDescription;
   const sourceFields = fieldsForDynamicSource(fields, question.dynamicSource);
-  const expectedLabels =
-    question.dynamicSource === "culture_skills"
-      ? ["Habilidade cultural", "Habilidade", "CompetҪncia", "Competencia"]
-      : [
-          "Habilidade do cargo",
-          "Habilidade especҭfica do cargo",
-          "Habilidade especifica do cargo",
-          "Habilidade",
-          "CompetҪncia",
-          "Competencia",
-        ];
-  const expectedKeys =
-    question.dynamicSource === "culture_skills"
-      ? ["habilidade_cultural", "habilidade", "competencia"]
-      : ["habilidade_cargo", "habilidade_do_cargo", "habilidade", "competencia"];
-  const expected = [...expectedLabels, ...expectedKeys].map(normalizeLookup);
+  const expectedLabels: Record<string, string[]> = {
+    culture_skills: ["Habilidade cultural", "Habilidade", "Competência", "Competencia"],
+    role_skills: [
+      "Habilidade do cargo",
+      "Habilidade específica do cargo",
+      "Habilidade especifica do cargo",
+      "Habilidade",
+      "Competência",
+      "Competencia",
+    ],
+    behavior: ["Postura e comportamento", "Postura", "Comportamento"],
+  };
+  const expectedKeys: Record<string, string[]> = {
+    culture_skills: ["habilidade_cultural", "habilidade", "competencia"],
+    role_skills: ["habilidade_cargo", "habilidade_do_cargo", "habilidade", "competencia"],
+    behavior: ["postura_comportamento", "postura", "comportamento"],
+  };
+  const expected = [
+    ...(expectedLabels[question.dynamicSource] ?? []),
+    ...(expectedKeys[question.dynamicSource] ?? []),
+  ].map(normalizeLookup);
   const field =
     sourceFields.find((candidate) => {
+      if (!itemHasFieldValue(item, candidate)) return false;
       const label = normalizeLookup(candidate.label);
       const key = normalizeLookup(candidate.field_key);
       return expected.includes(label) || expected.includes(key);
     }) ??
     sourceFields.find((candidate) => {
+      if (!itemHasFieldValue(item, candidate)) return false;
       const searchable = `${normalizeLookup(candidate.label)} ${normalizeLookup(candidate.field_key)}`;
-      return searchable.includes("habilidade") || searchable.includes("competencia");
+      return ["habilidade", "competencia", "postura", "comportamento"].some((term) =>
+        searchable.includes(term),
+      );
     });
   if (!field) return question.groupDescription;
   const value = stringFromUnknown(item[field.field_key]);
@@ -378,7 +450,10 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           }
           if (participant.status === "answered") {
             return Response.json(
-              { error: "already_answered", message: "Este formulario ja foi respondido. Obrigado!" },
+              {
+                error: "already_answered",
+                message: "Este formulario ja foi respondido. Obrigado!",
+              },
               { status: 410 },
             );
           }
@@ -451,31 +526,50 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
             `,
             [review.project_id],
           );
-          const questions = [...((review.questions_snapshot as PerformanceQuestion[] | null) ?? [])]
-            .filter((question) => question.active ?? true)
-            .map((question) => ({
-              ...question,
-              groupTitle: titleForQuestion(
-                snapshot,
-                (baseFields.rows ?? []) as unknown as BaseFieldRow[],
-                question,
-              ),
-              groupDescription: descriptionForQuestion(
-                snapshot,
-                (baseFields.rows ?? []) as unknown as BaseFieldRow[],
-                question,
-              ),
-            }));
+          const snapshotQuestions = [
+            ...((review.questions_snapshot as PerformanceQuestion[] | null) ?? []),
+          ];
+          const completedQuestions =
+            (review.review_type ?? "performance") === "performance"
+              ? withMissingCulturalSkillQuestions(snapshot, snapshotQuestions)
+              : snapshotQuestions;
+          const resolvedQuestions = completedQuestions.map((question) => ({
+            ...question,
+            groupTitle: titleForQuestion(
+              snapshot,
+              (baseFields.rows ?? []) as unknown as BaseFieldRow[],
+              question,
+            ),
+            groupDescription: descriptionForQuestion(
+              snapshot,
+              (baseFields.rows ?? []) as unknown as BaseFieldRow[],
+              question,
+            ),
+          }));
+          const questions = resolvedQuestions.filter((question) => question.active ?? true);
+          if (completedQuestions.length !== snapshotQuestions.length) {
+            await query(
+              `update public.performance_reviews set questions_snapshot = $2::jsonb where id = $1::uuid`,
+              [review.id, JSON.stringify(resolvedQuestions)],
+            );
+          }
 
           const [employee, employeePosition, leaderPosition] = await Promise.all([
             review.employee_id
-              ? query(`select admission_date, area_id, sector_id from public.project_employees where id = $1::uuid limit 1`, [review.employee_id])
+              ? query(
+                  `select admission_date, area_id, sector_id from public.project_employees where id = $1::uuid limit 1`,
+                  [review.employee_id],
+                )
               : Promise.resolve({ rows: [] }),
             review.employee_position_id
-              ? query(`select nome from public.project_positions where id = $1::uuid limit 1`, [review.employee_position_id])
+              ? query(`select nome from public.project_positions where id = $1::uuid limit 1`, [
+                  review.employee_position_id,
+                ])
               : Promise.resolve({ rows: [] }),
             review.leader_position_id
-              ? query(`select nome from public.project_positions where id = $1::uuid limit 1`, [review.leader_position_id])
+              ? query(`select nome from public.project_positions where id = $1::uuid limit 1`, [
+                  review.leader_position_id,
+                ])
               : Promise.resolve({ rows: [] }),
           ]);
           const employeeRow = employee.rows[0] as {
@@ -485,10 +579,14 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           } | null;
           const [area, sector] = await Promise.all([
             employeeRow?.area_id
-              ? query(`select nome from public.project_areas where id = $1::uuid limit 1`, [employeeRow.area_id])
+              ? query(`select nome from public.project_areas where id = $1::uuid limit 1`, [
+                  employeeRow.area_id,
+                ])
               : Promise.resolve({ rows: [] }),
             employeeRow?.sector_id
-              ? query(`select nome from public.project_areas where id = $1::uuid limit 1`, [employeeRow.sector_id])
+              ? query(`select nome from public.project_areas where id = $1::uuid limit 1`, [
+                  employeeRow.sector_id,
+                ])
               : Promise.resolve({ rows: [] }),
           ]);
 
@@ -514,7 +612,8 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
               sentAt: participant.sent_at ?? null,
               expiresAt: participant.expires_at,
               positionName:
-                stringValue((employeePosition.rows[0] as { nome?: string } | null)?.nome) ?? review.job_title,
+                stringValue((employeePosition.rows[0] as { nome?: string } | null)?.nome) ??
+                review.job_title,
               careerType: snapshotValue(snapshot, "tipo_carreira"),
               areaSector: areaSector || null,
               leaderPositionName:

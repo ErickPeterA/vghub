@@ -176,7 +176,7 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
           <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
             <PerformancePeriodConfigPanel
               key={selected.key}
-              projectId={projectId}
+              projectId={null}
               initialReviewType={selectedReviewType}
               hideReviewTypeTabs
             />

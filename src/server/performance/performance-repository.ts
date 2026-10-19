@@ -110,8 +110,7 @@ export async function getPerformanceWorkspaceData(userId: string, projectId: str
     ),
     query(`select * from public.descricoes_cargo where project_id = $1::uuid`, [projectId]),
     query(
-      `select * from public.performance_review_configs where project_id = $1::uuid and is_active = true order by period_days`,
-      [projectId],
+      `select * from public.performance_review_configs where project_id is null and is_active = true order by period_days`,
     ),
     query(baseFieldsSql, [projectId]),
     query(
@@ -159,8 +158,7 @@ export async function getPerformanceScoringData(userId: string, projectId: strin
       [projectId],
     ),
     query(
-      `select questions_schema from public.performance_review_configs where project_id = $1::uuid and review_type = 'performance' and is_active = true order by updated_at desc limit 1`,
-      [projectId],
+      `select questions_schema from public.performance_review_configs where project_id is null and review_type = 'performance' and is_active = true order by updated_at desc limit 1`,
     ),
     query(
       `select criterion_key, scoring_schema from public.criterion_scoring_configs where project_id = $1::uuid order by criterion_key`,
@@ -460,7 +458,7 @@ export async function createPerformanceReview(args: {
             on dc.id = $4::uuid and dc.project_id = employee.project_id
            and dc.organization_position_id = employee.position_id
           join public.performance_review_configs cfg
-            on cfg.id = $5::uuid and cfg.project_id = employee.project_id and cfg.is_active = true
+            on cfg.id = $5::uuid and cfg.project_id is null and cfg.is_active = true
          where employee.id = $2::uuid
            and employee.project_id = $1::uuid
            and employee.superior_imediato_id = leader.id
