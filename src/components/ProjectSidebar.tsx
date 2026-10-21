@@ -94,7 +94,7 @@ export function ProjectSidebar({
       to: "/projetos/$projectId/areas",
       href: `/projetos/${projectId}/areas`,
       icon: Network,
-      label: "Áreas e setores",
+      label: "Áreas e Setores",
       group: "EMPRESA",
     },
     {
@@ -108,14 +108,14 @@ export function ProjectSidebar({
       to: "/projetos/$projectId/organograma",
       href: `/projetos/${projectId}/organograma`,
       icon: GitFork,
-      label: "Organograma e descrição de cargo",
+      label: "Organograma e Descrição de Cargo",
       group: "PLANO DE CARREIRA",
     },
     {
       to: "/projetos/$projectId/atividades",
       href: `/projetos/${projectId}/atividades`,
       icon: ClipboardList,
-      label: "Coleta de dados",
+      label: "Coleta de Dados",
       group: "PLANO DE CARREIRA",
       badge: unreviewed,
     },
@@ -209,7 +209,7 @@ export function ProjectSidebar({
           className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3 w-3" />
-          <span>Todos os projetos</span>
+          <span>Todos os Projetos</span>
         </Link>
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Projeto</p>
         <h2 className="mt-1 font-display text-sm font-medium leading-tight">{projectName}</h2>

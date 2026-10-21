@@ -5,6 +5,6 @@ export async function assertAdminPostgres(userId: string) {
     userId,
   ]);
   if (!result.rows[0]?.allowed) {
-    throw new Error("Apenas administradores podem executar esta acao.");
+    throw new Error("Apenas administradores podem executar esta ação.");
   }
 }

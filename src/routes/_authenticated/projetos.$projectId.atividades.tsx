@@ -46,7 +46,7 @@ function AtividadesPage() {
               Atividades
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-              Coleta de atividades
+              Coleta de Atividades
             </h1>
             <p className="mt-1 text-sm text-[#042558]/60">
               Preencha o cabeçalho, gere links para colaboradores e receba as respostas.

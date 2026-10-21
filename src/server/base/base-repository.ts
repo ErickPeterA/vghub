@@ -60,10 +60,12 @@ export type BaseSectionSetting = {
 type FieldRow = Omit<BaseField, "created_at" | "updated_at" | "base_options"> & {
   created_at: Date | string;
   updated_at: Date | string;
-  base_options: Array<Omit<BaseOption, "created_at" | "updated_at"> & {
-    created_at: Date | string;
-    updated_at: Date | string;
-  }>;
+  base_options: Array<
+    Omit<BaseOption, "created_at" | "updated_at"> & {
+      created_at: Date | string;
+      updated_at: Date | string;
+    }
+  >;
 };
 
 type SettingRow = Omit<BaseSectionSetting, "created_at" | "updated_at"> & {
@@ -147,7 +149,7 @@ export async function canManageBaseScope(userId: string, projectId: string | nul
 
 export async function requireCanManageBaseScope(userId: string, projectId: string | null) {
   if (!(await canManageBaseScope(userId, projectId))) {
-    throw new HttpError(403, "forbidden", "Sem permissao para gerenciar esta base.");
+    throw new HttpError(403, "forbidden", "Sem permissão para gerenciar esta base.");
   }
 }
 
@@ -363,7 +365,7 @@ export async function createBaseField(input: {
     );
 
     const fieldId = fieldResult.rows[0]?.id;
-    if (!fieldId) throw new Error("Campo nao foi criado.");
+    if (!fieldId) throw new Error("Campo não foi criado.");
 
     for (const [index, option] of (input.options ?? []).entries()) {
       await client.query(
@@ -384,7 +386,7 @@ export async function createBaseField(input: {
     }
 
     const created = await getFieldById(fieldId, client);
-    if (!created) throw new Error("Campo criado nao foi encontrado.");
+    if (!created) throw new Error("Campo criado não foi encontrado.");
     return created;
   });
 }
@@ -451,7 +453,7 @@ export async function updateBaseFieldOrder(
     );
 
     if (scopeResult.rows.length !== 1 || scopeResult.rows[0]?.project_id === undefined) {
-      throw new HttpError(400, "invalid_fields", "Campos invalidos para reordenacao.");
+      throw new HttpError(400, "invalid_fields", "Campos inválidos para reordenação.");
     }
 
     await requireCanManageBaseScope(actorUserId, scopeResult.rows[0].project_id);
@@ -488,13 +490,7 @@ export async function upsertBaseSectionSetting(input: {
         do update set max_items = excluded.max_items, is_enabled = excluded.is_enabled
         returning id, project_id, section, max_items, is_enabled, created_by, created_at, updated_at
       `,
-      [
-        input.projectId,
-        input.section,
-        input.max_items,
-        input.is_enabled,
-        input.actorUserId,
-      ],
+      [input.projectId, input.section, input.max_items, input.is_enabled, input.actorUserId],
     );
 
     return mapSetting(result.rows[0]);
@@ -548,18 +544,16 @@ export async function createBaseOption(input: {
   return mapOption(result.rows[0]);
 }
 
-export async function updateBaseOption(
-  actorUserId: string,
-  optionId: string,
-  patch: OptionPatch,
-) {
+export async function updateBaseOption(actorUserId: string, optionId: string, patch: OptionPatch) {
   const projectId = await getOptionScope(optionId);
   if (projectId === undefined) return null;
   await requireCanManageBaseScope(actorUserId, projectId);
 
   const values = entries(patch as Record<string, unknown>);
   if (values.length === 0) {
-    const existing = await query<BaseOption & { created_at: Date | string; updated_at: Date | string }>(
+    const existing = await query<
+      BaseOption & { created_at: Date | string; updated_at: Date | string }
+    >(
       `
         select id, field_id, label, value, description, display_order, is_active, created_at, updated_at
         from public.base_options

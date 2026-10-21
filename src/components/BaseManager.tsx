@@ -66,19 +66,24 @@ type Field = {
   data_source: DataSource;
   base_options: Option[];
 };
-type SectionSetting = { id: string | null; section: string; max_items: number; is_enabled: boolean };
+type SectionSetting = {
+  id: string | null;
+  section: string;
+  max_items: number;
+  is_enabled: boolean;
+};
 
 const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/50 px-3 py-2 text-sm text-[#042558] outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 placeholder:text-[#042558]/40";
 
 const types: Array<{ value: FieldType; label: string }> = [
   { value: "text", label: "Texto" },
-  { value: "textarea", label: "Texto longo" },
+  { value: "textarea", label: "Texto Longo" },
   { value: "number", label: "Número" },
   { value: "date", label: "Data" },
   { value: "checkbox", label: "Sim/Não" },
-  { value: "single_select", label: "Seleção única" },
-  { value: "multi_select", label: "Seleção múltipla" },
+  { value: "single_select", label: "Seleção Única" },
+  { value: "multi_select", label: "Seleção Múltipla" },
   { value: "competency_description", label: "Competência + Descrição" },
 ];
 
@@ -236,7 +241,7 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
           {...attributes}
           {...listeners}
           className="flex cursor-grab items-center justify-center rounded-lg border border-[#042558]/20 bg-white/50 px-2 transition-colors hover:bg-[#042558]/10 active:cursor-grabbing"
-          title="Arrastar para reordenar"
+          title="Arrastar para Reordenar"
         >
           <GripVertical className="h-4 w-4 text-[#042558]/40" />
         </button>
@@ -268,7 +273,7 @@ const SortableFieldRow = memo(function SortableFieldRow(props: {
             type="button"
             onClick={() => onCopy(field)}
             className="rounded-lg border border-[#042558]/20 bg-white/50 p-2 text-[#042558] transition-colors hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20"
-            title="Copiar campo"
+            title="Copiar Campo"
           >
             <Copy className="h-4 w-4" />
           </button>
@@ -456,7 +461,7 @@ export function BaseManager({
     setLoading(true);
     load()
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Erro ao carregar base");
+        toast.error(error instanceof Error ? error.message : "Erro ao Carregar Base");
       })
       .finally(() => setLoading(false));
   }, [projectId, load]);
@@ -483,7 +488,7 @@ export function BaseManager({
       await apiJson(`/api/base/fields/${field.id}`, { method: "PATCH", body: payload });
       toast.success("Campo atualizado");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar campo");
+      toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Campo");
     }
   }, []);
 
@@ -512,7 +517,7 @@ export function BaseManager({
       setNewLabel((prev) => ({ ...prev, [sectionKey]: "" }));
       toast.success("Campo criado");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar campo");
+      toast.error(error instanceof Error ? error.message : "Erro ao Criar Campo");
     }
   }, []);
 
@@ -566,7 +571,7 @@ export function BaseManager({
         createdField = normalizeField(createdPayload.field);
         createdOptions = createdField.base_options;
       } catch (error) {
-        return toast.error(error instanceof Error ? error.message : "Erro ao copiar campo");
+        return toast.error(error instanceof Error ? error.message : "Erro ao Copiar Campo");
       }
 
       const reordered = [...sectionFields];
@@ -589,9 +594,12 @@ export function BaseManager({
       });
 
       try {
-        await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates: orderUpdates } });
+        await apiJson("/api/base/fields/order", {
+          method: "PATCH",
+          body: { updates: orderUpdates },
+        });
       } catch (error) {
-        return toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+        return toast.error(error instanceof Error ? error.message : "Erro ao Reordenar Campos");
       }
 
       toast.success("Campo copiado com opções");
@@ -604,7 +612,7 @@ export function BaseManager({
     try {
       await apiJson(`/api/base/fields/${id}`, { method: "DELETE" });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao excluir campo");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Excluir Campo");
     }
     setFields((cur) => cur.filter((f) => f.id !== id));
     toast.success("Campo excluído");
@@ -619,15 +627,18 @@ export function BaseManager({
       [sectionKey]: { id: existing?.id ?? null, max_items: safeValue },
     }));
     try {
-      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>("/api/base/sections", {
-        method: "PUT",
-        body: {
-          projectId: projectIdRef.current,
-          section: sectionKey,
-          max_items: safeValue,
-          is_enabled: isEnabled,
+      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>(
+        "/api/base/sections",
+        {
+          method: "PUT",
+          body: {
+            projectId: projectIdRef.current,
+            section: sectionKey,
+            max_items: safeValue,
+            is_enabled: isEnabled,
+          },
         },
-      });
+      );
       setSectionLimits((cur) => ({
         ...cur,
         [sectionKey]: { id: payload.setting.id, max_items: safeValue },
@@ -637,7 +648,7 @@ export function BaseManager({
         [sectionKey]: { id: payload.setting.id, is_enabled: isEnabled },
       }));
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar limite");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Limite");
     }
     toast.success("Limite de itens atualizado");
   }, []);
@@ -651,15 +662,18 @@ export function BaseManager({
 
     const maxItems = sectionLimitsRef.current[sectionKey]?.max_items ?? 3;
     try {
-      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>("/api/base/sections", {
-        method: "PUT",
-        body: {
-          projectId: projectIdRef.current,
-          section: sectionKey,
-          max_items: maxItems,
-          is_enabled,
+      const payload = await apiJson<{ ok: boolean; setting: SectionSetting }>(
+        "/api/base/sections",
+        {
+          method: "PUT",
+          body: {
+            projectId: projectIdRef.current,
+            section: sectionKey,
+            max_items: maxItems,
+            is_enabled,
+          },
         },
-      });
+      );
       setSectionEnabled((cur) => ({
         ...cur,
         [sectionKey]: { id: payload.setting.id, is_enabled },
@@ -669,9 +683,9 @@ export function BaseManager({
         [sectionKey]: { id: payload.setting.id, max_items: maxItems },
       }));
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar bloco");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Bloco");
     }
-    toast.success(is_enabled ? "Bloco habilitado" : "Bloco desabilitado");
+    toast.success(is_enabled ? "Bloco Habilitado" : "Bloco Desabilitado");
   }, []);
 
   const addOption = useCallback(async (fieldId: string, label: string) => {
@@ -691,12 +705,10 @@ export function BaseManager({
       });
       option = payload.option;
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao criar opcao");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Criar Opção");
     }
     setFields((cur) =>
-      cur.map((f) =>
-        f.id === fieldId ? { ...f, base_options: [...f.base_options, option] } : f,
-      ),
+      cur.map((f) => (f.id === fieldId ? { ...f, base_options: [...f.base_options, option] } : f)),
     );
   }, []);
 
@@ -707,7 +719,7 @@ export function BaseManager({
         body: { is_active: active },
       });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao atualizar opcao");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Opção");
     }
     setFields((cur) =>
       cur.map((f) =>
@@ -727,7 +739,7 @@ export function BaseManager({
     try {
       await apiJson(`/api/base/options/${optionId}`, { method: "DELETE" });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao excluir opcao");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Excluir Opção");
     }
     setFields((cur) =>
       cur.map((f) =>
@@ -746,7 +758,7 @@ export function BaseManager({
           body: { description },
         });
       } catch (error) {
-        return toast.error(error instanceof Error ? error.message : "Erro ao atualizar descricao");
+        return toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Descrição");
       }
       setFields((cur) =>
         cur.map((f) =>
@@ -806,7 +818,7 @@ export function BaseManager({
       try {
         await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates } });
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+        toast.error(error instanceof Error ? error.message : "Erro ao Reordenar Campos");
       }
       return;
     }
@@ -844,7 +856,7 @@ export function BaseManager({
     try {
       await apiJson("/api/base/fields/order", { method: "PATCH", body: { updates } });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao reordenar campos");
+      toast.error(error instanceof Error ? error.message : "Erro ao Reordenar Campos");
     }
   }, []);
 
@@ -900,8 +912,8 @@ export function BaseManager({
                           </p>
                           <h2 className="text-xl font-bold text-[#042558]">{section.label}</h2>
                           <p className="mt-0.5 text-xs text-[#042558]/40">
-                            Arraste os campos pela alça <GripVertical className="inline h-3 w-3" />{" "}
-                            para reordenar ou mover entre blocos
+                            Arraste os Campos pela Alça <GripVertical className="inline h-3 w-3" />{" "}
+                            Para Reordenar Ou Mover Entre Blocos
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-3">
@@ -943,11 +955,11 @@ export function BaseManager({
                           )}
                           {!planAllowed && (
                             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                              Bloqueado no plano {SECTION_PLAN_LABELS[currentPlan]}
+                              Bloqueado no Plano {SECTION_PLAN_LABELS[currentPlan]}
                             </span>
                           )}
                           <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-                            {sectionFields.length} campo{sectionFields.length !== 1 ? "s" : ""}
+                            {sectionFields.length} Campo{sectionFields.length !== 1 ? "s" : ""}
                           </span>
                         </div>
                       </div>
@@ -971,7 +983,7 @@ export function BaseManager({
                           onClick={() => addField(section.key)}
                           className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30"
                         >
-                          <Plus className="h-4 w-4" /> Criar campo
+                          <Plus className="h-4 w-4" /> Criar Campo
                         </button>
                         {copiedField && (
                           <button
@@ -980,7 +992,7 @@ export function BaseManager({
                             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#042558]/20 bg-white/70 px-4 py-2.5 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558] hover:text-white hover:shadow-lg hover:shadow-[#042558]/20"
                             title={`Colar "${copiedField.label}" neste bloco`}
                           >
-                            <ClipboardPaste className="h-4 w-4" /> Colar campo
+                            <ClipboardPaste className="h-4 w-4" /> Colar Campo
                           </button>
                         )}
                       </div>
@@ -989,9 +1001,9 @@ export function BaseManager({
                         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
                           <Layers className="mb-2 h-8 w-8 text-[#042558]/20" />
                           <p className="text-sm font-medium text-[#042558]/40">
-                            Nenhum campo neste bloco
+                            Nenhum Campo Neste Bloco
                           </p>
-                          <p className="text-xs text-[#042558]/30">Crie seu primeiro campo acima</p>
+                          <p className="text-xs text-[#042558]/30">Crie Seu Primeiro Campo Acima</p>
                         </div>
                       ) : (
                         <SortableContext

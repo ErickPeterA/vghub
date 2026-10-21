@@ -1,15 +1,12 @@
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "@/server/db/pool";
 import { HttpError } from "@/server/http/errors";
-import { requireCanManageProject, requireCanReadProject } from "@/server/projects/project-permissions";
+import {
+  requireCanManageProject,
+  requireCanReadProject,
+} from "@/server/projects/project-permissions";
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 type ActivityLinkStatus = "pending" | "answered" | "expired" | "cancelled";
 
@@ -67,10 +64,9 @@ async function expirePendingLinks(projectId: string, client?: PoolClient) {
 
 async function expirePublicLink(linkId: string, client?: PoolClient) {
   const runner = client ?? { query };
-  await runner.query(
-    `update public.activity_links set status = 'expired' where id = $1::uuid`,
-    [linkId],
-  );
+  await runner.query(`update public.activity_links set status = 'expired' where id = $1::uuid`, [
+    linkId,
+  ]);
 }
 
 export async function getActivityConfig(userId: string, projectId: string) {
@@ -210,7 +206,7 @@ export async function createActivityLink(input: {
   );
 
   if (!result.rows[0]) {
-    throw new HttpError(404, "not_found", "Configuracao de atividade nao encontrada.");
+    throw new HttpError(404, "not_found", "Configuração de atividade não encontrada.");
   }
 
   return result.rows[0];
@@ -260,18 +256,22 @@ export async function updateActivityLink(input: {
   };
 
   if (input.action === "reactivate" && !input.expiresAt) {
-    throw new HttpError(400, "invalid_body", "Data de expiracao obrigatoria.");
+    throw new HttpError(400, "invalid_body", "Data de expiracao obrigatória.");
   }
 
   const update = updates[input.action];
   const result = await query<ActivityLinkRow>(update.sql, update.values);
   if (!result.rows[0]) {
-    throw new HttpError(404, "not_found", "Link nao encontrado.");
+    throw new HttpError(404, "not_found", "Link não encontrado.");
   }
   return result.rows[0];
 }
 
-export async function getActivityResponseForLink(userId: string, projectId: string, linkId: string) {
+export async function getActivityResponseForLink(
+  userId: string,
+  projectId: string,
+  linkId: string,
+) {
   await requireCanManageProject(userId, projectId);
   return withTransaction(async (client) => {
     const linkResult = await client.query<ActivityLinkRow>(
@@ -286,7 +286,7 @@ export async function getActivityResponseForLink(userId: string, projectId: stri
     );
     const link = linkResult.rows[0];
     if (!link) {
-      throw new HttpError(404, "not_found", "Link nao encontrado.");
+      throw new HttpError(404, "not_found", "Link não encontrado.");
     }
 
     const response = await client.query(
@@ -355,7 +355,7 @@ export async function getActivityCompilationData(userId: string, projectId: stri
 
 function validatePublicToken(token: string) {
   if (!token || token.length < 20) {
-    throw new HttpError(400, "invalid_token", "Link invalido.");
+    throw new HttpError(400, "invalid_token", "Link inválido.");
   }
 }
 
@@ -376,13 +376,13 @@ async function getPublicLink(token: string, client?: PoolClient) {
 
 function assertPublicLinkOpen(link: ActivityLinkRow | null) {
   if (!link) {
-    throw new HttpError(404, "not_found", "Link nao encontrado.");
+    throw new HttpError(404, "not_found", "Link não encontrado.");
   }
   if (link.status === "cancelled") {
     throw new HttpError(410, "cancelled", "Link cancelado.");
   }
   if (link.status === "answered") {
-    throw new HttpError(410, "already_answered", "Ja respondido.");
+    throw new HttpError(410, "already_answered", "Já respondido.");
   }
 }
 
@@ -392,7 +392,7 @@ export async function getPublicActivityForm(token: string) {
 
   if (link!.status === "expired" || new Date(link!.expires_at) < new Date()) {
     await expirePublicLink(link!.id);
-    throw new HttpError(410, "expired", "Este link expirou. Solicite um novo ao responsavel.");
+    throw new HttpError(410, "expired", "Este link expirou. Solicite um novo ao responsável.");
   }
 
   const [config, areas] = await Promise.all([
@@ -420,7 +420,7 @@ export async function getPublicActivityForm(token: string) {
     | { header_schema: JsonValue; questions_schema: JsonValue; is_active: boolean }
     | undefined;
   if (!activityConfig?.is_active) {
-    throw new HttpError(410, "inactive", "O formulario esta inativo no momento.");
+    throw new HttpError(410, "inactive", "O formulário esta inativo no momento.");
   }
 
   return {
@@ -457,12 +457,7 @@ export async function savePublicActivityDraft(input: {
              draft_saved_at = $4::timestamptz
        where id = $1::uuid
     `,
-    [
-      link!.id,
-      JSON.stringify(input.headerAnswers),
-      JSON.stringify(input.questionAnswers),
-      savedAt,
-    ],
+    [link!.id, JSON.stringify(input.headerAnswers), JSON.stringify(input.questionAnswers), savedAt],
   );
   return { savedAt };
 }

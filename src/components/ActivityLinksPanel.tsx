@@ -66,14 +66,14 @@ const ACTIVITY_STAGES: Array<{
 }> = [
   {
     key: "creating",
-    label: "Em criação",
+    label: "Em Criação",
     empty: "Nenhuma atividade em criação",
     icon: Clock3,
     iconClass: "text-blue-500",
   },
   {
     key: "sent",
-    label: "Link enviado",
+    label: "Link Enviado",
     empty: "Nenhum link enviado",
     icon: Send,
     iconClass: "text-amber-500",
@@ -125,9 +125,18 @@ export function ActivityLinksPanel({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { config: cfg, links: ls, employees: emps, positions: pos } = await apiJson<{
+      const {
+        config: cfg,
+        links: ls,
+        employees: emps,
+        positions: pos,
+      } = await apiJson<{
         ok: boolean;
-        config: { id: string; header_schema: ActivityField[]; questions_schema: ActivityField[] } | null;
+        config: {
+          id: string;
+          header_schema: ActivityField[];
+          questions_schema: ActivityField[];
+        } | null;
         links: LinkRow[];
         employees: EmployeeRow[];
         positions: PositionRow[];
@@ -189,7 +198,7 @@ export function ActivityLinksPanel({
   };
 
   const gerar = async (employee: EmployeeRow) => {
-    if (!configId) return toast.error("Configure o formulario primeiro.");
+    if (!configId) return toast.error("Configure o formulário primeiro.");
 
     const areaName = employee.area_id ? (areaById.get(employee.area_id)?.nome ?? "") : "";
     const setorName = employee.sector_id ? (areaById.get(employee.sector_id)?.nome ?? "") : "";
@@ -284,9 +293,9 @@ export function ActivityLinksPanel({
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-            Colaboradores do projeto ({employees.length})
+            Colaboradores do Projeto ({employees.length})
           </h3>
-          <span className="text-xs text-[#042558]/50">Validade do link: 7 dias</span>
+          <span className="text-xs text-[#042558]/50">Validade do Link: 7 Dias</span>
         </div>
         {!configId && (
           <p className="mb-2 text-xs text-amber-700">Salve a configuração antes de gerar links.</p>
@@ -314,8 +323,8 @@ export function ActivityLinksPanel({
               <tbody className="divide-y divide-[#042558]/10 bg-white/60">
                 {employees.map((emp) => {
                   const link = linkByEmployee.get(emp.id) ?? null;
-                  const status = link ? STATUS_LABEL[link.status] : "Sem link";
-                  const color = link ? STATUS_COLOR[link.status] : "bg-slate-100 text-slate-600";
+                  const status = link ? STATUS_LABEL[link.status] : "Sem Link";
+                  const color = link ? STATUS_COLOR[link.status] : "Bg-slate-100 Text-slate-600";
                   return (
                     <tr key={emp.id} className="text-[#042558]">
                       <td className="px-3 py-2 font-medium">{emp.nome}</td>
@@ -341,7 +350,7 @@ export function ActivityLinksPanel({
                               disabled={!configId || generating === emp.id}
                               className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#042558]/90 disabled:opacity-40"
                             >
-                              <Plus className="h-3.5 w-3.5" /> Gerar link
+                              <Plus className="h-3.5 w-3.5" /> Gerar Link
                             </button>
                           ) : null}
                           {link && link.status === "pending" && (
@@ -350,12 +359,12 @@ export function ActivityLinksPanel({
                                 onClick={() => void copiar(link.token)}
                                 className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
                               >
-                                <Copy className="h-3.5 w-3.5" /> Copiar link
+                                <Copy className="h-3.5 w-3.5" /> Copiar Link
                               </button>
                               <button
                                 onClick={() => void cancelar(link)}
                                 className="rounded-lg p-1.5 text-[#042558]/40 hover:bg-red-50 hover:text-red-600"
-                                title="Cancelar link"
+                                title="Cancelar Link"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -366,7 +375,7 @@ export function ActivityLinksPanel({
                               onClick={() => void abrirResposta(link)}
                               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20"
                             >
-                              <Eye className="h-3.5 w-3.5" /> Ver resposta
+                              <Eye className="h-3.5 w-3.5" /> Ver Resposta
                             </button>
                           )}
                         </div>
@@ -383,7 +392,7 @@ export function ActivityLinksPanel({
       <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-5 shadow-sm">
         <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-            Kanban de atividades ({links.length})
+            Kanban de Atividades ({links.length})
           </h3>
         </div>
         {loading ? (
@@ -463,17 +472,24 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { config: cfg, links: ls, responses: rs } = await apiJson<{
+      const {
+        config: cfg,
+        links: ls,
+        responses: rs,
+      } = await apiJson<{
         ok: boolean;
-        config: { header_schema: ActivityField[] | null; questions_schema: ActivityField[] | null } | null;
+        config: {
+          header_schema: ActivityField[] | null;
+          questions_schema: ActivityField[] | null;
+        } | null;
         links: LinkRow[];
         responses: ResponseRow[];
       }>(`/api/projects/${projectId}/activity-compilation`);
 
       setConfigFields({
-        header: normalizeActivityFields((cfg?.header_schema as ActivityField[] | null) ?? []).filter(
-          includeInCompilation,
-        ),
+        header: normalizeActivityFields(
+          (cfg?.header_schema as ActivityField[] | null) ?? [],
+        ).filter(includeInCompilation),
         questions: normalizeActivityFields(
           (cfg?.questions_schema as ActivityField[] | null) ?? [],
         ).filter(includeInCompilation),
@@ -521,10 +537,10 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Atividades concluídas
+              Atividades Concluídas
             </h3>
             <p className="mt-1 text-sm text-[#042558]/60">
-              {completedResponses.length} resposta(s) pronta(s) para compilar
+              {completedResponses.length} Resposta(s) Pronta(s) para Compilar
             </p>
           </div>
           <button
@@ -533,7 +549,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Eye className="h-4 w-4" />
-            Gerar compilação
+            Gerar Compilação
           </button>
         </div>
       </div>
@@ -558,7 +574,7 @@ export function ActivityCompilationPanel({ projectId }: { projectId: string }) {
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h4 className="text-sm font-semibold text-[#042558]">
-                      {link?.label ?? "Sem rótulo"}
+                      {link?.label ?? "Sem Rótulo"}
                     </h4>
                     <p className="mt-1 text-xs text-[#042558]/50">
                       Respondido {new Date(response.submitted_at).toLocaleString("pt-BR")}
@@ -607,9 +623,9 @@ function CompilationPreview({
       >
         <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-[#042558]/10 bg-white/95 p-5 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da compilação</h3>
+            <h3 className="text-lg font-semibold text-[#042558]">Pré-visualização da Compilação</h3>
             <p className="text-sm text-[#042558]/60">
-              {responses.length} resposta(s) serão incluídas no PDF
+              {responses.length} Resposta(s) Serão Incluídas no PDF
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -631,7 +647,7 @@ function CompilationPreview({
 
         <div className="bg-slate-100 p-4 md:p-8">
           <div className="mx-auto min-h-[860px] max-w-[760px] bg-white p-8 text-[#042558] shadow-sm">
-            <h1 className="text-2xl font-bold">Compilação de respostas das atividades</h1>
+            <h1 className="text-2xl font-bold">Compilação de Respostas das Atividades</h1>
             <p className="mt-2 text-sm text-[#042558]/60">Total de respostas: {responses.length}</p>
 
             <div className="mt-8 space-y-8">
@@ -654,7 +670,7 @@ function CompilationPreview({
                             ))}
                           </div>
                         ) : (
-                          <p className="mt-2 italic text-[#042558]/30">sem respostas registradas</p>
+                          <p className="mt-2 italic text-[#042558]/30">Sem Respostas Registradas</p>
                         )}
                       </div>
                     ))}
@@ -687,7 +703,7 @@ function ActivityLinkCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-[#042558]">
-            {link.label ?? "Sem rótulo"}
+            {link.label ?? "Sem Rótulo"}
           </h4>
           <p className="mt-1 text-xs text-[#042558]/50">
             Criado {new Date(link.created_at).toLocaleDateString("pt-BR")}
@@ -697,14 +713,14 @@ function ActivityLinkCard({
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[link.status]}`}
         >
           {STATUS_LABEL[link.status]}
-          {link.status === "answered" && !link.reviewed_at && " · novo"}
+          {link.status === "answered" && !link.reviewed_at && " · Novo"}
         </span>
       </div>
 
       <div className="mt-3 space-y-1 text-xs text-[#042558]/50">
         <p>Expira {new Date(link.expires_at).toLocaleDateString("pt-BR")}</p>
         {link.draft_saved_at && link.status === "pending" && (
-          <p>Rascunho salvo {new Date(link.draft_saved_at).toLocaleDateString("pt-BR")}</p>
+          <p>Rascunho Salvo {new Date(link.draft_saved_at).toLocaleDateString("pt-BR")}</p>
         )}
         {link.answered_at && (
           <p>Respondido {new Date(link.answered_at).toLocaleDateString("pt-BR")}</p>
@@ -715,7 +731,7 @@ function ActivityLinkCard({
         <button
           onClick={() => onCopy(link.token)}
           className="rounded-lg p-2 text-[#042558]/60 hover:bg-[#042558]/5"
-          title="Copiar link"
+          title="Copiar Link"
         >
           <Copy className="h-4 w-4" />
         </button>
@@ -724,7 +740,7 @@ function ActivityLinkCard({
             onClick={() => onOpenResponse(link)}
             className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
           >
-            <Eye className="h-3.5 w-3.5" /> Ver resposta
+            <Eye className="h-3.5 w-3.5" /> Ver Resposta
           </button>
         )}
         {link.status === "pending" && (
@@ -740,9 +756,9 @@ function ActivityLinkCard({
           <button
             onClick={() => onReactivate(link)}
             className="inline-flex items-center gap-1 rounded-lg bg-[#042558]/10 px-3 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/20"
-            title="Reabrir por 3 dias"
+            title="Reabrir por 3 Dias"
           >
-            <RotateCcw className="h-3.5 w-3.5" /> Reabrir por 3 dias
+            <RotateCcw className="h-3.5 w-3.5" /> Reabrir por 3 Dias
           </button>
         )}
       </div>
@@ -818,7 +834,7 @@ function buildCompilationSections(
 ) {
   return [
     {
-      title: "Cabecalho",
+      title: "Cabeçalho",
       items: fields.header
         .filter((field) => (field.active ?? true) && includeInCompilation(field))
         .map((field) => ({
@@ -1029,7 +1045,7 @@ function FieldInput({
           className={base}
           disabled={!parentAreaId}
         >
-          <option value="">{parentAreaId ? "Selecione" : "Selecione a Área primeiro"}</option>
+          <option value="">{parentAreaId ? "Selecione" : "Selecione a Área Primeiro"}</option>
           {setorOptions.map((area) => (
             <option key={area.id} value={area.id}>
               {area.nome}
@@ -1086,7 +1102,7 @@ function ResponseDrawer({
           </button>
         </div>
         <p className="text-xs text-[#042558]/50">
-          {data.link.label ?? "Sem rótulo"} · Enviado{" "}
+          {data.link.label ?? "Sem Rótulo"} · Enviado{" "}
           {data.response ? new Date(data.response.submitted_at).toLocaleString("pt-BR") : "-"}
         </p>
 
@@ -1131,7 +1147,7 @@ function Section({
           <div key={f.id}>
             <dt className="text-xs font-medium text-[#042558]/70">{f.label}</dt>
             <dd className="mt-0.5 whitespace-pre-wrap text-sm text-[#042558]">
-              {answers[f.id] || <span className="italic text-[#042558]/30">sem resposta</span>}
+              {answers[f.id] || <span className="italic text-[#042558]/30">Sem Resposta</span>}
             </dd>
           </div>
         ))}
@@ -1139,4 +1155,3 @@ function Section({
     </div>
   );
 }
-

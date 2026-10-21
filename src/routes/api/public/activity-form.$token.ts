@@ -28,7 +28,7 @@ const normalizeActivityFields = (fields: ActivityField[]) =>
         {
           ...normalized,
           id: "area",
-          label: "Area",
+          label: "Área",
           type: "select" as const,
           dataSource: "areas" as const,
         },

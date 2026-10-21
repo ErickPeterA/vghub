@@ -1,5 +1,9 @@
-import { query } from "@/server/db/pool";
-import { requireCanManageProject, requireCanReadProject } from "@/server/projects/project-permissions";
+import { query, withTransaction } from "@/server/db/pool";
+import { HttpError } from "@/server/http/errors";
+import {
+  requireCanManageProject,
+  requireCanReadProject,
+} from "@/server/projects/project-permissions";
 
 type EmployeeRow = {
   id: string;
@@ -104,4 +108,104 @@ export async function createEmployee(input: {
   );
 
   return mapEmployee(result.rows[0]);
+}
+
+export async function updateEmployee(input: {
+  actorUserId: string;
+  projectId: string;
+  employeeId: string;
+  positionId: string;
+  areaId?: string | null;
+  sectorId?: string | null;
+  superiorImediatoId?: string | null;
+  nome: string;
+  admissionDate: string;
+  lastPerformanceReviewDate?: string | null;
+}) {
+  await requireCanManageProject(input.actorUserId, input.projectId);
+
+  return withTransaction(async (client) => {
+    const result = await client.query<EmployeeRow>(
+      `
+        update public.project_employees
+           set position_id = $3::uuid,
+               area_id = $4::uuid,
+               sector_id = $5::uuid,
+               superior_imediato_id = $6::uuid,
+               nome = $7,
+               admission_date = $8::date,
+               last_performance_review_date = $9::date,
+               updated_at = now()
+         where id = $1::uuid
+           and project_id = $2::uuid
+        returning id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome,
+                  admission_date, last_performance_review_date, created_at
+      `,
+      [
+        input.employeeId,
+        input.projectId,
+        input.positionId,
+        input.areaId ?? null,
+        input.sectorId ?? null,
+        input.superiorImediatoId ?? null,
+        input.nome,
+        input.admissionDate,
+        input.lastPerformanceReviewDate ?? null,
+      ],
+    );
+
+    if (!result.rows[0]) {
+      throw new HttpError(404, "not_found", "Colaborador não encontrado.");
+    }
+
+    // These tables keep display-name snapshots. Keep them synchronized so the
+    // edited employee is shown with the new name throughout the application.
+    await client.query(
+      `
+        update public.performance_reviews
+           set employee_name = $3,
+               leader_name = coalesce(
+                 (
+                   select leader.nome
+                     from public.project_employees employee
+                     join public.project_employees leader on leader.id = employee.superior_imediato_id
+                    where employee.id = $1::uuid
+                      and employee.project_id = $2::uuid
+                 ),
+                 leader_name
+               ),
+               updated_at = now()
+         where employee_id = $1::uuid
+           and project_id = $2::uuid
+      `,
+      [input.employeeId, input.projectId, input.nome],
+    );
+    await client.query(
+      `
+        update public.performance_reviews review
+           set leader_name = $3,
+               updated_at = now()
+         where review.project_id = $2::uuid
+           and review.employee_id in (
+             select employee.id
+               from public.project_employees employee
+              where employee.project_id = $2::uuid
+                and employee.superior_imediato_id = $1::uuid
+           )
+      `,
+      [input.employeeId, input.projectId, input.nome],
+    );
+    await client.query(
+      `
+        update public.pam
+           set employee_name = $3,
+               updated_at = now()
+         where employee_id = $1::uuid
+           and project_id = $2::uuid
+      `,
+      [input.employeeId, input.projectId, input.nome],
+    );
+
+    return mapEmployee(result.rows[0]);
+  });
 }

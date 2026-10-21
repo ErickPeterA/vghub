@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/base/fields/$fieldId")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateBaseField }] =
             await Promise.all([
               import("zod"),
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);
@@ -46,7 +46,7 @@ export const Route = createFileRoute("/api/base/fields/$fieldId")({
           const field = await updateBaseField(user.userId, params.fieldId, patch);
           if (!field) {
             return Response.json(
-              { error: "not_found", message: "Campo nao encontrado." },
+              { error: "not_found", message: "Campo não encontrado." },
               { status: 404 },
             );
           }
@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/base/fields/$fieldId")({
           const deleted = await deleteBaseField(user.userId, params.fieldId);
           if (!deleted) {
             return Response.json(
-              { error: "not_found", message: "Campo nao encontrado." },
+              { error: "not_found", message: "Campo não encontrado." },
               { status: 404 },
             );
           }

@@ -37,7 +37,7 @@ export function ProjectListPage() {
       });
       setResponsaveis(map);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao carregar projetos");
+      toast.error(error instanceof Error ? error.message : "Erro ao Carregar Projetos");
       setRows([]);
     } finally {
       setLoading(false);
@@ -62,10 +62,10 @@ export function ProjectListPage() {
         method: "PATCH",
         body: { status: novo },
       });
-      toast.success(novo === "desativado" ? "Projeto desativado" : "Projeto ativado");
+      toast.success(novo === "desativado" ? "Projeto Desativado" : "Projeto Ativado");
       void load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar projeto");
+      toast.error(error instanceof Error ? error.message : "Erro ao Atualizar Projeto");
     }
   };
 
@@ -91,7 +91,7 @@ export function ProjectListPage() {
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          {p.responsavel_id ? (responsaveis[p.responsavel_id] ?? "-") : "Sem responsavel"}
+          {p.responsavel_id ? (responsaveis[p.responsavel_id] ?? "-") : "Sem Responsável"}
         </span>
         <span>{new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
       </div>
@@ -115,7 +115,7 @@ export function ProjectListPage() {
             title={
               p.status === "ativo"
                 ? "Desativar projeto (bloqueia acesso, mantem os dados)"
-                : "Ativar projeto (libera o acesso novamente)"
+                : "Ativar Projeto (Libera o Acesso Novamente)"
             }
           >
             {p.status === "ativo" ? (
@@ -141,7 +141,7 @@ export function ProjectListPage() {
             to="/projetos/novo"
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground hover:opacity-90"
           >
-            <Plus className="h-4 w-4" /> Novo projeto
+            <Plus className="h-4 w-4" /> Novo Projeto
           </Link>
         )}
       </div>
@@ -153,11 +153,11 @@ export function ProjectListPage() {
       ) : rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
           <FolderKanban className="mx-auto h-10 w-10 text-muted-foreground" strokeWidth={1.2} />
-          <h3 className="mt-4 font-display text-2xl">Nenhum projeto disponivel</h3>
+          <h3 className="mt-4 font-display text-2xl">Nenhum Projeto Disponível</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             {isAdmin
               ? "Crie o primeiro projeto."
-              : "Voce ainda nao esta vinculado a nenhum projeto. Fale com o administrador."}
+              : "Você ainda não esta vinculado a nenhum projeto. Fale com o administrador."}
           </p>
         </div>
       ) : (
@@ -169,7 +169,7 @@ export function ProjectListPage() {
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
               <FolderKanban className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.2} />
-              <h3 className="mt-3 font-display text-xl">Nenhum projeto ativo</h3>
+              <h3 className="mt-3 font-display text-xl">Nenhum Projeto Ativo</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Os projetos desativados ficam no menu abaixo.
               </p>
@@ -185,7 +185,7 @@ export function ProjectListPage() {
                 aria-expanded={showDisabled}
               >
                 <Menu className="h-4 w-4" />
-                Projetos desativados ({disabledProjects.length})
+                Projetos Desativados ({disabledProjects.length})
               </button>
 
               {showDisabled && (

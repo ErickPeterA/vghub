@@ -58,7 +58,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
       );
       setAreas(payload.areas);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao carregar areas");
+      toast.error(error instanceof Error ? error.message : "Erro ao Carregar Áreas");
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
         body: { nome, cor, displayOrder: topLevel.length * 10 + 10 },
       });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao criar area");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Criar Área");
     }
     setNewAreaName("");
     void load();
@@ -103,7 +103,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
         },
       });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao criar setor");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Criar Setor");
     }
     setNewSetorName((p) => ({ ...p, [areaId]: "" }));
     setExpanded((p) => ({ ...p, [areaId]: true }));
@@ -119,7 +119,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
     try {
       await apiJson(`/api/projects/${projectId}/areas/${a.id}`, { method: "DELETE" });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao excluir");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Excluir");
     }
     void load();
   };
@@ -140,7 +140,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
         body: { nome: novo },
       });
     } catch (error) {
-      return toast.error(error instanceof Error ? error.message : "Erro ao salvar");
+      return toast.error(error instanceof Error ? error.message : "Erro ao Salvar");
     }
     setEditing(null);
     void load();
@@ -200,8 +200,8 @@ export function AreasManager({ projectId }: { projectId: string }) {
         ) : topLevel.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-12">
             <Building2 className="mb-4 h-12 w-12 text-[#042558]/20" />
-            <p className="text-sm font-medium text-[#042558]/60">Nenhuma área cadastrada</p>
-            <p className="text-xs text-[#042558]/40">Comece criando sua primeira área acima</p>
+            <p className="text-sm font-medium text-[#042558]/60">Nenhuma Área Cadastrada</p>
+            <p className="text-xs text-[#042558]/40">Comece Criando Sua Primeira Área Acima</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -261,7 +261,7 @@ export function AreasManager({ projectId }: { projectId: string }) {
                       <>
                         <span className="flex-1 font-semibold text-[#042558]">{area.nome}</span>
                         <span className="rounded-full bg-[#042558]/10 px-2.5 py-0.5 text-xs font-medium text-[#042558]">
-                          {setores.length} setor{setores.length !== 1 ? "es" : ""}
+                          {setores.length} Setor{setores.length !== 1 ? "es" : ""}
                         </span>
                         <button
                           onClick={() => startEdit(area)}

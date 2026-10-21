@@ -65,12 +65,12 @@ export function clearSessionCookie() {
 export function assertSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin) {
-    throw new HttpError(403, "invalid_origin", "Origem da requisicao nao permitida.");
+    throw new HttpError(403, "invalid_origin", "Origem da requisicao não permitida.");
   }
 
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") {
-    throw new HttpError(403, "invalid_origin", "Origem da requisicao nao permitida.");
+    throw new HttpError(403, "invalid_origin", "Origem da requisicao não permitida.");
   }
 }
 
@@ -118,7 +118,7 @@ export async function revokeAllUserSessions(userId: string) {
 
 export async function requireAuthenticatedUser(request: Request): Promise<AuthenticatedApiUser> {
   const token = readCookie(request, SESSION_COOKIE_NAME);
-  if (!token) throw new HttpError(401, "unauthorized", "Sessao ausente ou expirada.");
+  if (!token) throw new HttpError(401, "unauthorized", "Sessão ausente ou expirada.");
 
   const result = await query<{ user_id: string; email: string; expires_at: Date | string }>(
     `
@@ -134,11 +134,11 @@ export async function requireAuthenticatedUser(request: Request): Promise<Authen
     [hashSessionToken(token)],
   );
   const session = result.rows[0];
-  if (!session) throw new HttpError(401, "unauthorized", "Sessao ausente ou expirada.");
+  if (!session) throw new HttpError(401, "unauthorized", "Sessão ausente ou expirada.");
   const expiresAt =
     session.expires_at instanceof Date ? session.expires_at : new Date(session.expires_at);
   if (!Number.isFinite(expiresAt.getTime())) {
-    throw new HttpError(401, "unauthorized", "Sessao ausente ou expirada.");
+    throw new HttpError(401, "unauthorized", "Sessão ausente ou expirada.");
   }
 
   return {

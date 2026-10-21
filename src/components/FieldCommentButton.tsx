@@ -63,7 +63,7 @@ export function FieldCommentButton({
         method: "PATCH",
         body: { commentId, decision },
       });
-      toast.success(decision === "approved" ? "Comentario aprovado" : "Comentario reprovado");
+      toast.success(decision === "approved" ? "Comentário Aprovado" : "Comentário Reprovado");
       await load();
       await onChange?.();
       if (decision === "approved") {
@@ -71,7 +71,7 @@ export function FieldCommentButton({
         await onDecision?.({ fieldKey, commentId, decision });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao avaliar comentario.");
+      toast.error(error instanceof Error ? error.message : "Erro ao avaliar comentário.");
     } finally {
       setLoading(false);
     }
@@ -171,7 +171,7 @@ export function FieldCommentButton({
                       onClick={() => decide(c.id, "approved")}
                       disabled={loading}
                       className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                      title="Aprovar comentario"
+                      title="Aprovar Comentário"
                     >
                       <ThumbsUp className="h-3 w-3" />
                       Aprovar
@@ -181,7 +181,7 @@ export function FieldCommentButton({
                       onClick={() => decide(c.id, "rejected")}
                       disabled={loading}
                       className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-                      title="Reprovar comentario"
+                      title="Reprovar Comentário"
                     >
                       <ThumbsDown className="h-3 w-3" />
                       Reprovar
@@ -207,7 +207,7 @@ export function FieldCommentButton({
               disabled={loading || !text.trim()}
               className="w-full rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
             >
-              {loading ? "Enviando..." : "Adicionar comentário"}
+              {loading ? "Enviando..." : "Adicionar Comentário"}
             </button>
           </div>
         )}
@@ -215,4 +215,3 @@ export function FieldCommentButton({
     </Popover>
   );
 }
-

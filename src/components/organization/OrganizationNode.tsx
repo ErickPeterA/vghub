@@ -96,7 +96,7 @@ export function OrganizationNode({
           type="button"
           onClick={() => hasChildren && onToggle(node.id)}
           className={`mt-0.5 rounded-md p-1 ${hasChildren ? "text-[#042558]/60 hover:bg-[#042558]/10 hover:text-[#042558]" : "text-transparent"}`}
-          title={collapsed ? "Expandir subordinados" : "Recolher subordinados"}
+          title={collapsed ? "Expandir Subordinados" : "Recolher Subordinados"}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
@@ -110,7 +110,7 @@ export function OrganizationNode({
                 : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
             }`}
             title={
-              hasDescription ? "Descricao de cargo criada" : "Descricao de cargo ainda nao criada"
+              hasDescription ? "Descrição de Cargo Criada" : "Descrição de Cargo Ainda Não Criada"
             }
           >
             {hasDescription ? (
@@ -118,10 +118,10 @@ export function OrganizationNode({
             ) : (
               <FileText className="h-3 w-3" />
             )}
-            {hasDescription ? "Descricao criada" : "Sem descricao"}
+            {hasDescription ? "Descrição Criada" : "Sem Descrição"}
           </span>
           <span className="mt-1 block text-xs text-[#042558]/45">
-            {node.status === "active" ? "Ativo" : "Inativo"} · {descendantCount} abaixo
+            {node.status === "active" ? "Ativo" : "Inativo"} · {descendantCount} Abaixo
           </span>
         </button>
 
@@ -137,33 +137,33 @@ export function OrganizationNode({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => onAddChild(node)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Adicionar subordinado
+              <UserPlus className="mr-2 h-4 w-4" /> Adicionar Subordinado
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAddSibling(node)}>
-              <Plus className="mr-2 h-4 w-4" /> Adicionar no mesmo nível
+              <Plus className="mr-2 h-4 w-4" /> Adicionar no Mesmo Nível
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onInsertAbove(node)}>
-              <MoveUp className="mr-2 h-4 w-4" /> Inserir cargo acima
+              <MoveUp className="mr-2 h-4 w-4" /> Inserir Cargo Acima
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onMove(node)}>
-              <MoveDown className="mr-2 h-4 w-4" /> Alterar superior
+              <MoveDown className="mr-2 h-4 w-4" /> Alterar Superior
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(node)}>
-              <Pencil className="mr-2 h-4 w-4" /> Editar cargo
+              <Pencil className="mr-2 h-4 w-4" /> Editar Cargo
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onReorder(node, "up")}>
-              Mover para cima
+              Mover para Cima
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onReorder(node, "down")}>
-              Mover para baixo
+              Mover para Baixo
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(node)}
               className="text-red-600 focus:text-red-600"
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Excluir cargo
+              <Trash2 className="mr-2 h-4 w-4" /> Excluir Cargo
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -177,10 +177,10 @@ export function OrganizationNode({
         >
           {node.children.length}
           <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden w-56 -translate-x-1/2 rounded-lg bg-[#042558] p-2 text-left text-[11px] font-medium leading-4 text-white shadow-lg group-hover/subordinates:block">
-            <span className="mb-1 block font-bold">Subordinados diretos</span>
+            <span className="mb-1 block font-bold">Subordinados Diretos</span>
             {node.children.map((child) => (
               <span key={child.id} className="block truncate">
-                • {child.nome} · camada {child.visual_level}
+                • {child.nome} · Camada {child.visual_level}
               </span>
             ))}
           </span>

@@ -165,7 +165,7 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
           <div className="flex items-center gap-2 mb-4">
             <UserPlus className="h-4 w-4 text-[#042558]" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Adicionar membro
+              Adicionar Membro
             </h2>
           </div>
           <form onSubmit={vincular} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
@@ -175,7 +175,7 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
               onChange={(e) => setUserId(e.target.value)}
               className={inputClass}
             >
-              <option value="">— Selecione um usuário —</option>
+              <option value="">— Selecione um Usuário —</option>
               {profiles
                 .filter((p) => !members.some((m) => m.user_id === p.id))
                 .map((p) => (
@@ -220,8 +220,8 @@ export function ProjectConfigPage({ projectId }: { projectId: string }) {
           ) : members.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
               <Users className="mb-2 h-8 w-8 text-[#042558]/20" />
-              <p className="text-sm font-medium text-[#042558]/40">Nenhum membro vinculado</p>
-              <p className="text-xs text-[#042558]/30">Adicione membros ao projeto acima</p>
+              <p className="text-sm font-medium text-[#042558]/40">Nenhum Membro Vinculado</p>
+              <p className="text-xs text-[#042558]/30">Adicione Membros ao Projeto Acima</p>
             </div>
           ) : (
             <div className="space-y-4">

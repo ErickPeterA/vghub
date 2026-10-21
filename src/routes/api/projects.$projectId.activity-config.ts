@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-config")
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getActivityConfig }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/activities/activity-repository"),
             ]);
@@ -22,13 +22,17 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-config")
       },
       POST: async ({ request, params }) => {
         try {
-          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { upsertActivityConfig }] =
-            await Promise.all([
-              import("zod"),
-              import("@/server/auth/session"),
-              import("@/server/auth/local-user"),
-              import("@/server/activities/activity-repository"),
-            ]);
+          const [
+            { z },
+            { requireAuthenticatedUser },
+            { requireLocalUser },
+            { upsertActivityConfig },
+          ] = await Promise.all([
+            import("zod"),
+            import("@/server/auth/session"),
+            import("@/server/auth/local-user"),
+            import("@/server/activities/activity-repository"),
+          ]);
           const body = await request.json().catch(() => null);
           const input = z
             .object({

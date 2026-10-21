@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getDcDetails }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -58,15 +58,20 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
               import("@/server/dc/dc-repository"),
             ]);
           const body = await request.json().catch(() => null);
-          const mode = z.discriminatedUnion("action", [
-            z.object({
-              action: z.literal("update"),
-              payload: await dcPayloadSchema(),
-              currentVersionId: z.string().uuid().nullable(),
-            }),
-            z.object({ action: z.literal("stage"), etapa: z.enum(["em_criacao", "em_aprovacao", "concluido"]) }),
-            z.object({ action: z.literal("finalize_review"), versionId: z.string().uuid() }),
-          ]).parse(body);
+          const mode = z
+            .discriminatedUnion("action", [
+              z.object({
+                action: z.literal("update"),
+                payload: await dcPayloadSchema(),
+                currentVersionId: z.string().uuid().nullable(),
+              }),
+              z.object({
+                action: z.literal("stage"),
+                etapa: z.enum(["em_criacao", "em_aprovacao", "concluido"]),
+              }),
+              z.object({ action: z.literal("finalize_review"), versionId: z.string().uuid() }),
+            ])
+            .parse(body);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
 
@@ -115,7 +120,11 @@ export const Route = createFileRoute("/api/projects/$projectId/dc/$dcId")({
             ]);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
-          await deleteDc({ actorUserId: user.userId, projectId: params.projectId, dcId: params.dcId });
+          await deleteDc({
+            actorUserId: user.userId,
+            projectId: params.projectId,
+            dcId: params.dcId,
+          });
           return Response.json({ ok: true });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");

@@ -53,7 +53,12 @@ export async function getProjectAccessPageData(projectId?: string) {
     );
   }
 
-  return { members: members.rows, profiles: profiles.rows, areasOrProjects: areas.rows, scopes: scopes.rows };
+  return {
+    members: members.rows,
+    profiles: profiles.rows,
+    areasOrProjects: areas.rows,
+    scopes: scopes.rows,
+  };
 }
 
 export async function addProjectMemberScope(memberId: string, areaId: string) {
@@ -70,8 +75,9 @@ export async function addProjectMemberScope(memberId: string, areaId: string) {
 }
 
 export async function removeProjectMemberScope(scopeId: string) {
-  const result = await query(`delete from public.project_member_scopes where id = $1::uuid returning id`, [
-    scopeId,
-  ]);
-  if (!result.rowCount) throw new HttpError(404, "not_found", "Escopo nao encontrado.");
+  const result = await query(
+    `delete from public.project_member_scopes where id = $1::uuid returning id`,
+    [scopeId],
+  );
+  if (!result.rowCount) throw new HttpError(404, "not_found", "Escopo não encontrado.");
 }

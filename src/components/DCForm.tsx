@@ -210,7 +210,7 @@ function ensureAreaFieldBeforeSetor(sectionFields: DynamicField[]) {
   const areaField: DynamicField = {
     id: `__virtual_area_field__:${setorField.section}`,
     field_key: "unidade_negocio",
-    label: "Area",
+    label: "Área",
     section: setorField.section,
     field_type: "single_select",
     is_required: false,
@@ -255,7 +255,7 @@ function withRequiredHeaderArea(sectionFields: DynamicField[]) {
   const areaField: DynamicField = {
     id: `__required_header_area_field__:${setorField.section}`,
     field_key: "unidade_negocio",
-    label: "Area",
+    label: "Área",
     section: setorField.section,
     field_type: "single_select",
     is_required: false,
@@ -679,7 +679,7 @@ export function DCForm({
       <div className="space-y-4">
         {items.length === 0 && (
           <p className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-            Nenhum item adicionado
+            Nenhum Item Adicionado
           </p>
         )}
         {items.map((item, i) => {

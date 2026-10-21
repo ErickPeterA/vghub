@@ -43,27 +43,27 @@ type ModelBlock =
 const blocks: ModelBlock[] = [
   {
     key: "job_description",
-    label: "Modelo Descricao de cargo",
-    description: "Campos, blocos, opcoes e limites usados como base nas descricoes do projeto.",
+    label: "Modelo Descrição de Cargo",
+    description: "Campos, blocos, opções e limites usados como base nas descrições do projeto.",
     icon: FileText,
   },
   {
     key: "activities",
-    label: "Modelo de atividades",
-    description: "Cabecalho e perguntas usados nos links de coleta de atividades.",
+    label: "Modelo de Atividades",
+    description: "Cabeçalho e perguntas usados nos links de coleta de atividades.",
     icon: ClipboardList,
   },
   {
     key: "experience",
-    label: "Modelo de experiencia",
-    description: "Perguntas usadas nas avaliacoes de 30, 45 e 90 dias.",
+    label: "Modelo de Experiência",
+    description: "Perguntas usadas nas avaliações de 30, 45 e 90 dias.",
     icon: ClipboardCheck,
     reviewType: "experience",
   },
   {
     key: "performance",
-    label: "Modelo de desempenho",
-    description: "Perguntas usadas nas avaliacoes de 3 meses, 6 meses e 1 ano.",
+    label: "Modelo de Desempenho",
+    description: "Perguntas usadas nas avaliações de 3 meses, 6 meses e 1 ano.",
     icon: ClipboardCheck,
     reviewType: "performance",
   },
@@ -100,14 +100,12 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-            Configuracao
+            Configuração
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-            Configurações
-          </h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">Configurações</h1>
           <p className="mt-1 text-sm text-[#042558]/60">
             {isGlobal
-              ? "Defina os modelos que entram como base para as descricoes de cargo e avaliacoes de todos os projetos."
+              ? "Defina os modelos que entram como base para as descrições de cargo e avaliações de todos os projetos."
               : "Centralize os modelos, pesos e regras de pontuação utilizados nas avaliações deste projeto."}
           </p>
         </div>
@@ -115,7 +113,7 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
         <section className="mb-8">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#042558]">
             <Layers className="h-4 w-4" />
-            Blocos de modelos
+            Blocos de Modelos
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {availableBlocks.map((block) => {
@@ -152,11 +150,11 @@ export function ProjectModelsManager({ projectId = null }: { projectId?: string 
         {selected.key === "job_description" ? (
           <BaseManager
             projectId={projectId}
-            title="Modelo Descricao de cargo"
+            title="Modelo Descrição de Cargo"
             description={
               isGlobal
-                ? "Esta e a base mestre. Novos projetos recebem uma copia independente destes campos e opcoes."
-                : "Edite, desative, remova ou acrescente campos e opcoes sem alterar a Base Geral nem outros projetos."
+                ? "Esta e a base mestre. Novos projetos recebem uma copia independente destes campos e opções."
+                : "Edite, desative, remova ou acrescente campos e opções sem alterar a Base Geral nem outros projetos."
             }
             embedded
           />

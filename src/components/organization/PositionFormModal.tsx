@@ -56,10 +56,10 @@ export function PositionFormModal({
   const parentOptions = availableParents(positions, mode === "edit" ? position : null);
   const title =
     mode === "edit"
-      ? "Editar cargo"
+      ? "Editar Cargo"
       : mode === "insertAbove"
-        ? "Inserir cargo acima"
-        : "Novo cargo";
+        ? "Inserir Cargo Acima"
+        : "Novo Cargo";
   const hiddenDisplayOrder = position?.display_order ?? defaultDisplayOrder ?? 10;
   const hiddenVisualLevel = position?.visual_level ?? defaultVisualLevel;
   const hiddenStatus: PositionStatus = position?.status ?? "active";
@@ -89,7 +89,7 @@ export function PositionFormModal({
         >
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
-              Nome do cargo *
+              Nome do Cargo *
             </span>
             <input
               value={nome}
@@ -106,14 +106,14 @@ export function PositionFormModal({
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-[#042558]/70">
-              Superior imediato
+              Superior Imediato
             </span>
             <select
               value={parentId ?? ""}
               onChange={(event) => setParentId(event.target.value || null)}
               className={inputClass}
             >
-              <option value="">Sem superior imediato</option>
+              <option value="">Sem Superior Imediato</option>
               {parentOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.nome}

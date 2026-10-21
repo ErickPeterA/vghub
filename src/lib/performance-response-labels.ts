@@ -36,12 +36,18 @@ export function responseOptionForParticipant(
     return option.replace(/^Atinjo/i, `${employee} atinge`);
   }
   if (normalized.startsWith("na maioria das vezes, atinjo")) {
-    return option.replace(/^Na maioria das vezes, atinjo/i, `Na maioria das vezes, ${employee} atinge`);
+    return option.replace(
+      /^Na maioria das vezes, atinjo/i,
+      `Na maioria das vezes, ${employee} atinge`,
+    );
   }
-  if (normalized.startsWith("na maioria das vezes, nao atinjo")) {
-    return option.replace(/^Na maioria das vezes, n[aã]o atinjo/i, `Na maioria das vezes, ${employee} não atinge`);
+  if (normalized.startsWith("na maioria das vezes, não atinjo")) {
+    return option.replace(
+      /^Na maioria das vezes, n[aã]o atinjo/i,
+      `Na maioria das vezes, ${employee} não atinge`,
+    );
   }
-  if (normalized.startsWith("nao atinjo") || normalized.startsWith("não atinjo")) {
+  if (normalized.startsWith("não atinjo") || normalized.startsWith("não atinjo")) {
     return option.replace(/^N[aã]o atinjo/i, `${employee} não atinge`);
   }
 

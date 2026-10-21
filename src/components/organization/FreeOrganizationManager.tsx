@@ -136,7 +136,7 @@ export function FreeOrganizationManager({ projectId }: { projectId: string }) {
           method: "POST",
           body: { action: "create", values: { ...values, display_order: nextOrder } },
         });
-        toast.success(values.parent_id ? "Cargo criado e conectado" : "Cargo isolado criado");
+        toast.success(values.parent_id ? "Cargo Criado e Conectado" : "Cargo Isolado Criado");
       }
       setForm(closedForm);
       await load();
@@ -272,7 +272,7 @@ export function FreeOrganizationManager({ projectId }: { projectId: string }) {
               <GitBranch className="h-5 w-5" />
             </span>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-[#042558]">Organograma livre</h1>
+              <h1 className="text-xl font-bold tracking-tight text-[#042558]">Organograma Livre</h1>
               <p className="text-xs text-[#042558]/55">
                 Posicione os cargos livremente e conecte superior e subordinado pelas alças.
               </p>
@@ -294,7 +294,7 @@ export function FreeOrganizationManager({ projectId }: { projectId: string }) {
               onClick={() => openCreate(null)}
               className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#042558]/90"
             >
-              <Plus className="h-4 w-4" /> Cargo isolado
+              <Plus className="h-4 w-4" /> Cargo Isolado
             </button>
           </div>
         </header>
@@ -311,7 +311,7 @@ export function FreeOrganizationManager({ projectId }: { projectId: string }) {
             className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/60 p-6 text-center hover:bg-white/80"
           >
             <Network className="mb-4 h-12 w-12 text-[#042558]/25" />
-            <strong className="text-lg text-[#042558]">Crie o primeiro cargo do canvas</strong>
+            <strong className="text-lg text-[#042558]">Crie o Primeiro Cargo do Canvas</strong>
             <span className="mt-1 text-sm text-[#042558]/50">
               Depois você poderá arrastar e conectar tudo livremente.
             </span>

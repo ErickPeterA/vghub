@@ -31,17 +31,13 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
             const reviewId = url.searchParams.get("reviewId");
             if (!reviewId) {
               return Response.json(
-                { error: "invalid_query", message: "Avaliacao nao informada." },
+                { error: "invalid_query", message: "Avaliação não informada." },
                 { status: 400 },
               );
             }
             return Response.json({
               ok: true,
-              ...(await repo.getPerformanceComparisonData(
-                user.userId,
-                params.projectId,
-                reviewId,
-              )),
+              ...(await repo.getPerformanceComparisonData(user.userId, params.projectId, reviewId)),
             });
           }
           return Response.json({
@@ -189,7 +185,7 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
           } else if (input.action === "markSent") {
             if (!input.participantId && !input.reviewId) {
               return Response.json(
-                { error: "invalid_body", message: "Participante ou avaliacao nao informado." },
+                { error: "invalid_body", message: "Participante ou avaliação não informado." },
                 { status: 400 },
               );
             }

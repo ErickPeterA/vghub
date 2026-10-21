@@ -24,13 +24,13 @@ export const Route = createFileRoute("/api/public/pam-draft/$token")({
           body = await request.json();
         } catch {
           return Response.json(
-            { error: "invalid_body", message: "Payload invalido." },
+            { error: "invalid_body", message: "Payload inválido." },
             { status: 400 },
           );
         }
         if (!body.itemId) {
           return Response.json(
-            { error: "missing_item", message: "Item nao informado." },
+            { error: "missing_item", message: "Item não informado." },
             { status: 400 },
           );
         }

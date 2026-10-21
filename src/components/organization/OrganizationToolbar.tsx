@@ -39,19 +39,19 @@ export function OrganizationToolbar({
       </div>
 
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
-        <button type="button" onClick={onZoomOut} className={iconButton} title="Zoom menos">
+        <button type="button" onClick={onZoomOut} className={iconButton} title="Zoom Menos">
           <Minus className="h-4 w-4" />
         </button>
         <span className="min-w-12 rounded-lg bg-[#042558]/10 px-2 py-1.5 text-center text-xs font-semibold text-[#042558]">
           {Math.round(zoom * 100)}%
         </span>
-        <button type="button" onClick={onZoomIn} className={iconButton} title="Zoom mais">
+        <button type="button" onClick={onZoomIn} className={iconButton} title="Zoom Mais">
           <ZoomIn className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onResetZoom} className={iconButton} title="Restaurar zoom">
+        <button type="button" onClick={onResetZoom} className={iconButton} title="Restaurar Zoom">
           <RotateCcw className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onFit} className={iconButton} title="Ajustar à tela">
+        <button type="button" onClick={onFit} className={iconButton} title="Ajustar À Tela">
           <Maximize2 className="h-4 w-4" />
         </button>
         <button

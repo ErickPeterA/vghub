@@ -31,18 +31,18 @@ const FIELD_ALIASES: Record<string, string[]> = {
     "cargo",
     "nome do cargo",
     "nomenclatura do cargo",
-    "nomenclatura do cargo visivel",
-    "titulo do cargo",
+    "nomenclatura do cargo visível",
+    "título do cargo",
     "denominacao do cargo",
   ],
   unidade_negocio: ["area", "unidade de negocio", "unidade negocio"],
-  departamento: ["setor", "departamento", "area de atuacao"],
+  departamento: ["setor", "departamento", "área de atuacao"],
   superior_imediato: ["superior imediato", "gestor imediato", "cargo do superior"],
   tipo_carreira: ["tipo de carreira", "carreira"],
-  nivelamento: ["nivel", "nivelamento", "nivel do cargo"],
-  objetivo: ["objetivo", "objetivo do cargo", "missao do cargo", "finalidade do cargo"],
-  data_versao: ["data da versao", "versao"],
-  data_revisao: ["data de revisao", "revisao"],
+  nivelamento: ["nivel", "nivelamento", "nível do cargo"],
+  objetivo: ["objetivo", "objetivo do cargo", "missão do cargo", "finalidade do cargo"],
+  data_versao: ["data da versão", "versao"],
+  data_revisao: ["data de revisão", "revisao"],
 };
 
 // Cabeçalho do modelo legado que foi fornecido para a importação. Esta leitura
@@ -54,8 +54,8 @@ const LEGACY_HEADER_FIELDS: Record<string, keyof DescricaoCargo> = {
   "tipo de carreira do cargo": "tipo_carreira",
   "cargo do superior imediato": "superior_imediato",
   "objetivo principal do cargo": "objetivo",
-  "data de criacao do cargo": "data_versao",
-  "data ultima revisao do cargo": "data_revisao",
+  "data de criação do cargo": "data_versao",
+  "data última revisão do cargo": "data_revisao",
 };
 
 type Parsed = { draft: DescricaoCargo; sheetName: string; mappedFields: number };

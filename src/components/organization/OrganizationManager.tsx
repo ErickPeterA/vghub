@@ -413,7 +413,7 @@ export function OrganizationManager({ projectId }: { projectId: string }) {
               onClick={() => openCreate(null)}
               className="mt-5 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#042558]/90"
             >
-              Cadastrar primeiro cargo
+              Cadastrar Primeiro Cargo
             </button>
           </div>
         ) : (

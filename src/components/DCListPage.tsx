@@ -69,7 +69,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
       setProjectRole(data.projectRole ?? null);
       setIsResponsavel(data.isResponsavel ?? false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao carregar");
+      toast.error(e instanceof Error ? e.message : "Erro ao Carregar");
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
       });
       void load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao excluir descricao.");
+      toast.error(error instanceof Error ? error.message : "Erro ao excluir descrição.");
     }
   };
   const getSetorInfo = (row: Row) => {
@@ -149,7 +149,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
               <div className=""></div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-[#042558]">
-                  Aprovações e acompanhamento
+                  Aprovações e Acompanhamento
                 </h1>
                 <p className="text-sm text-[#042558]/60">
                   Acompanhe as descrições criadas pelo organograma e avance as etapas de revisão.
@@ -163,7 +163,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
             className="group inline-flex items-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5 focus:outline-none focus:ring-2 focus:ring-[#042558] focus:ring-offset-2"
           >
             <GitFork className="h-4 w-4" />
-            Ir para o organograma
+            Ir para o Organograma
           </Link>
         </div>
 
@@ -203,7 +203,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                   {items.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
                       <FileText className="mb-2 h-8 w-8 text-[#042558]/30" />
-                      <p className="text-xs text-[#042558]/40">Nenhuma descrição</p>
+                      <p className="text-xs text-[#042558]/40">Nenhuma Descrição</p>
                     </div>
                   ) : (
                     <div className="flex-1 space-y-3">
@@ -243,8 +243,10 @@ export function DCListPage({ projectId }: { projectId: string }) {
                               params={{ projectId, dcId: row.id }}
                               className="block"
                             >
-                              <h3 className={`text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80 ${hasPendingComments ? "pr-8" : ""}`}>
-                                {row.cargo || "(sem cargo)"}
+                              <h3
+                                className={`text-base font-semibold leading-tight text-[#042558] transition-colors group-hover:text-[#042558]/80 ${hasPendingComments ? "pr-8" : ""}`}
+                              >
+                                {row.cargo || "(Sem Cargo)"}
                               </h3>
                             </Link>
 
@@ -259,7 +261,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
 
                             {responsavel && (
                               <p className="mt-1 text-xs text-[#042558]/40">
-                                por{" "}
+                                Por{" "}
                                 <span className="font-medium text-[#042558]/70">
                                   {responsavel.nome}
                                 </span>
@@ -291,7 +293,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   <button
                                     onClick={() => moveStage(row, STAGES[stageIdx - 1].key)}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
-                                    title="Etapa anterior"
+                                    title="Etapa Anterior"
                                   >
                                     <ArrowLeft className="h-3.5 w-3.5" />
                                   </button>
@@ -300,7 +302,7 @@ export function DCListPage({ projectId }: { projectId: string }) {
                                   <button
                                     onClick={() => moveStage(row, "em_aprovacao")}
                                     className="rounded-md p-1.5 text-[#042558]/40 transition-colors hover:bg-[#042558]/10 hover:text-[#042558]"
-                                    title="Enviar para aprovação"
+                                    title="Enviar para Aprovação"
                                   >
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </button>
@@ -338,4 +340,3 @@ export function DCListPage({ projectId }: { projectId: string }) {
     </main>
   );
 }
-

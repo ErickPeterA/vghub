@@ -33,14 +33,14 @@ const STAGES: Array<{
 }> = [
   {
     key: "em_criacao",
-    label: "Em criação",
+    label: "Em Criação",
     description: "descrições ainda sendo montadas",
     color: "#2563eb",
   },
   {
     key: "em_aprovacao",
-    label: "Em aprovação",
-    description: "descrições aguardando validação",
+    label: "Em Aprovação",
+    description: "descrições aguardando válidação",
     color: "#d97706",
   },
   {
@@ -123,7 +123,7 @@ function Andamento() {
                 Dashboard
               </p>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#042558] sm:text-3xl">
-                Andamento do projeto
+                Andamento do Projeto
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#042558]/60">
                 A onda mostra quantas descrições estão em criação, em aprovação e concluídas.
@@ -132,8 +132,8 @@ function Andamento() {
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[560px]">
               <MetricCard label="Total" value={stats.total} />
-              <MetricCard label="Em andamento" value={stats.active} />
-              <MetricCard label="Em aprovação" value={stats.counts.em_aprovacao} tone="amber" />
+              <MetricCard label="Em Andamento" value={stats.active} />
+              <MetricCard label="Em Aprovação" value={stats.counts.em_aprovacao} tone="amber" />
               <MetricCard label="Progresso" value={`${stats.progress}%`} tone="navy" />
             </div>
           </div>
@@ -146,7 +146,7 @@ function Andamento() {
         ) : stats.total === 0 ? (
           <div className="flex h-72 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 bg-white/75 text-center">
             <FileText className="mb-3 h-9 w-9 text-[#042558]/30" />
-            <h2 className="text-lg font-semibold text-[#042558]">Sem descrições para acompanhar</h2>
+            <h2 className="text-lg font-semibold text-[#042558]">Sem Descrições para Acompanhar</h2>
             <p className="mt-1 text-sm text-[#042558]/55">
               Quando houver descrições de cargo no projeto, a onda aparece aqui.
             </p>
@@ -156,14 +156,14 @@ function Andamento() {
             <section className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#042558]">Onda de andamento</h2>
+                  <h2 className="text-lg font-semibold text-[#042558]">Onda de Andamento</h2>
                   <p className="text-sm text-[#042558]/55">
                     Baseada no estágio atual das descrições de cargo.
                   </p>
                 </div>
                 <span className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#042558]/5 px-3 py-2 text-sm font-medium text-[#042558]/70">
                   <TrendingUp className="h-4 w-4" />
-                  {stats.total} descrições
+                  {stats.total} Descrições
                 </span>
               </div>
 
@@ -215,9 +215,9 @@ function Andamento() {
                     <Area
                       type="natural"
                       dataKey="quantidade"
-                      stroke="url(#andamentoWave)"
+                      stroke="Url(#andamentoWave)"
                       strokeWidth={5}
-                      fill="url(#andamentoWaveFill)"
+                      fill="Url(#andamentoWaveFill)"
                       activeDot={{ r: 7, strokeWidth: 3, stroke: "#ffffff" }}
                       dot={({ cx, cy, payload }) => (
                         <circle
@@ -252,10 +252,10 @@ function MetricCard({
 }) {
   const toneClass =
     tone === "navy"
-      ? "border-[#042558] bg-[#042558] text-white"
+      ? "Border-[#042558] Bg-[#042558] Text-white"
       : tone === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-[#042558]/10 bg-white text-[#042558]";
+        ? "Border-amber-200 Bg-amber-50 Text-amber-800"
+        : "Border-[#042558]/10 Bg-white Text-[#042558]";
   const labelClass = tone === "navy" ? "text-white/65" : "text-[#042558]/55";
 
   return (
@@ -265,4 +265,3 @@ function MetricCard({
     </div>
   );
 }
-

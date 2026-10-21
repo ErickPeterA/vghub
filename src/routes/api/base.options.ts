@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/base/options")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { createBaseOption }] =
             await Promise.all([
               import("zod"),
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/api/base/options")({
 
           if (!option) {
             return Response.json(
-              { error: "not_found", message: "Campo nao encontrado." },
+              { error: "not_found", message: "Campo não encontrado." },
               { status: 404 },
             );
           }

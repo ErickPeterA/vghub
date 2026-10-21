@@ -1,14 +1,11 @@
 import { query, withTransaction } from "@/server/db/pool";
 import { HttpError } from "@/server/http/errors";
-import { requireCanManageProject, requireCanReadProject } from "@/server/projects/project-permissions";
+import {
+  requireCanManageProject,
+  requireCanReadProject,
+} from "@/server/projects/project-permissions";
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 type DcStage = "em_criacao" | "em_aprovacao" | "concluido";
 
@@ -35,7 +32,7 @@ const dcColumns = `
   status,
   objetivo,
   instrucao,
-  experiencia,
+  experiência,
   conhecimento,
   atividades,
   indicadores,
@@ -150,9 +147,7 @@ export async function getDcListPageData(userId: string, projectId: string) {
       `,
       [ids],
     );
-    pendingByDc = new Map(
-      comments.rows.map((row) => [row.job_description_id, Number(row.count)]),
-    );
+    pendingByDc = new Map(comments.rows.map((row) => [row.job_description_id, Number(row.count)]));
   }
 
   return {
@@ -181,7 +176,11 @@ export async function getDcProgressRows(userId: string, projectId: string) {
   return result.rows;
 }
 
-export async function getPositionDescription(userId: string, projectId: string, positionId: string) {
+export async function getPositionDescription(
+  userId: string,
+  projectId: string,
+  positionId: string,
+) {
   await requireCanReadProject(userId, projectId);
   const result = await query(
     `
@@ -244,7 +243,7 @@ export async function getDcDetails(userId: string, projectId: string, dcId: stri
     ),
     getProjectRole(userId, projectId),
   ]);
-  if (!current.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+  if (!current.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
   return {
     current: current.rows[0],
     versions: versions.rows,
@@ -319,7 +318,7 @@ export async function updateDc(input: {
       `,
       [input.dcId, input.projectId, ...payloadValuesOnly(input.payload)],
     );
-    if (!result.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+    if (!result.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
 
     let versionId: string | null = null;
     if (input.currentVersionId) {
@@ -352,7 +351,7 @@ export async function updateDcStage(input: {
 }) {
   const role = await getProjectRole(input.actorUserId, input.projectId);
   if (!canApprove(role)) {
-    throw new HttpError(403, "forbidden", "Sem permissao para alterar a etapa.");
+    throw new HttpError(403, "forbidden", "Sem permissão para alterar a etapa.");
   }
   const result = await query(
     `
@@ -364,7 +363,7 @@ export async function updateDcStage(input: {
     `,
     [input.dcId, input.projectId, input.etapa],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
 }
 
 export async function finalizeDcReview(input: {
@@ -397,7 +396,7 @@ export async function finalizeDcReview(input: {
 export async function deleteDc(input: { actorUserId: string; projectId: string; dcId: string }) {
   const role = await getProjectRole(input.actorUserId, input.projectId);
   if (!canFullControl(role)) {
-    throw new HttpError(403, "forbidden", "Sem permissao para excluir.");
+    throw new HttpError(403, "forbidden", "Sem permissão para excluir.");
   }
   const result = await query(
     `
@@ -408,7 +407,7 @@ export async function deleteDc(input: { actorUserId: string; projectId: string; 
     `,
     [input.dcId, input.projectId],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
 }
 
 export async function getFieldComments(input: {
@@ -421,7 +420,7 @@ export async function getFieldComments(input: {
     `select project_id from public.descricoes_cargo where id = $1::uuid limit 1`,
     [input.dcId],
   );
-  if (!dc.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+  if (!dc.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
   await requireCanReadProject(input.userId, dc.rows[0].project_id);
 
   const comments = await query(
@@ -466,7 +465,7 @@ export async function addFieldComment(input: {
     `select project_id from public.descricoes_cargo where id = $1::uuid limit 1`,
     [input.dcId],
   );
-  if (!dc.rows[0]) throw new HttpError(404, "not_found", "Descricao nao encontrada.");
+  if (!dc.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
   await requireCanReadProject(input.actorUserId, dc.rows[0].project_id);
   await query(
     `

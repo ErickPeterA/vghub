@@ -4,7 +4,9 @@ import {
   Building2,
   CalendarDays,
   Loader2,
+  Pencil,
   Plus,
+  Save,
   UserPlus,
   Users,
   X,
@@ -81,6 +83,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
   const [positions, setPositions] = useState<PositionRow[]>([]);
   const [areas, setAreas] = useState<AreaRow[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [form, setForm] = useState<EmployeeFormState>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -151,14 +154,17 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     );
 
     return employees
-      .filter((employee) => ancestorDepthByPosition.has(employee.position_id))
+      .filter(
+        (employee) =>
+          employee.id !== editingEmployeeId && ancestorDepthByPosition.has(employee.position_id),
+      )
       .map((employee) => ({
         employee,
         position: positionsById.get(employee.position_id),
         depth: ancestorDepthByPosition.get(employee.position_id) ?? 999,
       }))
       .sort((a, b) => a.depth - b.depth || a.employee.nome.localeCompare(b.employee.nome, "pt-BR"));
-  }, [ancestorPositionIds, employees, positionsById]);
+  }, [ancestorPositionIds, editingEmployeeId, employees, positionsById]);
 
   useEffect(() => {
     const optionIds = new Set(leaderOptions.map((option) => option.employee.id));
@@ -188,24 +194,51 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     }));
   };
 
-  const createEmployee = async (event: FormEvent) => {
+  const openCreateForm = () => {
+    setEditingEmployeeId(null);
+    setForm(emptyForm);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (employee: EmployeeRow) => {
+    setEditingEmployeeId(employee.id);
+    setForm({
+      nome: employee.nome,
+      positionId: employee.position_id,
+      areaId: employee.area_id ?? "",
+      sectorId: employee.sector_id ?? "",
+      superiorImediatoId: employee.superior_imediato_id ?? "",
+      admissionDate: employee.admission_date,
+      lastPerformanceReviewDate: employee.last_performance_review_date ?? "",
+    });
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingEmployeeId(null);
+    setForm(emptyForm);
+  };
+
+  const saveEmployee = async (event: FormEvent) => {
     event.preventDefault();
     const nome = form.nome.trim();
-    if (!nome) return toast.error("Nome do funcionario e obrigatorio.");
+    if (!nome) return toast.error("Nome do funcionário e obrigatório.");
     if (!form.positionId) return toast.error("Selecione um cargo do organograma.");
     if (leaderOptions.length > 0 && !form.superiorImediatoId) {
-      return toast.error("Selecione o lider sugerido pelo organograma.");
+      return toast.error("Selecione o líder sugerido pelo organograma.");
     }
-    if (!form.admissionDate) return toast.error("Informe a data de admissao.");
+    if (!form.admissionDate) return toast.error("Informe a data de admissão.");
     if (form.lastPerformanceReviewDate && form.lastPerformanceReviewDate < form.admissionDate) {
-      return toast.error("A ultima avaliacao nao pode ser anterior a admissao.");
+      return toast.error("A última avaliação não pode ser anterior à admissão.");
     }
 
     setSaving(true);
     try {
       await apiJson(`/api/projects/${projectId}/employees`, {
-        method: "POST",
+        method: editingEmployeeId ? "PUT" : "POST",
         body: {
+          ...(editingEmployeeId ? { employeeId: editingEmployeeId } : null),
           positionId: form.positionId,
           areaId: form.areaId || null,
           sectorId: form.sectorId || null,
@@ -217,14 +250,18 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
       });
     } catch (error) {
       setSaving(false);
-      return toast.error(error instanceof Error ? error.message : "Erro ao cadastrar colaborador.");
+      return toast.error(error instanceof Error ? error.message : "Erro ao salvar colaborador.");
     }
     setSaving(false);
 
-    toast.success("Colaborador cadastrado");
-    setForm(emptyForm);
+    toast.success(editingEmployeeId ? "Colaborador Atualizado" : "Colaborador Cadastrado");
     await load();
-    nameRef.current?.focus();
+    if (editingEmployeeId) {
+      closeForm();
+    } else {
+      setForm(emptyForm);
+      nameRef.current?.focus();
+    }
   };
 
   const formatDate = (value: string | null) => {
@@ -250,11 +287,11 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
             </div>
             <Button
               type="button"
-              onClick={() => setFormOpen(true)}
+              onClick={openCreateForm}
               className="bg-[#042558] text-white hover:bg-[#042558]/90"
             >
               <UserPlus className="h-4 w-4" />
-              Cadastrar colaborador
+              Cadastrar Colaborador
             </Button>
           </div>
         </div>
@@ -263,16 +300,16 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-                Lista de colaboradores
+                Lista de Colaboradores
               </h2>
               <p className="mt-1 text-xs text-[#042558]/50">
-                Os cargos vem do organograma. Os setores aparecem conforme a area escolhida.
+                Os cargos vêm do organograma. Os setores aparecem conforme a área escolhida.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-[#042558]">
               <Metric icon={Users} label="Pessoas" value={employees.length} />
               <Metric icon={Briefcase} label="Cargos" value={positions.length} />
-              <Metric icon={Building2} label="Areas" value={areaOptions.length} />
+              <Metric icon={Building2} label="Áreas" value={areaOptions.length} />
             </div>
           </div>
 
@@ -288,7 +325,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 Nenhum colaborador cadastrado.
               </p>
               <p className="mt-1 text-xs text-[#042558]/40">
-                Abra o formulario acima para criar o primeiro registro.
+                Abra o formulário acima para criar o primeiro registro.
               </p>
             </div>
           ) : (
@@ -297,10 +334,11 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 <TableRow className="border-[#042558]/10">
                   <TableHead>Nome</TableHead>
                   <TableHead>Cargo</TableHead>
-                  <TableHead>Area / Setor</TableHead>
-                  <TableHead>Superior imediato</TableHead>
-                  <TableHead>Admissao</TableHead>
-                  <TableHead>Ultima avaliacao</TableHead>
+                  <TableHead>Área / Setor</TableHead>
+                  <TableHead>Superior Imediato</TableHead>
+                  <TableHead>Admissão</TableHead>
+                  <TableHead>Última Avaliação</TableHead>
+                  <TableHead className="w-16 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -308,13 +346,13 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   <TableRow key={employee.id} className="border-[#042558]/10">
                     <TableCell className="font-medium text-[#042558]">{employee.nome}</TableCell>
                     <TableCell className="text-[#042558]/70">
-                      {positionsById.get(employee.position_id)?.nome ?? "Cargo removido"}
+                      {positionsById.get(employee.position_id)?.nome ?? "Cargo Removido"}
                     </TableCell>
                     <TableCell className="text-[#042558]/70">
                       <div className="flex flex-col">
                         <span>{areasById.get(employee.area_id ?? "")?.nome ?? "-"}</span>
                         <span className="text-xs text-[#042558]/45">
-                          {areasById.get(employee.sector_id ?? "")?.nome ?? "Sem setor"}
+                          {areasById.get(employee.sector_id ?? "")?.nome ?? "Sem Setor"}
                         </span>
                       </div>
                     </TableCell>
@@ -330,6 +368,17 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                     <TableCell className="text-[#042558]/70">
                       {formatDate(employee.last_performance_review_date)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => openEditForm(employee)}
+                        className="inline-flex rounded-md p-2 text-[#042558]/55 transition hover:bg-[#042558]/10 hover:text-[#042558]"
+                        aria-label={`Editar ${employee.nome}`}
+                        title={`Editar ${employee.nome}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -341,27 +390,29 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#042558]/25 px-4 py-6 backdrop-blur-sm">
           <form
-            onSubmit={createEmployee}
+            onSubmit={saveEmployee}
             className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[#042558]/10 bg-white p-5 shadow-2xl shadow-[#042558]/20"
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-                  Novo funcionario
+                  {editingEmployeeId ? "Editar Funcionário" : "Novo Funcionário"}
                 </h2>
                 <p className="mt-1 text-xs text-[#042558]/50">
-                  Pressione Enter para cadastrar e continuar preenchendo o proximo.
+                  {editingEmployeeId
+                    ? "Atualize os dados do colaborador e salve as alterações."
+                    : "Pressione Enter para cadastrar e continuar preenchendo o próximo."}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-[#042558]/10 text-[#042558]">
-                  {employees.length} cadastrado(s)
+                  {employees.length} Cadastrado(s)
                 </Badge>
                 <button
                   type="button"
-                  onClick={() => setFormOpen(false)}
+                  onClick={closeForm}
                   className="rounded-md p-2 text-[#042558]/45 transition hover:bg-[#042558]/10 hover:text-[#042558]"
-                  aria-label="Fechar formulario"
+                  aria-label="Fechar formulário"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -387,7 +438,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   onChange={(event) => setField("positionId", event.target.value)}
                   className={inputClass}
                 >
-                  <option value="">Selecione um cargo</option>
+                  <option value="">Selecione um Cargo</option>
                   {positions.map((position) => (
                     <option key={position.id} value={position.id}>
                       {position.nome}
@@ -397,13 +448,13 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Area</span>
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">Área</span>
                 <select
                   value={form.areaId}
                   onChange={(event) => setField("areaId", event.target.value)}
                   className={inputClass}
                 >
-                  <option value="">Selecione uma area</option>
+                  <option value="">Selecione uma Área</option>
                   {areaOptions.map((area) => (
                     <option key={area.id} value={area.id}>
                       {area.nome}
@@ -421,7 +472,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   disabled={!form.areaId}
                 >
                   <option value="">
-                    {form.areaId ? "Selecione um setor" : "Selecione uma area primeiro"}
+                    {form.areaId ? "Selecione um Setor" : "Selecione uma Área Primeiro"}
                   </option>
                   {sectorOptions.map((sector) => (
                     <option key={sector.id} value={sector.id}>
@@ -433,7 +484,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-                  Lider pelo organograma
+                  Líder pelo Organograma
                 </span>
                 <select
                   value={form.superiorImediatoId}
@@ -443,21 +494,21 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 >
                   <option value="">
                     {!form.positionId
-                      ? "Selecione um cargo primeiro"
+                      ? "Selecione um Cargo Primeiro"
                       : leaderOptions.length === 0
-                        ? "Nenhum funcionario em cargos superiores"
-                        : "Selecione o lider"}
+                        ? "Nenhum Funcionário em Cargos Superiores"
+                        : "Selecione o Líder"}
                   </option>
                   {leaderOptions.map(({ employee, position, depth }) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.nome} - {position?.nome ?? "cargo removido"}
-                      {depth === 1 ? " - superior direto" : ` - ${depth} niveis acima`}
+                      {employee.nome} - {position?.nome ?? "Cargo Removido"}
+                      {depth === 1 ? " - Superior Direto" : ` - ${depth} niveis acima`}
                     </option>
                   ))}
                 </select>
                 {form.positionId && leaderOptions.length > 0 && (
                   <p className="mt-1 text-xs text-[#042558]/45">
-                    Opcoes puxadas dos cargos acima:{" "}
+                    Opções puxadas dos cargos acima:{" "}
                     {ancestorPositionIds
                       .map((positionId) => positionsById.get(positionId)?.nome)
                       .filter(Boolean)
@@ -481,7 +532,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-                  Data de admissao
+                  Data de Admissão
                 </span>
                 <input
                   type="date"
@@ -493,7 +544,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
 
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-                  Ultima avaliacao de desempenho
+                  Última Avaliação de Desempenho
                 </span>
                 <input
                   type="date"
@@ -512,13 +563,15 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingEmployeeId ? (
+                  <Save className="h-4 w-4" />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                Adicionar
+                {editingEmployeeId ? "Salvar Alterações" : "Adicionar"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                Fechar formulario
+              <Button type="button" variant="outline" onClick={closeForm} disabled={saving}>
+                {editingEmployeeId ? "Cancelar" : "Fechar Formulário"}
               </Button>
             </div>
           </form>

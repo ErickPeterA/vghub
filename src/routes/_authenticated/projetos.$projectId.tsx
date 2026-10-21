@@ -28,7 +28,7 @@ function ProjectLayout() {
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error(error instanceof Error ? error.message : "Erro ao carregar projeto");
+        toast.error(error instanceof Error ? error.message : "Erro ao Carregar Projeto");
         setNotFound(true);
         setLoading(false);
       });
@@ -49,7 +49,7 @@ function ProjectLayout() {
   if (notFound) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-        Projeto nao encontrado.
+        Projeto não encontrado.
       </div>
     );
   }

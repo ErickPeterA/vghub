@@ -100,7 +100,13 @@ export const updateUserAdmin = createServerFn({ method: "POST" })
                 updated_at = now()
             where id = $1::uuid
           `,
-          [data.userId, data.email?.toLowerCase() ?? null, data.nome ?? null, data.status ?? null, passwordHash],
+          [
+            data.userId,
+            data.email?.toLowerCase() ?? null,
+            data.nome ?? null,
+            data.status ?? null,
+            passwordHash,
+          ],
         );
         await client.query(
           `
@@ -272,7 +278,7 @@ export const updateProjectMemberRoleAdmin = createServerFn({ method: "POST" })
         [data.memberId],
       );
       const member = memberResult.rows[0];
-      if (!member) throw new Error("Membro nao encontrado.");
+      if (!member) throw new Error("Membro não encontrado.");
       await client.query(
         `update public.project_members set role = $2::public.project_role where id = $1::uuid`,
         [data.memberId, data.role],
@@ -306,7 +312,7 @@ export const removeProjectMemberAdmin = createServerFn({ method: "POST" })
         [data.memberId],
       );
       const member = memberResult.rows[0];
-      if (!member) throw new Error("Membro nao encontrado.");
+      if (!member) throw new Error("Membro não encontrado.");
       await client.query(`delete from public.project_members where id = $1::uuid`, [data.memberId]);
       await client.query(
         `

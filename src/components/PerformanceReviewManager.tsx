@@ -28,10 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiJson } from "@/lib/api";
-import {
-  leaderOptionsFor,
-  responseOptionForParticipant,
-} from "@/lib/performance-response-labels";
+import { leaderOptionsFor, responseOptionForParticipant } from "@/lib/performance-response-labels";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };
 type FieldType = "text" | "textarea" | "select";
@@ -238,7 +235,7 @@ const EDUCATION_LEVEL_OPTIONS = [
   "Ensino Fundamental Completo",
   "Ensino Medio Incompleto",
   "Ensino Medio Completo",
-  "Ensino Tecnico",
+  "Ensino Técnico",
   "Ensino Superior Incompleto",
   "Ensino Superior Completo",
   "Pos-graduacao",
@@ -254,28 +251,28 @@ const EXPERIENCE_YEARS_OPTIONS = [
   "10 ou mais",
 ];
 const ACTIVITY_EFFICIENCY_OPTIONS = [
-  "Domina o processo/metodo desta atividade a ponto de tambem ensinar alguem a executa-la",
-  "Executa o processo/metodo desta atividade sem necessitar de auxilio.",
-  "Algumas vezes executa o processo/metodo desta atividade necessitando de auxilio.",
-  "Muitas vezes executa o processo/metodo desta atividade necessitando de auxilio.",
-  "Sempre executa o processo/metodo desta atividade necessitando de auxilio.",
-  "Nao se aplica.",
+  "Domina o processo/método desta atividade a ponto de também ensinar alguem a executa-la",
+  "Executa o processo/método desta atividade sem necessitar de auxilio.",
+  "Algumas vezes executa o processo/método desta atividade necessitando de auxilio.",
+  "Muitas vezes executa o processo/método desta atividade necessitando de auxilio.",
+  "Sempre executa o processo/método desta atividade necessitando de auxilio.",
+  "Não se aplica.",
 ];
 const ACTIVITY_EFFICACY_OPTIONS = [
   "Supero os resultados propostos.",
   "Atinjo os resultados propostos.",
   "Na maioria das vezes, atinjo os resultados propostos.",
   "Na maioria das vezes, NAO atinjo os resultados propostos.",
-  "Nao atinjo os resultados propostos.",
-  "Nao se aplica.",
+  "Não atinjo os resultados propostos.",
+  "Não se aplica.",
 ];
 const INDICATOR_OPTIONS = [
   "Supero as metas propostas",
   "Atinjo as metas propostas",
   "Atinjo mais que 80% das metas propostas",
   "Atinjo menos que 80% das metas propostas",
-  "Nao atinjo",
-  "Nao se aplica.",
+  "Não atinjo",
+  "Não se aplica.",
 ];
 const SKILL_OPTIONS = [
   "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
@@ -283,7 +280,7 @@ const SKILL_OPTIONS = [
   "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
   "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
   "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
-  "Nao se aplica.",
+  "Não se aplica.",
 ];
 const BEHAVIOR_OPTIONS = [
   "Demonstro este comportamento no dia a dia, a ponto de me DESTACAR perante os demais colaboradores.",
@@ -291,13 +288,13 @@ const BEHAVIOR_OPTIONS = [
   "Preciso MELHORAR neste comportamento em POUCAS situacoes.",
   "Preciso MELHORAR neste comportamento em MUITAS situacoes.",
   "Preciso MELHORAR URGENTEMENTE neste comportamento.",
-  "Nao se aplica.",
+  "Não se aplica.",
 ];
 
 const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   {
     id: "qualidade_entrega",
-    label: "Qualidade das entregas",
+    label: "Qualidade das Entregas",
     type: "select",
     required: true,
     active: true,
@@ -305,7 +302,7 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "cumprimento_prazos",
-    label: "Cumprimento de prazos",
+    label: "Cumprimento de Prazos",
     type: "select",
     required: true,
     active: true,
@@ -313,7 +310,7 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "comunicacao",
-    label: "Comunicação e colaboração",
+    label: "Comunicação e Colaboração",
     type: "select",
     required: true,
     active: true,
@@ -321,14 +318,14 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "pontos_fortes",
-    label: "Pontos fortes observados",
+    label: "Pontos Fortes Observados",
     type: "textarea",
     required: false,
     active: true,
   },
   {
     id: "pontos_desenvolver",
-    label: "Pontos a desenvolver",
+    label: "Pontos a Desenvolver",
     type: "textarea",
     required: false,
     active: true,
@@ -347,7 +344,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_experiencia",
-    label: "Responda aqui a experiencia que o avaliado possui, em anos:",
+    label: "Responda aqui a experiência que o avaliado possui, em anos:",
     type: "select",
     required: true,
     active: true,
@@ -356,23 +353,23 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_atividade_eficiencia",
-    label: "EFICIENCIA - FAZER DA FORMA CORRETA",
+    label: "EFICIENCIA - FAZER da FORMA CORRETA",
     type: "select",
     required: true,
     active: true,
     options: ACTIVITY_EFFICIENCY_OPTIONS,
-    sectionTitle: "Avaliacao das atividades",
+    sectionTitle: "Avaliação das atividades",
     dynamicSource: "activities",
     dynamicRole: "efficiency",
   },
   {
     id: "avdp_atividade_eficacia",
-    label: "EFICACIA - RESULTADO E QUALIDADE",
+    label: "EFICACIA - RESULTADO e QUALIDADE",
     type: "select",
     required: true,
     active: true,
     options: ACTIVITY_EFFICACY_OPTIONS,
-    sectionTitle: "Avaliacao das atividades",
+    sectionTitle: "Avaliação das atividades",
     dynamicSource: "activities",
     dynamicRole: "efficacy",
   },
@@ -409,7 +406,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_habilidade_cultura",
-    label: "Avaliacao da habilidade",
+    label: "Avaliação da Habilidade",
     type: "select",
     required: true,
     active: true,
@@ -420,7 +417,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_habilidade_cargo",
-    label: "Avaliacao da habilidade",
+    label: "Avaliação da Habilidade",
     type: "select",
     required: true,
     active: true,
@@ -431,7 +428,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_postura",
-    label: "Avaliacao do comportamento",
+    label: "Avaliação do Comportamento",
     type: "select",
     required: true,
     active: true,
@@ -888,7 +885,7 @@ function questionBlockLabel(question: PerformanceQuestion) {
   return (
     (question.dynamicSource ? sourceLabels[question.dynamicSource] : undefined) ??
     question.sectionTitle?.trim() ??
-    "Perguntas gerais"
+    "Perguntas Gerais"
   );
 }
 
@@ -922,14 +919,14 @@ const inputClass =
   "w-full rounded-lg border border-[#042558]/20 bg-white/70 px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20";
 export const performanceBlockCommentKey = (blockId: string) => `__block_comment:${blockId}`;
 const EXPERIENCE_REVIEW_PERIOD_OPTIONS = [
-  { days: 30, label: "30 dias" },
-  { days: 45, label: "45 dias" },
-  { days: 90, label: "90 dias" },
+  { days: 30, label: "30 Dias" },
+  { days: 45, label: "45 Dias" },
+  { days: 90, label: "90 Dias" },
 ];
 const PERFORMANCE_REVIEW_PERIOD_OPTIONS = [
-  { days: 90, label: "3 meses" },
-  { days: 180, label: "6 meses" },
-  { days: 365, label: "1 ano" },
+  { days: 90, label: "3 Meses" },
+  { days: 180, label: "6 Meses" },
+  { days: 365, label: "1 Ano" },
 ];
 
 function reviewPeriodOptionsForType(type: ReviewType) {
@@ -961,7 +958,9 @@ function displayQuestionLabel(question: PerformanceQuestion, participantType?: P
 function questionOptions(question: PerformanceQuestion, participantType?: ParticipantType) {
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
-    : (question.options ?? []).map((option) => responseOptionForParticipant(option, participantType));
+    : (question.options ?? []).map((option) =>
+        responseOptionForParticipant(option, participantType),
+      );
 }
 
 function normalizeLookup(value: string) {
@@ -1158,8 +1157,7 @@ function optionLabelForValue(field: BaseFieldRow, value: string) {
       (option) =>
         (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
         option.is_active !== false,
-    )
-      ?.label ?? value
+    )?.label ?? value
   );
 }
 
@@ -1428,7 +1426,7 @@ function withRequirementFromDescription(
     ? {
         ...question,
         requirementValue,
-        requirementLabel: "Requisito da descricao de cargo",
+        requirementLabel: "Requisito da descrição de cargo",
       }
     : question;
 }
@@ -1465,7 +1463,7 @@ function buildReviewQuestions(
         helpText: question.helpText,
         requirementValue:
           requirementValueForDynamicItem(question, item, fields) || question.requirementValue,
-        requirementLabel: "Requisito da descricao de cargo",
+        requirementLabel: "Requisito da descrição de cargo",
       });
       return questions;
     }, []);
@@ -1557,7 +1555,7 @@ function scoreRulesForCriterion(review: ReviewRow, criterionKey: string) {
 
 function scoreFromAnswerText(answer: string) {
   const normalized = normalizeLookup(answer);
-  if (!normalized || normalized.includes("nao se aplica") || normalized.includes("não se aplica")) {
+  if (!normalized || normalized.includes("não se aplica") || normalized.includes("não se aplica")) {
     return null;
   }
   if (
@@ -1601,7 +1599,7 @@ function scoreFromAnswerText(answer: string) {
   if (
     normalized.includes("urgente") ||
     normalized.includes("sempre necessita") ||
-    normalized.includes("nao atinjo") ||
+    normalized.includes("não atinjo") ||
     normalized.includes("não atinjo") ||
     normalized.includes("ruim") ||
     normalized.includes("abaixo do esperado")
@@ -1614,7 +1612,7 @@ function scoreFromAnswerText(answer: string) {
 function scoreFromQuestionOrder(answer: string, question: PerformanceQuestion) {
   const options = Array.from(
     new Set([...(question.options ?? []), ...(question.leaderOptions ?? [])]),
-  ).filter((option) => !normalizeLookup(option).includes("nao se aplica"));
+  ).filter((option) => !normalizeLookup(option).includes("não se aplica"));
   const index = options.findIndex((option) => normalizeLookup(option) === normalizeLookup(answer));
   if (index < 0) return null;
   if (options.length <= 1) return 100;
@@ -1926,7 +1924,7 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   if (introQuestions.length) {
     blocks.push({
       id: "intro",
-      title: introQuestions[0]?.sectionTitle || "Instrução e experiência",
+      title: introQuestions[0]?.sectionTitle || "Instrução e Experiência",
       eyebrow: "Bloco",
       questions: introQuestions,
     });
@@ -1949,9 +1947,9 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
     title: string;
   }> = [
     { source: "indicators", title: "Indicadores" },
-    { source: "culture_skills", title: "Habilidade cultural" },
-    { source: "role_skills", title: "Habilidade específica do cargo" },
-    { source: "behavior", title: "Postura e comportamento" },
+    { source: "culture_skills", title: "Habilidade Cultural" },
+    { source: "role_skills", title: "Habilidade Específica do Cargo" },
+    { source: "behavior", title: "Postura e Comportamento" },
   ];
 
   dynamicSections.forEach(({ source, title }) => {
@@ -2048,13 +2046,13 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 rounded-2xl border border-[#042558]/10 bg-white/80 p-6 shadow-sm backdrop-blur-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-            Avaliacoes
+            Avaliações
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#042558]">
-            Experiencia e desempenho
+            Experiência e Desempenho
           </h1>
           <p className="mt-1 text-sm text-[#042558]/60">
-            Ate 90 dias de admissao, a avaliacao entra como experiencia; depois disso, entra como
+            Até 90 dias de admissão, a avaliação entra como experiência; depois disso, entra como
             desempenho.
           </p>
         </div>
@@ -2075,7 +2073,7 @@ export function PerformanceReviewManager({ projectId }: { projectId: string }) {
         <div className="rounded-2xl border border-[#042558]/10 bg-white/60 p-6 shadow-sm backdrop-blur-sm">
           {!canManage ? (
             <div className="rounded-xl border border-dashed border-[#042558]/20 p-8 text-center text-sm text-[#042558]/50">
-              Apenas GP e administradores podem criar e comparar avaliacoes.
+              Apenas GP e administradores podem criar e comparar avaliações.
             </div>
           ) : tab === "schedule" ? (
             <PerformanceAgendaPanel projectId={projectId} />
@@ -2167,7 +2165,7 @@ export function PerformanceComparisonPage({
       });
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel comentar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível comentar.");
     }
   };
 
@@ -2194,7 +2192,7 @@ export function PerformanceComparisonPage({
       toast.success("Resposta alterada");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel alterar a resposta.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível alterar a resposta.");
     }
   };
 
@@ -2216,7 +2214,7 @@ export function PerformanceComparisonPage({
       toast.success("Avaliação finalizada");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel finalizar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível finalizar.");
     }
   };
 
@@ -2254,7 +2252,7 @@ export function PerformanceComparisonPage({
       });
     } catch (error) {
       setFinalizing(false);
-      return toast.error(error instanceof Error ? error.message : "Nao foi possivel finalizar.");
+      return toast.error(error instanceof Error ? error.message : "Não foi possível finalizar.");
     }
     setFinalizing(false);
     setOpinionOpen(false);
@@ -2273,7 +2271,7 @@ export function PerformanceComparisonPage({
       toast.success("Avaliação reaberta");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel reabrir.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível reabrir.");
     }
   };
 
@@ -2283,7 +2281,7 @@ export function PerformanceComparisonPage({
         <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-              Comparação de avaliação
+              Comparação de Avaliação
             </p>
             <h1 className="text-xl font-bold">{review.name}</h1>
             <p className="text-sm text-[#042558]/60">
@@ -2303,7 +2301,7 @@ export function PerformanceComparisonPage({
                 onClick={openFinalizeOpinion}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
               >
-                <CheckCircle2 className="h-4 w-4" /> Finalizar avaliação
+                <CheckCircle2 className="h-4 w-4" /> Finalizar Avaliação
               </button>
             )}
           </div>
@@ -2345,7 +2343,7 @@ export function PerformanceComparisonPage({
               disabled={finalizing || !managementOpinion.trim()}
               className="rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {finalizing ? "Finalizando..." : "Finalizar parecer"}
+              {finalizing ? "Finalizando..." : "Finalizar Parecer"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -2504,10 +2502,10 @@ function LegacyPerformanceScoreSummaryPanel({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-            Resumo de comparação
+            Resumo de Comparação
           </p>
           <h2 className="mt-1 text-2xl font-bold text-[#042558]">
-            Nota contra a descricao de cargo
+            Nota Contra a Descrição de Cargo
           </h2>
           <p className="mt-1 text-sm text-[#042558]/60">
             {summary.careerLabel ? `Carreira: ${summary.careerLabel} · ` : ""}
@@ -2517,7 +2515,7 @@ function LegacyPerformanceScoreSummaryPanel({
         <div className="grid min-w-full gap-3 sm:grid-cols-3 md:min-w-[560px]">
           <MetricTile
             tone="blue"
-            label="Nota final"
+            label="Nota Final"
             value={formatSummaryNumber(summary.collaboratorFinalScore)}
           />
           <MetricTile label="Referencia" value={formatSummaryNumber(summary.leaderFinalScore)} />
@@ -2525,7 +2523,7 @@ function LegacyPerformanceScoreSummaryPanel({
             label="Aderência"
             value={
               summary.matchPercent === null
-                ? "sem dados"
+                ? "Sem Dados"
                 : `${formatSummaryNumber(summary.matchPercent)}%`
             }
           />
@@ -2555,8 +2553,8 @@ function LegacyPerformanceScoreSummaryPanel({
                 <div>
                   <h3 className="font-semibold text-[#042558]">{criterion.label}</h3>
                   <p className="text-xs text-[#042558]/55">
-                    Peso {formatSummaryNumber(criterion.weight)}% · {criterion.scored} resposta(s)
-                    pontuada(s)
+                    Peso {formatSummaryNumber(criterion.weight)}% · {criterion.scored} Resposta(s)
+                    Pontuada(s)
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs font-medium">
@@ -2568,7 +2566,7 @@ function LegacyPerformanceScoreSummaryPanel({
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
                     Aderência{" "}
-                    {matchPercent === null ? "sem dados" : `${formatSummaryNumber(matchPercent)}%`}
+                    {matchPercent === null ? "Sem Dados" : `${formatSummaryNumber(matchPercent)}%`}
                   </span>
                 </div>
               </div>
@@ -2576,7 +2574,7 @@ function LegacyPerformanceScoreSummaryPanel({
                 <ScoreBar
                   label={`Colaborador: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
                   value={criterion.collaboratorAverage}
-                  color="bg-[#042558]"
+                  color="Bg-[#042558]"
                 />
                 <ScoreBar
                   label={`Líder: ${formatSummaryNumber(criterion.leaderPoints)} pts`}
@@ -2621,10 +2619,10 @@ function PerformanceScoreSummaryPanel({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-            Resumo de aderencia
+            Resumo de Aderencia
           </p>
           <h2 className="mt-1 text-2xl font-bold text-[#042558]">
-            Nota contra a descricao de cargo
+            Nota Contra a Descrição de Cargo
           </h2>
           <p className="mt-1 text-sm text-[#042558]/60">
             {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
@@ -2634,17 +2632,17 @@ function PerformanceScoreSummaryPanel({
         <div className="grid min-w-full gap-3 sm:grid-cols-2 md:min-w-[380px]">
           <MetricTile
             tone="blue"
-            label="Nota final"
+            label="Nota Final"
             value={formatSummaryNumber(summary.collaboratorFinalScore)}
           />
-          <MetricTile label="Respostas validas" value={String(validAnswers)} />
+          <MetricTile label="Respostas Validas" value={String(validAnswers)} />
         </div>
       </div>
 
       {review.management_opinion?.trim() && (
         <div className="mt-5 rounded-xl border border-[#042558]/10 bg-white/70 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-            Parecer da Gestao de Pessoa
+            Parecer da Gestão de Pessoa
           </p>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
             {review.management_opinion}
@@ -2663,8 +2661,8 @@ function PerformanceScoreSummaryPanel({
                 <div>
                   <h3 className="font-semibold text-[#042558]">{criterion.label}</h3>
                   <p className="text-xs text-[#042558]/55">
-                    Peso {formatSummaryNumber(criterion.weight)}% - {criterion.scored} resposta(s)
-                    valida(s) no calculo
+                    Peso {formatSummaryNumber(criterion.weight)}% - {criterion.scored} Resposta(s)
+                    Válida(s) no Calculo
                   </p>
                   {criterion.requirementLabel && (
                     <p className="mt-1 text-xs text-[#042558]/55">
@@ -2685,7 +2683,7 @@ function PerformanceScoreSummaryPanel({
                 <ScoreBar
                   label={`Nota do colaborador: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
                   value={criterion.collaboratorAverage}
-                  color="bg-[#042558]"
+                  color="Bg-[#042558]"
                 />
               </div>
             </div>
@@ -2720,11 +2718,11 @@ function PerformanceFinalVisualizationPanel({
     <section className="mb-5 overflow-hidden rounded-2xl border border-[#042558]/10 bg-white shadow-lg shadow-[#042558]/10">
       <div className="border-b border-[#042558]/10 bg-[#042558] px-5 py-5 text-white">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-          Visualização final de desempenho
+          Visualização Final de Desempenho
         </p>
         <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Resultado da avaliação</h2>
+            <h2 className="text-2xl font-bold">Resultado da Avaliação</h2>
             <p className="mt-1 text-sm text-white/70">
               {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
               Nota total tirada na avaliação.
@@ -2732,11 +2730,11 @@ function PerformanceFinalVisualizationPanel({
           </div>
           <div className="grid min-w-full gap-2 sm:grid-cols-3 md:min-w-[520px]">
             <ResultPill
-              label="Nota total"
+              label="Nota Total"
               value={formatSummaryNumber(summary.collaboratorFinalScore)}
             />
-            <ResultPill label="Notas positivas" value={String(positiveBlocks.length)} />
-            <ResultPill label="Menores que 80%" value={String(lowerBlocks.length)} />
+            <ResultPill label="Notas Positivas" value={String(positiveBlocks.length)} />
+            <ResultPill label="Menores Que 80%" value={String(lowerBlocks.length)} />
           </div>
         </div>
       </div>
@@ -2756,14 +2754,14 @@ function PerformanceFinalVisualizationPanel({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <PerformanceBlockScoreList
-              title="Notas positivas"
+              title="Notas Positivas"
               count={positiveBlocks.length}
               blocks={positiveBlocks}
               tone="positive"
               emptyMessage="Nenhum bloco com nota igual ou acima de 80%."
             />
             <PerformanceBlockScoreList
-              title="Menores que 80%"
+              title="Menores Que 80%"
               count={lowerBlocks.length}
               blocks={lowerBlocks}
               tone="attention"
@@ -2772,7 +2770,7 @@ function PerformanceFinalVisualizationPanel({
           </div>
 
           <p className="text-xs font-medium text-[#042558]/50">
-            {validAnswers} resposta(s) valida(s) entraram no calculo.
+            {validAnswers} resposta(s) válida(s) entraram no calculo.
           </p>
         </div>
       </div>
@@ -2815,14 +2813,14 @@ function PerformanceBlockScoreList({
 }) {
   const toneClass =
     tone === "positive"
-      ? "border-emerald-200 bg-emerald-50/45 text-emerald-800"
-      : "border-red-200 bg-red-50/45 text-red-800";
+      ? "Border-emerald-200 Bg-emerald-50/45 Text-emerald-800"
+      : "Border-red-200 Bg-red-50/45 Text-red-800";
 
   return (
     <section className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="mb-3 flex items-end justify-between gap-3">
         <h3 className="text-lg font-bold text-[#042558]">{title}</h3>
-        <span className="shrink-0 text-sm font-semibold">{count} bloco(s)</span>
+        <span className="shrink-0 text-sm font-semibold">{count} Bloco(s)</span>
       </div>
 
       {blocks.length === 0 ? (
@@ -2849,7 +2847,7 @@ function PerformanceBlockScoreCard({
 }) {
   const color = tone === "positive" ? "bg-emerald-500" : "bg-red-500";
   const chipClass =
-    tone === "positive" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800";
+    tone === "positive" ? "Bg-emerald-100 Text-emerald-800" : "Bg-red-100 Text-red-800";
 
   return (
     <article className="rounded-lg border border-[#042558]/10 bg-white p-4 text-[#042558] shadow-sm shadow-[#042558]/5">
@@ -2862,7 +2860,7 @@ function PerformanceBlockScoreCard({
         </div>
         <div className={`rounded-lg px-3 py-2 text-right ${chipClass}`}>
           <p className="text-[11px] font-semibold uppercase tracking-wider opacity-70">
-            Nota geral do bloco
+            Nota Geral do Bloco
           </p>
           <p className="text-2xl font-black">{formatSummaryNumber(block.score)}%</p>
         </div>
@@ -2935,7 +2933,7 @@ function ScoreBar({ label, value, color }: { label: string; value: number | null
     <div>
       <div className="mb-1 flex items-center justify-between gap-2 text-xs text-[#042558]/60">
         <span>{label}</span>
-        <span>{value === null ? "sem regra" : `${formatSummaryNumber(value)}%`}</span>
+        <span>{value === null ? "Sem Regra" : `${formatSummaryNumber(value)}%`}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
         <div
@@ -2984,7 +2982,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
           body: {
             projectId,
             configId,
-            name: "Avaliacao de experiencia",
+            name: "Avaliação de Experiência",
             periodDays: EXPERIENCE_LIMIT_DAYS,
             reviewType: "experience",
             questionsSchema: questions,
@@ -2998,7 +2996,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
             projectId,
             configs: [
               {
-                name: "Avaliacao de experiencia",
+                name: "Avaliação de Experiência",
                 periodDays: EXPERIENCE_LIMIT_DAYS,
                 reviewType: "experience",
                 questionsSchema: questions,
@@ -3011,7 +3009,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
       toast.success("Configuração salva");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
@@ -3031,7 +3029,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#042558]">Perguntas da avaliação</h2>
+          <h2 className="text-xl font-bold text-[#042558]">Perguntas da Avaliação</h2>
           <p className="text-sm text-[#042558]/60">
             Somente as perguntas configuradas no modelo entram na avaliação.
           </p>
@@ -3115,8 +3113,8 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
                 className={inputClass}
               >
                 <option value="text">Texto</option>
-                <option value="textarea">Texto longo</option>
-                <option value="select">Seleção única</option>
+                <option value="textarea">Texto Longo</option>
+                <option value="select">Seleção Única</option>
               </select>
               <button
                 onClick={() =>
@@ -3160,7 +3158,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
             {question.type === "select" && (
               <div className="grid gap-3 md:grid-cols-2">
                 <SelectOptionsEditor
-                  title="Opções do colaborador"
+                  title="Opções do Colaborador"
                   options={question.options ?? []}
                   onChange={(options) =>
                     setQuestions((current) =>
@@ -3169,7 +3167,7 @@ function PerformanceConfigPanel({ projectId }: { projectId: string }) {
                   }
                 />
                 <SelectOptionsEditor
-                  title="Opções do líder"
+                  title="Opções do Líder"
                   options={question.leaderOptions ?? []}
                   onChange={(leaderOptions) =>
                     setQuestions((current) =>
@@ -3227,7 +3225,7 @@ export function PerformancePeriodConfigPanel({
       const result = await apiJson<{ configs: ConfigRow[] }>(`/api/performance-configs${suffix}`);
       rows = toConfigRows(result.configs);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar modelos.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar modelos.");
       return;
     }
     const missingTypes = (["experience", "performance"] as ReviewType[]).filter(
@@ -3240,7 +3238,7 @@ export function PerformancePeriodConfigPanel({
           body: {
             projectId,
             configs: missingTypes.map((type) => ({
-              name: type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho",
+              name: type === "experience" ? "Avaliação de Experiência" : "Avaliação de Desempenho",
               periodDays: EXPERIENCE_LIMIT_DAYS,
               reviewType: type,
               questionsSchema: defaultQuestionsForConfig(type),
@@ -3250,7 +3248,7 @@ export function PerformancePeriodConfigPanel({
         });
         rows = toConfigRows(created.configs);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Nao foi possivel criar os modelos.");
+        toast.error(error instanceof Error ? error.message : "Não foi possível criar os modelos.");
       }
     }
 
@@ -3304,7 +3302,7 @@ export function PerformancePeriodConfigPanel({
       toast.success("Modelo salvo");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar o modelo.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o modelo.");
     } finally {
       setSaving(false);
     }
@@ -3327,10 +3325,10 @@ export function PerformancePeriodConfigPanel({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-                Tipo de modelo
+                Tipo de Modelo
               </h2>
               <p className="mt-1 text-xs text-[#042558]/50">
-                Configure um modelo de perguntas para experiencia e outro para desempenho.
+                Configure um modelo de perguntas para experiência e outro para desempenho.
               </p>
             </div>
             <div className="flex min-w-fit gap-6">
@@ -3348,7 +3346,7 @@ export function PerformancePeriodConfigPanel({
                       : "text-[#042558]/40 hover:text-[#042558]/70"
                   }`}
                 >
-                  {type === "experience" ? "Modelo de experiencia" : "Modelo de desempenho"}
+                  {type === "experience" ? "Modelo de Experiência" : "Modelo de Desempenho"}
                   <span
                     className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
                       configTypeTab === type
@@ -3373,15 +3371,15 @@ export function PerformancePeriodConfigPanel({
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-                Configuracao do modelo
+                Configuração do Modelo
               </p>
               <h2 className="mt-1 text-xl font-bold text-[#042558]">
                 {periodLabel(selectedConfig)}
               </h2>
               <p className="text-sm text-[#042558]/60">
                 {projectId === null
-                  ? "Configuracao global: estas perguntas serao usadas em todos os projetos, inclusive os ja criados."
-                  : "As perguntas deste modelo serao usadas em qualquer dia escolhido na criacao da avaliacao."}
+                  ? "Configuração global: estas perguntas serao usadas em todos os projetos, inclusive os já criados."
+                  : "As perguntas deste modelo serao usadas em qualquer dia escolhido na criação da avaliação."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -3407,17 +3405,17 @@ export function PerformancePeriodConfigPanel({
           <div className="mb-5 grid gap-3 md:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-                Nome do modelo
+                Nome do Modelo
               </span>
               <input
                 value={modelName}
                 onChange={(event) => setModelName(event.target.value)}
                 className={inputClass}
-                placeholder="Ex: Avaliacao de experiencia"
+                placeholder="Ex: Avaliação de experiência"
               />
             </label>
             <div className="rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/65">
-              O ciclo da avaliacao sera escolhido ao criar/enviar o formulario.
+              O ciclo da avaliação será escolhido ao criar/enviar o formulário.
             </div>
           </div>
 
@@ -3448,125 +3446,130 @@ export function PerformancePeriodConfigPanel({
                     Bloco: {block.label}
                   </span>
                   <span className="text-xs text-[#042558]/50">
-                    {block.questions.length} {block.questions.length === 1 ? "pergunta" : "perguntas"}
+                    {block.questions.length}{" "}
+                    {block.questions.length === 1 ? "pergunta" : "perguntas"}
                   </span>
                 </div>
                 <div className="space-y-3">
-            {block.questions.map((question) => (
-              <div
-                key={question.id}
-                className="rounded-xl border border-[#042558]/10 bg-white/70 p-4"
-              >
-                <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
-                  <div className="grid gap-2">
-                    <input
-                      value={question.label}
-                      onChange={(event) =>
-                        setQuestions((current) =>
-                          current.map((q) =>
-                            q.id === question.id ? { ...q, label: event.target.value } : q,
-                          ),
-                        )
-                      }
-                      placeholder="Texto para colaborador"
-                      className={inputClass}
-                    />
-                    <input
-                      value={question.leaderLabel ?? ""}
-                      onChange={(event) =>
-                        setQuestions((current) =>
-                          current.map((q) =>
-                            q.id === question.id
-                              ? { ...q, leaderLabel: event.target.value || undefined }
-                              : q,
-                          ),
-                        )
-                      }
-                      placeholder="Texto para líder (opcional)"
-                      className={inputClass}
-                    />
-                  </div>
-                  <select
-                    value={question.type}
-                    onChange={(event) =>
-                      setQuestions((current) =>
-                        current.map((q) =>
-                          q.id === question.id
-                            ? { ...q, type: event.target.value as FieldType }
-                            : q,
-                        ),
-                      )
-                    }
-                    className={inputClass}
-                  >
-                    <option value="text">Texto</option>
-                    <option value="textarea">Texto longo</option>
-                    <option value="select">Selecao unica</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQuestions((current) => current.filter((q) => q.id !== question.id))
-                    }
-                    className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
-                  >
-                    Remover
-                  </button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-4 text-sm text-[#042558]/60">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={question.required}
-                      onChange={(event) =>
-                        setQuestions((current) =>
-                          current.map((q) =>
-                            q.id === question.id ? { ...q, required: event.target.checked } : q,
-                          ),
-                        )
-                      }
-                    />
-                    Obrigatorio
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={question.active ?? true}
-                      onChange={(event) =>
-                        setQuestions((current) =>
-                          current.map((q) =>
-                            q.id === question.id ? { ...q, active: event.target.checked } : q,
-                          ),
-                        )
-                      }
-                    />
-                    Ativo
-                  </label>
-                </div>
-                {question.type === "select" && (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <SelectOptionsEditor
-                      title="Opções do colaborador"
-                      options={question.options ?? []}
-                      onChange={(options) =>
-                        setQuestions((current) =>
-                          current.map((q) => (q.id === question.id ? { ...q, options } : q)),
-                        )
-                      }
-                    />
-                    <SelectOptionsEditor
-                      title="Opções do líder"
-                      options={question.leaderOptions ?? []}
-                      onChange={(leaderOptions) =>
-                        setQuestions((current) =>
-                          current.map((q) => (q.id === question.id ? { ...q, leaderOptions } : q)),
-                        )
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+                  {block.questions.map((question) => (
+                    <div
+                      key={question.id}
+                      className="rounded-xl border border-[#042558]/10 bg-white/70 p-4"
+                    >
+                      <div className="grid gap-3 md:grid-cols-[1fr_150px_auto]">
+                        <div className="grid gap-2">
+                          <input
+                            value={question.label}
+                            onChange={(event) =>
+                              setQuestions((current) =>
+                                current.map((q) =>
+                                  q.id === question.id ? { ...q, label: event.target.value } : q,
+                                ),
+                              )
+                            }
+                            placeholder="Texto para colaborador"
+                            className={inputClass}
+                          />
+                          <input
+                            value={question.leaderLabel ?? ""}
+                            onChange={(event) =>
+                              setQuestions((current) =>
+                                current.map((q) =>
+                                  q.id === question.id
+                                    ? { ...q, leaderLabel: event.target.value || undefined }
+                                    : q,
+                                ),
+                              )
+                            }
+                            placeholder="Texto para líder (opcional)"
+                            className={inputClass}
+                          />
+                        </div>
+                        <select
+                          value={question.type}
+                          onChange={(event) =>
+                            setQuestions((current) =>
+                              current.map((q) =>
+                                q.id === question.id
+                                  ? { ...q, type: event.target.value as FieldType }
+                                  : q,
+                              ),
+                            )
+                          }
+                          className={inputClass}
+                        >
+                          <option value="text">Texto</option>
+                          <option value="textarea">Texto Longo</option>
+                          <option value="select">Selecao Única</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuestions((current) => current.filter((q) => q.id !== question.id))
+                          }
+                          className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-4 text-sm text-[#042558]/60">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={question.required}
+                            onChange={(event) =>
+                              setQuestions((current) =>
+                                current.map((q) =>
+                                  q.id === question.id
+                                    ? { ...q, required: event.target.checked }
+                                    : q,
+                                ),
+                              )
+                            }
+                          />
+                          Obrigatório
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={question.active ?? true}
+                            onChange={(event) =>
+                              setQuestions((current) =>
+                                current.map((q) =>
+                                  q.id === question.id ? { ...q, active: event.target.checked } : q,
+                                ),
+                              )
+                            }
+                          />
+                          Ativo
+                        </label>
+                      </div>
+                      {question.type === "select" && (
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <SelectOptionsEditor
+                            title="Opções do Colaborador"
+                            options={question.options ?? []}
+                            onChange={(options) =>
+                              setQuestions((current) =>
+                                current.map((q) => (q.id === question.id ? { ...q, options } : q)),
+                              )
+                            }
+                          />
+                          <SelectOptionsEditor
+                            title="Opções do Líder"
+                            options={question.leaderOptions ?? []}
+                            onChange={(leaderOptions) =>
+                              setQuestions((current) =>
+                                current.map((q) =>
+                                  q.id === question.id ? { ...q, leaderOptions } : q,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </section>
             ))}
@@ -3629,7 +3632,7 @@ function automaticReviewName(
   days: number | null | undefined,
   type?: ReviewType | null,
 ) {
-  return `${employeeName} - Avaliacao de ${reviewPeriodLabel(days, type).toLowerCase()}`;
+  return `${employeeName} - Avaliação de ${reviewPeriodLabel(days, type).toLowerCase()}`;
 }
 
 function normalizeDateOnly(value: unknown): string | null {
@@ -3795,7 +3798,7 @@ const AGENDA_STATE_LABEL: Record<AgendaState, string> = {
   done: "Concluida",
   late: "Atrasada",
   sent: "Link enviado",
-  upcoming: "Link nao enviado",
+  upcoming: "Link não enviado",
 };
 
 type AgendaEntry = AgendaItem & {
@@ -3851,7 +3854,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       setWeightConfigs(data.weightConfigs);
       setScoringConfigs(data.scoringConfigs);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar a agenda.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar a agenda.");
     } finally {
       setLoading(false);
     }
@@ -4019,7 +4022,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
   };
 
   const copyLink = async (entry: AgendaEntry) => {
-    if (!entry.token) return toast.error("Link indisponivel para esta avaliacao.");
+    if (!entry.token) return toast.error("Link indisponivel para esta avaliação.");
     try {
       await navigator.clipboard.writeText(
         `${window.location.origin}/avaliacao-desempenho/preencher/${entry.token}`,
@@ -4027,20 +4030,20 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       toast.success("Link copiado");
       await markLinkSent(entry);
     } catch {
-      toast.error("Nao foi possivel copiar o link.");
+      toast.error("Não foi possível copiar o link.");
     }
   };
 
   const createAgendaReview = async (item: AgendaItem) => {
     try {
       if (item.existingReview) return;
-      if (!item.leader) return toast.error("Cadastre o lider imediato deste funcionario primeiro.");
+      if (!item.leader) return toast.error("Cadastre o líder imediato deste funcionário primeiro.");
       if (!item.description)
-        return toast.error("Este funcionario nao possui descricao de cargo vinculada.");
+        return toast.error("Este funcionário não possui descrição de cargo vinculada.");
       const leaderPosition =
         positions.find((position) => position.id === item.leader?.position_id) ?? null;
       if (!item.employeePosition || !leaderPosition)
-        return toast.error("Colaborador ou lider invalido.");
+        return toast.error("Colaborador ou líder inválido.");
       const questions = buildReviewQuestions(
         item.config.questions_schema ?? [],
         item.description,
@@ -4075,10 +4078,10 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           expiresAt: expires_at,
         },
       });
-      toast.success("Avaliacao criada na agenda");
+      toast.success("Avaliação criada na agenda");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar.");
     }
   };
 
@@ -4087,11 +4090,11 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-            Agenda de avaliacoes
+            Agenda de Avaliações
           </h2>
           <p className="mt-1 text-xs text-[#042558]/50">
-            {monthEntries.length} previstas · {monthNotSent} links nao enviados · {monthLate}{" "}
-            atrasadas
+            {monthEntries.length} Previstas · {monthNotSent} Links Não Enviados · {monthLate}{" "}
+            Atrasadas
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -4114,7 +4117,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
               setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
             }
             className="rounded-lg border border-[#042558]/15 p-2 text-[#042558] hover:bg-[#042558]/5"
-            aria-label="Proximo mes"
+            aria-label="Próximo mes"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -4137,14 +4140,14 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className={inputClass}
-          placeholder="Pesquisar pessoa, cargo ou lider"
+          placeholder="Pesquisar pessoa, cargo ou líder"
         />
         <select
           value={leaderFilter}
           onChange={(event) => setLeaderFilter(event.target.value)}
           className={inputClass}
         >
-          <option value="all">Todos os lideres</option>
+          <option value="all">Todos os Líderes</option>
           {leaderOptions.map(([id, nome]) => (
             <option key={id} value={id}>
               {nome}
@@ -4156,8 +4159,8 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           onChange={(event) => setTypeFilter(event.target.value as "all" | ReviewType)}
           className={inputClass}
         >
-          <option value="all">Todos os tipos</option>
-          <option value="experience">Experiencia</option>
+          <option value="all">Todos os Tipos</option>
+          <option value="experience">Experiência</option>
           <option value="performance">Desempenho</option>
         </select>
         <select
@@ -4165,10 +4168,10 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           onChange={(event) => setStatusFilter(event.target.value as "all" | AgendaState)}
           className={inputClass}
         >
-          <option value="all">Todos os status</option>
-          <option value="upcoming">Links nao enviados</option>
-          <option value="sent">Links enviados</option>
-          <option value="late">Somente atrasadas</option>
+          <option value="all">Todos os Status</option>
+          <option value="upcoming">Links Não Enviados</option>
+          <option value="sent">Links Enviados</option>
+          <option value="late">Somente Atrasadas</option>
           <option value="done">Concluidas</option>
         </select>
       </div>
@@ -4255,7 +4258,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <aside className="rounded-xl border border-[#042558]/10 bg-white p-4">
             {!selectedDate ? (
               <p className="text-sm text-[#042558]/45">
-                Selecione um dia no calendario para ver as avaliacoes previstas.
+                Selecione um dia no calendario para ver as avaliações previstas.
               </p>
             ) : (
               <>
@@ -4263,11 +4266,11 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                   {formatDateOnly(selectedDate)}
                 </h3>
                 <p className="mt-1 text-xs text-[#042558]/50">
-                  {selectedEntries.length} avaliacao(oes) prevista(s)
+                  {selectedEntries.length} Avaliação(oes) Prevista(s)
                 </p>
                 {selectedEntries.length === 0 ? (
                   <p className="mt-4 rounded-lg border border-dashed border-[#042558]/15 p-4 text-center text-xs text-[#042558]/45">
-                    Nenhuma avaliacao prevista para esta data.
+                    Nenhuma avaliação prevista para esta data.
                   </p>
                 ) : (
                   <div className="mt-3 space-y-3">
@@ -4284,7 +4287,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                             <p className="text-[11px] text-[#042558]/50">
                               {[entry.employeePosition?.nome, entry.areaName]
                                 .filter(Boolean)
-                                .join(" · ") || "sem cargo"}
+                                .join(" · ") || "Sem Cargo"}
                             </p>
                           </div>
                           <span
@@ -4298,7 +4301,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                           {reviewPeriodLabel(entry.periodDays, entry.reviewType)}
                         </p>
                         <p className="text-[11px] text-[#042558]/50">
-                          Lider responsavel: {entry.leader?.nome ?? "sem lider cadastrado"}
+                          Líder responsável: {entry.leader?.nome ?? "Sem Líder Cadastrado"}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {entry.existingReview ? (
@@ -4307,14 +4310,14 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                                 href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${entry.existingReview.id}`}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-[#042558]/20 px-2.5 py-1.5 text-xs font-medium text-[#042558] hover:bg-[#042558]/5"
                               >
-                                <SplitSquareVertical className="h-3.5 w-3.5" /> Abrir avaliacao
+                                <SplitSquareVertical className="h-3.5 w-3.5" /> Abrir Avaliação
                               </a>
                               <button
                                 type="button"
                                 onClick={() => copyLink(entry)}
                                 className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-2.5 py-1.5 text-xs font-medium text-white"
                               >
-                                <Copy className="h-3.5 w-3.5" /> Copiar link
+                                <Copy className="h-3.5 w-3.5" /> Copiar Link
                               </button>
                             </>
                           ) : (
@@ -4323,7 +4326,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                               onClick={() => createAgendaReview(entry)}
                               className="inline-flex items-center gap-1.5 rounded-lg bg-[#042558] px-2.5 py-1.5 text-xs font-medium text-white"
                             >
-                              <Plus className="h-3.5 w-3.5" /> Gerar avaliacao
+                              <Plus className="h-3.5 w-3.5" /> Gerar Avaliação
                             </button>
                           )}
                         </div>
@@ -4376,7 +4379,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       setScoringConfigs(data.scoringConfigs);
       setConfigId((current) => current || rows[0]?.id || "");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar avaliacoes.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar avaliações.");
     }
   }, [projectId]);
 
@@ -4426,7 +4429,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       : null;
   const automaticNamePreview = selectedEmployee
     ? automaticReviewName(selectedEmployee.nome, reviewPeriodDays, formReviewType)
-    : `Colaborador - Avaliacao de ${reviewPeriodLabel(reviewPeriodDays, formReviewType).toLowerCase()}`;
+    : `Colaborador - Avaliação de ${reviewPeriodLabel(reviewPeriodDays, formReviewType).toLowerCase()}`;
   const reviewCounts = reviews.reduce(
     (acc, review) => {
       acc[review.review_type ?? "experience"] += 1;
@@ -4470,7 +4473,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         );
       }
       if (!selectedEmployeeIsBelowLeader)
-        return toast.error("Selecione um colaborador que responda diretamente para este lider.");
+        return toast.error("Selecione um colaborador que responda diretamente para este líder.");
       if (!selectedDc)
         return toast.error("Este colaborador não possui descrição de cargo vinculada.");
       if (!selectedConfig || !selectedConfig.is_active)
@@ -4515,7 +4518,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       toast.success("Avaliação criada");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar.");
     }
   };
 
@@ -4544,7 +4547,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Agenda de avaliações
+              Agenda de Avaliações
             </h2>
             <p className="mt-1 text-xs text-[#042558]/50">
               Datas calculadas pela última avaliação do funcionário ou, se não houver, pela
@@ -4553,7 +4556,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </div>
           <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
             {agendaItems.filter((item) => item.daysUntil <= 0 && !item.existingReview).length}{" "}
-            notificação(ões)
+            Notificação(ões)
           </span>
         </div>
 
@@ -4585,15 +4588,15 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                       </span>
                       {item.existingReview ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                          Avaliação criada
+                          Avaliação Criada
                         </span>
                       ) : isDue ? (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                          {isToday ? "Vence hoje" : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
+                          {isToday ? "Vence Hoje" : `${Math.abs(item.daysUntil)} dia(s) em atraso`}
                         </span>
                       ) : (
                         <span className="rounded-full bg-[#042558]/5 px-2 py-0.5 text-xs text-[#042558]/55">
-                          Em {item.daysUntil} dia(s)
+                          Em {item.daysUntil} Dia(s)
                         </span>
                       )}
                     </div>
@@ -4601,12 +4604,12 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                       Prevista para {formatDateOnly(item.dueDate)} · base:{" "}
                       {formatDateOnly(item.baseDate)}
                       {item.employee.last_performance_review_date
-                        ? " (ultima avaliação)"
-                        : " (admissão)"}
+                        ? " (Última Avaliação)"
+                        : " (Admissão)"}
                     </p>
                     <p className="mt-1 text-xs text-[#042558]/45">
-                      Lider: {item.leader?.nome ?? "sem lider cadastrado"} · Cargo:{" "}
-                      {item.employeePosition?.nome ?? "sem cargo"}
+                      Líder: {item.leader?.nome ?? "Sem Líder Cadastrado"} · Cargo:{" "}
+                      {item.employeePosition?.nome ?? "Sem Cargo"}
                     </p>
                   </div>
                   {item.existingReview ? (
@@ -4636,10 +4639,10 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-[#042558]">
-              Tipo de avaliacao
+              Tipo de Avaliação
             </h2>
             <p className="mt-1 text-xs text-[#042558]/50">
-              A separacao e feita automaticamente pela data de admissao do funcionario.
+              A separacao e feita automaticamente pela data de admissão do funcionário.
             </p>
           </div>
           <div className="flex min-w-fit gap-6">
@@ -4654,7 +4657,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     : "text-[#042558]/40 hover:text-[#042558]/70"
                 }`}
               >
-                {type === "experience" ? "Avaliacao de experiencia" : "Avaliacao de desempenho"}
+                {type === "experience" ? "Avaliação de Experiência" : "Avaliação de Desempenho"}
                 <span
                   className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
                     reviewTypeTab === type
@@ -4675,7 +4678,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
 
       <section className="rounded-2xl border border-[#042558]/10 bg-white/70 p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#042558]">
-          Nova avaliacao
+          Nova Avaliação
         </h2>
         <p className="mb-4 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
           Nome gerado: <span className="font-semibold">{automaticNamePreview}</span>
@@ -4683,7 +4686,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Lider avaliador
+              Líder Avaliador
             </span>
             <select
               value={leaderEmployeeId}
@@ -4696,7 +4699,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                 const count = subordinateCountByLeader.get(employee.id) ?? 0;
                 return (
                   <option key={employee.id} value={employee.id}>
-                    {employee.nome} - {position?.nome ?? "sem cargo"} - {count} subordinado(s)
+                    {employee.nome} - {position?.nome ?? "Sem Cargo"} - {count} Subordinado(s)
                   </option>
                 );
               })}
@@ -4704,7 +4707,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Colaborador avaliado
+              Colaborador Avaliado
             </span>
             <select
               value={employeeId}
@@ -4713,7 +4716,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
               disabled={!leaderEmployeeId}
             >
               <option value="">
-                {leaderEmployeeId ? "Selecione" : "Selecione o lider primeiro"}
+                {leaderEmployeeId ? "Selecione" : "Selecione o Líder Primeiro"}
               </option>
               {subordinateEmployees.map((employee) => {
                 const position = positions.find((item) => item.id === employee.position_id);
@@ -4722,21 +4725,21 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                 );
                 return (
                   <option key={employee.id} value={employee.id} disabled={!hasDescription}>
-                    {employee.nome} - {position?.nome ?? "sem cargo"}
-                    {!hasDescription ? " - sem descricao de cargo" : ""}
+                    {employee.nome} - {position?.nome ?? "Sem Cargo"}
+                    {!hasDescription ? " - Sem Descrição de Cargo" : ""}
                   </option>
                 );
               })}
               {leaderEmployeeId && subordinateEmployees.length === 0 && (
                 <option value="" disabled>
-                  Nenhum funcionario cadastrado abaixo deste lider
+                  Nenhum Funcionário Cadastrado Abaixo Deste Líder
                 </option>
               )}
             </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Dia da avaliacao
+              Dia da Avaliação
             </span>
             <select
               value={reviewPeriodDays}
@@ -4752,15 +4755,15 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[#042558]/70">
-              Validade dos links
+              Validade dos Links
             </span>
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
               className={inputClass}
             >
-              <option value={7}>7 dias</option>
-              <option value={14}>14 dias</option>
+              <option value={7}>7 Dias</option>
+              <option value={14}>14 Dias</option>
             </select>
           </label>
         </div>
@@ -4773,20 +4776,20 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
           <p className="mt-3 rounded-lg border border-[#042558]/10 bg-[#042558]/5 px-3 py-2 text-sm text-[#042558]/70">
             {selectedReviewType ? `${reviewTypeLabel(selectedReviewType)} · ` : ""}
             Data prevista: {formatDateOnly(expectedReviewDate)} (
-            {reviewPeriodLabel(reviewPeriodDays, formReviewType)} apos a data base de{" "}
+            {reviewPeriodLabel(reviewPeriodDays, formReviewType)} Após a Data Base de{" "}
             {formatDateOnly(getEmployeeBaseDate(selectedEmployee))}).
           </p>
         )}
         {selectedDc && (
           <p className="mt-3 text-sm text-[#042558]/60">
-            Descrição vinculada: {selectedDc.cargo || "sem cargo"}.
+            Descrição vinculada: {selectedDc.cargo || "Sem Cargo"}.
           </p>
         )}
         <button
           onClick={createReview}
           className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white"
         >
-          <Plus className="h-4 w-4" /> Criar avaliacao
+          <Plus className="h-4 w-4" /> Criar Avaliação
         </button>
       </section>
 
@@ -4835,7 +4838,7 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${review.id}`}
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
                   >
-                    <SplitSquareVertical className="h-4 w-4" /> Comparar avaliações
+                    <SplitSquareVertical className="h-4 w-4" /> Comparar Avaliações
                   </a>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -4881,7 +4884,7 @@ function ParticipantCard({
             {title}
           </p>
           <p className={`text-sm font-medium ${answered ? "text-emerald-900" : "text-[#042558]"}`}>
-            {participant ? STATUS_LABEL[participant.status] : "Link não gerado"}
+            {participant ? STATUS_LABEL[participant.status] : "Link Não Gerado"}
           </p>
         </div>
         {participant ? (
@@ -4893,11 +4896,11 @@ function ParticipantCard({
                 : "border-[#042558]/20 text-[#042558] hover:bg-[#042558]/5"
             }`}
           >
-            <Copy className="h-3.5 w-3.5" /> Enviar link
+            <Copy className="h-3.5 w-3.5" /> Enviar Link
           </button>
         ) : (
           <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-            Recrie a avaliação
+            Recrie a Avaliação
           </span>
         )}
       </div>
@@ -4924,7 +4927,7 @@ function LinkValidityBadge({ expiresAt }: { expiresAt?: string | null }) {
 function linkValidityInfo(expiresAt?: string | null) {
   if (!expiresAt) {
     return {
-      label: "Validade nao informada",
+      label: "Validade Não Informada",
       expiresLabel: "",
       className: "border-gray-200 bg-gray-50 text-gray-600",
     };
@@ -4938,7 +4941,7 @@ function linkValidityInfo(expiresAt?: string | null) {
 
   if (diffMs <= 0) {
     return {
-      label: "Link expirado",
+      label: "Link Expirado",
       expiresLabel: expiresLabel.replace("Vence em", "Expirou em"),
       className: "border-red-200 bg-red-50 text-red-700",
     };
@@ -4989,7 +4992,7 @@ function BlockObservationComparison({
   return (
     <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-900/60">
-        Observações do bloco
+        Observações do Bloco
       </p>
       <div className="hidden grid-cols-[1fr_1px_1fr] gap-4 md:grid">
         <BlockObservationCell title="Colaborador" value={collaboratorComment} />
@@ -5013,7 +5016,7 @@ function BlockObservationCell({ title, value }: { title: string; value: string }
         {title}
       </p>
       <p className="min-h-[38px] whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-[#042558]">
-        {value || <span className="italic text-[#042558]/40">sem observação</span>}
+        {value || <span className="italic text-[#042558]/40">Sem Observação</span>}
       </p>
     </div>
   );
@@ -5040,7 +5043,7 @@ function AnswerCell({
       </p>
       {!participant || participant.status !== "answered" ? (
         <p className="rounded-lg bg-[#042558]/5 p-3 text-sm italic text-[#042558]/40">
-          sem resposta
+          Sem Resposta
         </p>
       ) : canEdit ? (
         <QuestionInput
@@ -5051,7 +5054,7 @@ function AnswerCell({
         />
       ) : (
         <p className="min-h-[42px] whitespace-pre-wrap rounded-lg bg-[#042558]/5 p-3 text-sm text-[#042558]">
-          {value || <span className="italic text-[#042558]/40">sem resposta</span>}
+          {value || <span className="italic text-[#042558]/40">Sem Resposta</span>}
         </p>
       )}
     </div>
@@ -5188,8 +5191,8 @@ function HistoryList({
                 {authors[item.changed_by ?? ""] ?? "Usuário"} ·{" "}
                 {new Date(item.changed_at).toLocaleString("pt-BR")}
               </p>
-              <p className="mt-1">Anterior: {item.previous_answer || "sem resposta"}</p>
-              <p>Atual: {item.new_answer || "sem resposta"}</p>
+              <p className="mt-1">Anterior: {item.previous_answer || "Sem Resposta"}</p>
+              <p>Atual: {item.new_answer || "Sem Resposta"}</p>
             </div>
           ))}
         </div>

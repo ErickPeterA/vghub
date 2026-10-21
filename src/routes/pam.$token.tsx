@@ -77,7 +77,7 @@ function PublicPamPage() {
         const json = (await response.json()) as PamData | PamError;
         if (cancelled) return;
         if (!response.ok || "error" in json) {
-          setErrorMsg((json as PamError).message ?? "Nao foi possivel carregar o PAM.");
+          setErrorMsg((json as PamError).message ?? "Não foi possível carregar o PAM.");
           setState("error");
           return;
         }
@@ -88,7 +88,7 @@ function PublicPamPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          setErrorMsg("Erro de conexao.");
+          setErrorMsg("Erro de conexão.");
           setState("error");
         }
       });
@@ -104,7 +104,11 @@ function PublicPamPage() {
   const progressPercent = items.length ? Math.round((completedCount / items.length) * 100) : 0;
   const editable = Boolean(data?.editable && data.pam.status !== "completed");
   const currentIndex = useMemo(
-    () => Math.max(0, items.findIndex((item) => item.id === selectedItem?.id)),
+    () =>
+      Math.max(
+        0,
+        items.findIndex((item) => item.id === selectedItem?.id),
+      ),
     [items, selectedItem?.id],
   );
 
@@ -176,7 +180,7 @@ function PublicPamPage() {
       const response = await fetch(`/api/public/pam-complete/${token}`, { method: "POST" });
       const json = (await response.json()) as { ok?: true; completedAt?: string } | PamError;
       if (!response.ok || "error" in json) {
-        setErrorMsg((json as PamError).message ?? "Nao foi possivel concluir.");
+        setErrorMsg((json as PamError).message ?? "Não foi possível concluir.");
         setState("ready");
         return;
       }
@@ -196,7 +200,7 @@ function PublicPamPage() {
       );
       setState("success");
     } catch {
-      setErrorMsg("Erro de conexao.");
+      setErrorMsg("Erro de conexão.");
       setState("ready");
     }
   };
@@ -225,22 +229,28 @@ function PublicPamPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-xl font-bold text-[#042558]">
-                      PAM - Plano de Acao de Melhorias
+                      PAM - Plano de Ação de Melhorias
                     </h1>
                     <span className="rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
                       {statusLabel(data.pam.status)}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-[#042558]/65">
-                    {data.pam.employeeName} - {data.pam.jobTitle || "Cargo nao informado"} -
+                    {data.pam.employeeName} - {data.pam.jobTitle || "Cargo Não Informado"} -
                     Feedback: {formatDate(data.pam.feedbackDate)}
                   </p>
                 </div>
-                <SaveFeedback state={saveState} savedAt={savedAt} completed={data.pam.status === "completed"} />
+                <SaveFeedback
+                  state={saveState}
+                  savedAt={savedAt}
+                  completed={data.pam.status === "completed"}
+                />
               </div>
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#042558]/55">
-                  <span>{completedCount} de {items.length} pontos concluidos</span>
+                  <span>
+                    {completedCount} De {items.length} Pontos Concluidos
+                  </span>
                   <span>{progressPercent}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
@@ -255,10 +265,10 @@ function PublicPamPage() {
             {state === "success" && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
                 <div className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="h-5 w-5" /> Plano de acao concluido
+                  <CheckCircle2 className="h-5 w-5" /> Plano de Ação Concluido
                 </div>
                 <p className="mt-1 text-sm text-emerald-700">
-                  As respostas foram registradas e agora ficam disponiveis para o gestor.
+                  As respostas foram registradas e agora ficam disponíveis para o gestor.
                 </p>
               </div>
             )}
@@ -272,7 +282,7 @@ function PublicPamPage() {
             <main className="grid gap-5 md:grid-cols-[320px_1fr]">
               <aside className={`${mobileDetailOpen ? "hidden md:block" : "block"} space-y-3`}>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-[#042558]/60">
-                  Pontos de melhoria
+                  Pontos de Melhoria
                 </h2>
                 {items.map((item) => (
                   <button
@@ -291,10 +301,13 @@ function PublicPamPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-[#042558]">
-                          {displayPamImprovementPoint(item.improvement_point, fallbackItemTitle(item))}
+                          {displayPamImprovementPoint(
+                            item.improvement_point,
+                            fallbackItemTitle(item),
+                          )}
                         </p>
                         <p className="mt-1 text-sm text-[#042558]/55">
-                          {item.skill_label || "Habilidade nao informada"}
+                          {item.skill_label || "Habilidade Não Informada"}
                         </p>
                       </div>
                       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[#042558]/35 md:hidden" />
@@ -305,7 +318,7 @@ function PublicPamPage() {
                       </span>
                       {isPamItemFilled(item) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                          <Check className="h-3 w-3" /> preenchido
+                          <Check className="h-3 w-3" /> Preenchido
                         </span>
                       )}
                     </div>
@@ -331,7 +344,7 @@ function PublicPamPage() {
             <footer className="sticky bottom-0 -mx-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(4,37,88,0.08)] backdrop-blur md:static md:mx-0 md:rounded-xl md:border md:border-[#042558]/10 md:shadow-sm">
               <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm text-[#042558]/60">
-                  {filledCount} de {items.length} pontos preenchidos
+                  {filledCount} De {items.length} Pontos Preenchidos
                 </p>
                 <button
                   onClick={() => void completePam()}
@@ -339,7 +352,7 @@ function PublicPamPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#042558]/90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {state === "completing" ? "Concluindo..." : "Concluir Plano de Acao"}
+                  {state === "completing" ? "Concluindo..." : "Concluir Plano de Ação"}
                 </button>
               </div>
             </footer>
@@ -373,18 +386,18 @@ function ActionPlanEditor({
         onClick={onBack}
         className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#042558] md:hidden"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar aos pontos
+        <ArrowLeft className="h-4 w-4" /> Voltar aos Pontos
       </button>
       <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-[#042558]/45">
-            Ponto {index} de {total}
+            Ponto {index} De {total}
           </p>
           <h2 className="mt-1 text-xl font-semibold text-[#042558]">
             {displayPamImprovementPoint(item.improvement_point, fallbackItemTitle(item))}
           </h2>
           <p className="mt-1 text-sm text-[#042558]/60">
-            Habilidade: {item.skill_label || "Nao informada"}
+            Habilidade: {item.skill_label || "Não Informada"}
           </p>
         </div>
       </div>
@@ -403,7 +416,7 @@ function ActionPlanEditor({
         </label>
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-gray-700">
-            Como voce pretende melhorar?
+            Como você pretende melhorar?
           </span>
           <textarea
             disabled={!editable}
@@ -431,7 +444,7 @@ function ActionPlanEditor({
           disabled={!editable || !isPamItemFilled(item)}
           className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#042558]/20 transition hover:bg-[#042558]/90 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
         >
-          <Check className="h-4 w-4" /> Concluir aba
+          <Check className="h-4 w-4" /> Concluir Aba
         </button>
       </div>
     </article>
@@ -461,14 +474,16 @@ function SaveFeedback({
     return (
       <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
         <Save className="h-4 w-4" /> Salvo
-        {savedAt ? ` ${new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}
+        {savedAt
+          ? ` ${new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+          : ""}
       </span>
     );
   }
   if (state === "error") {
-    return <span className="text-sm font-medium text-red-600">Erro ao salvar</span>;
+    return <span className="text-sm font-medium text-red-600">Erro ao Salvar</span>;
   }
-  return <span className="text-sm text-[#042558]/45">Salvo automaticamente</span>;
+  return <span className="text-sm text-[#042558]/45">Salvo Automaticamente</span>;
 }
 
 function formatDate(value?: string | null) {
@@ -487,5 +502,5 @@ function fallbackItemTitle(item: PamItem) {
   if (item.source_key?.startsWith("activities_")) {
     return `Atividade ${item.source_key.match(/\d+$/)?.[0] ?? ""}`.trim();
   }
-  return item.skill_label || "Ponto de melhoria";
+  return item.skill_label || "Ponto de Melhoria";
 }

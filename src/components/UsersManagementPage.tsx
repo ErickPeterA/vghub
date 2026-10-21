@@ -36,7 +36,7 @@ export function UsersManagementPage() {
       const data = await withTimeout(listFn(), 10_000, "Não foi possível carregar usuários.");
       setRows(data as Row[]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao carregar");
+      toast.error(e instanceof Error ? e.message : "Erro ao Carregar");
       setRows([]);
     } finally {
       setLoading(false);
@@ -78,7 +78,7 @@ export function UsersManagementPage() {
           to="/gerenciamento/usuarios/novo"
           className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground"
         >
-          <UserPlus className="h-4 w-4" /> Criar usuário
+          <UserPlus className="h-4 w-4" /> Criar Usuário
         </Link>
       </div>
 
@@ -198,7 +198,7 @@ function EditDialog({
         className="w-full max-w-md rounded-xl border border-border bg-card p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 font-display text-2xl">Editar usuário</h2>
+        <h2 className="mb-4 font-display text-2xl">Editar Usuário</h2>
         <form onSubmit={submit} className="space-y-3">
           <input
             className={inp}

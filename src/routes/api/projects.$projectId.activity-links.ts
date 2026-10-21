@@ -5,15 +5,12 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
     handlers: {
       GET: async ({ request, params }) => {
         try {
-          const [
-            { requireAuthenticatedUser },
-            { requireLocalUser },
-            { getActivityLinksPageData },
-          ] = await Promise.all([
-            import("@/server/auth/session"),
-            import("@/server/auth/local-user"),
-            import("@/server/activities/activity-repository"),
-          ]);
+          const [{ requireAuthenticatedUser }, { requireLocalUser }, { getActivityLinksPageData }] =
+            await Promise.all([
+              import("@/server/auth/session"),
+              import("@/server/auth/local-user"),
+              import("@/server/activities/activity-repository"),
+            ]);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
           return Response.json({
@@ -27,13 +24,17 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
       },
       POST: async ({ request, params }) => {
         try {
-          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { createActivityLink }] =
-            await Promise.all([
-              import("zod"),
-              import("@/server/auth/session"),
-              import("@/server/auth/local-user"),
-              import("@/server/activities/activity-repository"),
-            ]);
+          const [
+            { z },
+            { requireAuthenticatedUser },
+            { requireLocalUser },
+            { createActivityLink },
+          ] = await Promise.all([
+            import("zod"),
+            import("@/server/auth/session"),
+            import("@/server/auth/local-user"),
+            import("@/server/activities/activity-repository"),
+          ]);
           const body = await request.json().catch(() => null);
           const input = z
             .object({
@@ -61,13 +62,17 @@ export const Route = createFileRoute("/api/projects/$projectId/activity-links")(
       },
       PATCH: async ({ request, params }) => {
         try {
-          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateActivityLink }] =
-            await Promise.all([
-              import("zod"),
-              import("@/server/auth/session"),
-              import("@/server/auth/local-user"),
-              import("@/server/activities/activity-repository"),
-            ]);
+          const [
+            { z },
+            { requireAuthenticatedUser },
+            { requireLocalUser },
+            { updateActivityLink },
+          ] = await Promise.all([
+            import("zod"),
+            import("@/server/auth/session"),
+            import("@/server/auth/local-user"),
+            import("@/server/activities/activity-repository"),
+          ]);
           const body = await request.json().catch(() => null);
           const input = z
             .object({

@@ -7,13 +7,16 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getPamPageData }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/pam/pam-repository"),
             ]);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
-          return Response.json({ ok: true, ...(await getPamPageData(user.userId, params.projectId)) });
+          return Response.json({
+            ok: true,
+            ...(await getPamPageData(user.userId, params.projectId)),
+          });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");
           return toErrorResponse(error);
@@ -29,34 +32,36 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
               import("@/server/pam/pam-repository"),
             ]);
           const body = await request.json().catch(() => null);
-          const mode = z.discriminatedUnion("action", [
-            z.object({
-              action: z.literal("create_pam"),
-              reviewId: z.string().uuid(),
-              employeeId: z.string().uuid().nullable(),
-              employeeName: z.string().min(1),
-              jobTitle: z.string().nullable(),
-              feedbackDate: z.string().nullable(),
-              items: z.array(
-                z.object({
-                  source: z.string(),
-                  source_key: z.string().nullable(),
-                  source_score: z.number().nullable(),
-                  improvement_point: z.string().min(1),
-                  skill_label: z.string().nullable(),
-                  display_order: z.number().int(),
-                }),
-              ),
-            }),
-            z.object({
-              action: z.literal("add_item"),
-              pamId: z.string().uuid(),
-              source: z.string(),
-              improvementPoint: z.string().min(1),
-              skillLabel: z.string().nullable(),
-              displayOrder: z.number().int(),
-            }),
-          ]).parse(body);
+          const mode = z
+            .discriminatedUnion("action", [
+              z.object({
+                action: z.literal("create_pam"),
+                reviewId: z.string().uuid(),
+                employeeId: z.string().uuid().nullable(),
+                employeeName: z.string().min(1),
+                jobTitle: z.string().nullable(),
+                feedbackDate: z.string().nullable(),
+                items: z.array(
+                  z.object({
+                    source: z.string(),
+                    source_key: z.string().nullable(),
+                    source_score: z.number().nullable(),
+                    improvement_point: z.string().min(1),
+                    skill_label: z.string().nullable(),
+                    display_order: z.number().int(),
+                  }),
+                ),
+              }),
+              z.object({
+                action: z.literal("add_item"),
+                pamId: z.string().uuid(),
+                source: z.string(),
+                improvementPoint: z.string().min(1),
+                skillLabel: z.string().nullable(),
+                displayOrder: z.number().int(),
+              }),
+            ])
+            .parse(body);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
 
@@ -135,7 +140,10 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
           const url = new URL(request.url);
           const itemId = url.searchParams.get("itemId");
           if (!itemId) {
-            return Response.json({ error: "invalid_body", message: "Item nao informado." }, { status: 400 });
+            return Response.json(
+              { error: "invalid_body", message: "Item não informado." },
+              { status: 400 },
+            );
           }
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);

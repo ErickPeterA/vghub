@@ -19,7 +19,7 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}) {
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     }),
     options.timeoutMs ?? 10_000,
-    "Nao foi possivel comunicar com a API.",
+    "Não foi possível comunicar com a API.",
   );
 }
 

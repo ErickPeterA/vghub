@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/base/options/$optionId")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateBaseOption }] =
             await Promise.all([
               import("zod"),
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/base/options/$optionId")({
           const option = await updateBaseOption(user.userId, params.optionId, patch);
           if (!option) {
             return Response.json(
-              { error: "not_found", message: "Opcao nao encontrada." },
+              { error: "not_found", message: "Opção não encontrada." },
               { status: 404 },
             );
           }
@@ -52,7 +52,7 @@ export const Route = createFileRoute("/api/base/options/$optionId")({
           const deleted = await deleteBaseOption(user.userId, params.optionId);
           if (!deleted) {
             return Response.json(
-              { error: "not_found", message: "Opcao nao encontrada." },
+              { error: "not_found", message: "Opção não encontrada." },
               { status: 404 },
             );
           }

@@ -191,7 +191,7 @@ function Historico() {
             <div className="flex items-center gap-2 rounded-full bg-[#042558]/5 px-3.5 py-1.5 text-sm font-medium text-[#042558]">
               <Clock className="h-4 w-4" />
               <span>
-                {items.length} registro{items.length !== 1 ? "s" : ""}
+                {items.length} Registro{items.length !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
@@ -213,7 +213,7 @@ function Historico() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#042558]/5">
               <History className="h-8 w-8 text-[#042558]/30" />
             </div>
-            <h3 className="text-lg font-medium text-[#042558]/60">Nenhuma ação registrada</h3>
+            <h3 className="text-lg font-medium text-[#042558]/60">Nenhuma Ação Registrada</h3>
             <p className="mt-1 text-sm text-[#042558]/40">
               As ações realizadas no projeto aparecerão aqui.
             </p>
@@ -222,9 +222,9 @@ function Historico() {
           <div className="space-y-3">
             {items.map((item) => {
               const actionLabel = labelMap[item.acao] ?? item.acao;
-              const actionColor = acaoColors[item.acao] ?? "bg-[#042558]/5 text-[#042558]";
+              const actionColor = acaoColors[item.acao] ?? "Bg-[#042558]/5 Text-[#042558]";
               const userName = item.user_id
-                ? (users[item.user_id] ?? "Usuário não encontrado")
+                ? (users[item.user_id] ?? "Usuário Não Encontrado")
                 : "Sistema";
               const detailText = formatDetails(item, users);
 

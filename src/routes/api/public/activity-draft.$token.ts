@@ -11,15 +11,14 @@ export const Route = createFileRoute("/api/public/activity-draft/$token")({
           body = await request.json();
         } catch {
           return Response.json(
-            { error: "invalid_body", message: "Payload invalido." },
+            { error: "invalid_body", message: "Payload inválido." },
             { status: 400 },
           );
         }
 
         try {
-          const { savePublicActivityDraft } = await import(
-            "@/server/activities/activity-repository"
-          );
+          const { savePublicActivityDraft } =
+            await import("@/server/activities/activity-repository");
           const result = await savePublicActivityDraft({
             token: params.token,
             headerAnswers: body.header_answers ?? {},

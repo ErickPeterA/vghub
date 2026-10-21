@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/areas")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { listProjectAreas }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/areas/area-repository"),
             ]);

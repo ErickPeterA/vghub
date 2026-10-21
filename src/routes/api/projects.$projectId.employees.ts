@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getEmployeesPageData }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/employees/employee-repository"),
             ]);
@@ -57,6 +57,48 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
             lastPerformanceReviewDate: input.lastPerformanceReviewDate || null,
           });
           return Response.json({ ok: true, employee }, { status: 201 });
+        } catch (error) {
+          const { toErrorResponse } = await import("@/server/http/errors");
+          return toErrorResponse(error);
+        }
+      },
+      PUT: async ({ request, params }) => {
+        try {
+          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updateEmployee }] =
+            await Promise.all([
+              import("zod"),
+              import("@/server/auth/session"),
+              import("@/server/auth/local-user"),
+              import("@/server/employees/employee-repository"),
+            ]);
+          const body = await request.json().catch(() => null);
+          const input = z
+            .object({
+              employeeId: z.string().uuid(),
+              positionId: z.string().uuid(),
+              areaId: z.string().uuid().optional().nullable().or(z.literal("")),
+              sectorId: z.string().uuid().optional().nullable().or(z.literal("")),
+              superiorImediatoId: z.string().uuid().optional().nullable().or(z.literal("")),
+              nome: z.string().trim().min(1),
+              admissionDate: z.string().min(1),
+              lastPerformanceReviewDate: z.string().optional().nullable().or(z.literal("")),
+            })
+            .parse(body);
+          const user = await requireAuthenticatedUser(request);
+          await requireLocalUser(user.userId);
+          const employee = await updateEmployee({
+            actorUserId: user.userId,
+            projectId: params.projectId,
+            employeeId: input.employeeId,
+            positionId: input.positionId,
+            areaId: input.areaId || null,
+            sectorId: input.sectorId || null,
+            superiorImediatoId: input.superiorImediatoId || null,
+            nome: input.nome,
+            admissionDate: input.admissionDate,
+            lastPerformanceReviewDate: input.lastPerformanceReviewDate || null,
+          });
+          return Response.json({ ok: true, employee });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");
           return toErrorResponse(error);

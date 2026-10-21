@@ -34,7 +34,7 @@ function LoginPage() {
       await navigate({ to: "/projetos", replace: true });
       window.location.reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao autenticar");
+      toast.error(err instanceof Error ? err.message : "Erro ao Autenticar");
       setLoading(false);
     }
   };

@@ -51,7 +51,11 @@ export const Route = createFileRoute("/api/projects/$projectId/dc")({
           if (mode === "position-description" && positionId) {
             return Response.json({
               ok: true,
-              description: await repo.getPositionDescription(user.userId, params.projectId, positionId),
+              description: await repo.getPositionDescription(
+                user.userId,
+                params.projectId,
+                positionId,
+              ),
             });
           }
           if (mode === "linked-position" && positionId) {
@@ -82,7 +86,11 @@ export const Route = createFileRoute("/api/projects/$projectId/dc")({
           const payload = schema.parse(await request.json().catch(() => null));
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
-          const dc = await createDc({ actorUserId: user.userId, projectId: params.projectId, payload });
+          const dc = await createDc({
+            actorUserId: user.userId,
+            projectId: params.projectId,
+            payload,
+          });
           return Response.json({ ok: true, dc }, { status: 201 });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");

@@ -84,10 +84,10 @@ export function normalizeFieldDataSource(field: {
 export function normalizeCoreFieldLabel(field: { field_key: string; label: string }) {
   switch (field.field_key.toLowerCase()) {
     case "cargo":
-      return "Nomenclatura do cargo visivel";
+      return "Nomenclatura do cargo visível";
     case "unidade_negocio":
     case "area":
-      return "Area";
+      return "Área";
     case "departamento":
     case "setor":
       return "Setor";
@@ -121,8 +121,8 @@ function resolveConfiguredOptionValue(
 function semanticFieldKey(field: { field_key: string; label: string }) {
   const key = field.field_key.toLowerCase();
   const label = normalizeText(field.label);
-  if (key === "cargo" || label === "nomenclatura do cargo visivel") return "cargo";
-  if (key === "superior_imediato" || label === "cargo do superior imediato")
+  if (key === "cargo" || label === "Nomenclatura do Cargo Visivel") return "cargo";
+  if (key === "superior_imediato" || label === "Cargo do Superior Imediato")
     return "superior_imediato";
   if (key === "nivelamento") return "nivelamento";
   if (key === "unidade_negocio" || key === "area" || label === "area") return "area";
@@ -241,7 +241,7 @@ export function useProjectAreas(projectId: string) {
     apiJson<{ ok: boolean; areas: ProjectArea[] }>(`/api/projects/${projectId}/areas`)
       .then(({ areas }) => setAreas(areas))
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Erro ao carregar areas.");
+        toast.error(error instanceof Error ? error.message : "Erro ao carregar áreas.");
         setAreas([]);
       });
   }, [projectId]);
@@ -308,7 +308,7 @@ export function DynamicFieldControl({
         is_active: true,
       },
     }).catch((error) => {
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar opcao.");
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar opção.");
       return null;
     });
 
@@ -342,7 +342,7 @@ export function DynamicFieldControl({
             type="button"
             onClick={() => setModalOpen(true)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-            title="Adicionar opção"
+            title="Adicionar Opção"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -351,7 +351,7 @@ export function DynamicFieldControl({
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Nova opção</DialogTitle>
+              <DialogTitle>Nova Opção</DialogTitle>
               <DialogDescription>
                 Cadastre uma nova opção para este campo e ela será salva na base do projeto.
               </DialogDescription>
@@ -432,7 +432,7 @@ export function DynamicFieldControl({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled || !parentAreaId}
       >
-        <option value="">{parentAreaId ? "— Selecione —" : "Selecione a Área primeiro"}</option>
+        <option value="">{parentAreaId ? "— Selecione —" : "Selecione a Área Primeiro"}</option>
         {opts.map((a) => (
           <option key={a.id} value={a.id}>
             {a.nome}
@@ -535,7 +535,7 @@ export function DynamicFieldControl({
         >
           <div className="flex h-full items-center p-3 text-sm leading-6">
             {selected?.description || (
-              <span className="opacity-60">Descrição aparecerá ao selecionar a competência</span>
+              <span className="opacity-60">Descrição Aparecerá ao Selecionar a Competência</span>
             )}
           </div>
         </div>
@@ -568,7 +568,7 @@ export function DynamicFieldControl({
               {option.label}
             </option>
           ))}
-          {!disabled && <option value="__add_new_option__">+ Adicionar nova opcao</option>}
+          {!disabled && <option value="__add_new_option__">+ Adicionar Nova Opção</option>}
         </select>
         {renderOptionAdder(false)}
       </>

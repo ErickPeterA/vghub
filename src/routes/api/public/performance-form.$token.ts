@@ -120,8 +120,7 @@ function optionLabelForValue(field: BaseFieldRow, value: string) {
       (option) =>
         (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
         option.is_active !== false,
-    )
-      ?.label ?? value
+    )?.label ?? value
   );
 }
 
@@ -131,8 +130,7 @@ function optionDescriptionForValue(field: BaseFieldRow, value: string) {
       (option) =>
         (option.value === value || normalizeLookup(option.label) === normalizeLookup(value)) &&
         option.is_active !== false,
-    )
-      ?.description ?? ""
+    )?.description ?? ""
   ).trim();
 }
 
@@ -236,7 +234,7 @@ const CULTURAL_SKILL_OPTIONS = [
   "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
   "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
   "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
-  "Nao se aplica.",
+  "Não se aplica.",
 ];
 
 function withMissingCulturalSkillQuestions(snapshot: JsonRecord, questions: PerformanceQuestion[]) {
@@ -253,7 +251,7 @@ function withMissingCulturalSkillQuestions(snapshot: JsonRecord, questions: Perf
   const generated = culturalSkills.map(
     (_, index): PerformanceQuestion => ({
       id: `avdp_habilidade_cultura_${index + 1}`,
-      label: "Avaliacao da habilidade",
+      label: "Avaliação da Habilidade",
       type: "select",
       required: true,
       active: true,
@@ -423,7 +421,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         const token = params.token;
         if (!token || token.length < 20) {
           return Response.json(
-            { error: "invalid_token", message: "Link invalido." },
+            { error: "invalid_token", message: "Link inválido." },
             { status: 400 },
           );
         }
@@ -444,7 +442,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
 
           if (!participant) {
             return Response.json(
-              { error: "not_found", message: "Este link nao existe ou foi removido." },
+              { error: "not_found", message: "Este link não existe ou foi removido." },
               { status: 404 },
             );
           }
@@ -452,14 +450,14 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
             return Response.json(
               {
                 error: "already_answered",
-                message: "Este formulario ja foi respondido. Obrigado!",
+                message: "Este formulário já foi respondido. Obrigado!",
               },
               { status: 410 },
             );
           }
           if (new Date(participant.expires_at) < new Date()) {
             return Response.json(
-              { error: "expired", message: "Este link expirou. Solicite um novo ao responsavel." },
+              { error: "expired", message: "Este link expirou. Solicite um novo ao responsável." },
               { status: 410 },
             );
           }
@@ -479,13 +477,13 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
 
           if (!review) {
             return Response.json(
-              { error: "not_found", message: "Avaliacao nao encontrada." },
+              { error: "not_found", message: "Avaliação não encontrada." },
               { status: 404 },
             );
           }
           if (review.status === "finalized") {
             return Response.json(
-              { error: "finalized", message: "Esta avaliacao ja foi finalizada." },
+              { error: "finalized", message: "Esta avaliação já foi finalizada." },
               { status: 410 },
             );
           }
@@ -630,7 +628,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
         } catch (error) {
           console.error(error);
           return Response.json(
-            { error: "server_error", message: "Erro ao buscar formulario." },
+            { error: "server_error", message: "Erro ao buscar formulário." },
             { status: 500 },
           );
         }

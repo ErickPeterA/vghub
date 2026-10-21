@@ -127,7 +127,7 @@ export function PamManager({ projectId }: { projectId: string }) {
     const existing = pamByReview.get(review.id);
     if (existing) {
       setSelectedPamId(existing.id);
-      toast.info("Este PAM ja existe.");
+      toast.info("Este PAM já existe.");
       return;
     }
 
@@ -136,25 +136,28 @@ export function PamManager({ projectId }: { projectId: string }) {
     const feedbackDate = (review.finalized_at ?? new Date().toISOString()).slice(0, 10);
 
     try {
-      const { pam } = await apiJson<{ ok: boolean; pam: PamRow }>(`/api/projects/${projectId}/pam`, {
-        method: "POST",
-        body: {
-          action: "create_pam",
-          reviewId: review.id,
-          employeeId: review.employee_id,
-          employeeName: review.employee_name,
-          jobTitle: review.job_title,
-          feedbackDate,
-          items: suggestions.map((suggestion, index) => ({
-            source: suggestion.source,
-            source_key: suggestion.source_key,
-            source_score: suggestion.source_score,
-            improvement_point: suggestion.improvement_point,
-            skill_label: suggestion.skill_label,
-            display_order: index + 1,
-          })),
+      const { pam } = await apiJson<{ ok: boolean; pam: PamRow }>(
+        `/api/projects/${projectId}/pam`,
+        {
+          method: "POST",
+          body: {
+            action: "create_pam",
+            reviewId: review.id,
+            employeeId: review.employee_id,
+            employeeName: review.employee_name,
+            jobTitle: review.job_title,
+            feedbackDate,
+            items: suggestions.map((suggestion, index) => ({
+              source: suggestion.source,
+              source_key: suggestion.source_key,
+              source_score: suggestion.source_score,
+              improvement_point: suggestion.improvement_point,
+              skill_label: suggestion.skill_label,
+              display_order: index + 1,
+            })),
+          },
         },
-      });
+      );
 
       if (!suggestions.length) {
         toast.info("Nenhum ponto abaixo de 80% foi encontrado; adicione pontos manuais.");
@@ -164,7 +167,7 @@ export function PamManager({ projectId }: { projectId: string }) {
       toast.success("PAM criado como rascunho");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel criar o PAM.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o PAM.");
     }
   };
   const addManualItem = async () => {
@@ -180,7 +183,7 @@ export function PamManager({ projectId }: { projectId: string }) {
           pamId: selectedPam.id,
           source: "manual",
           improvementPoint: manualTitle.trim(),
-          skillLabel: manualSkill.trim() || "Ponto manual",
+          skillLabel: manualSkill.trim() || "Ponto Manual",
           displayOrder: selectedItems.length + 1,
         },
       });
@@ -252,7 +255,7 @@ export function PamManager({ projectId }: { projectId: string }) {
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-            Plano de Acao de Melhorias
+            Plano de Ação de Melhorias
           </p>
           <h1 className="font-display text-3xl text-[#042558]">PAM</h1>
         </div>
@@ -267,11 +270,11 @@ export function PamManager({ projectId }: { projectId: string }) {
       <section className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
         <div className="space-y-4">
           <div className="rounded-xl border border-[#042558]/10 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-[#042558]">Avaliacoes finalizadas</h2>
+            <h2 className="text-sm font-semibold text-[#042558]">Avaliações Finalizadas</h2>
             <div className="mt-3 space-y-2">
               {reviews.length === 0 ? (
                 <p className="rounded-lg bg-[#042558]/5 p-3 text-sm text-[#042558]/55">
-                  Nenhuma avaliacao de desempenho finalizada.
+                  Nenhuma avaliação de desempenho finalizada.
                 </p>
               ) : (
                 reviews.map((review) => {
@@ -287,7 +290,7 @@ export function PamManager({ projectId }: { projectId: string }) {
                           onClick={() => setSelectedPamId(existing.id)}
                           className="mt-2 text-xs font-semibold text-[#042558] hover:underline"
                         >
-                          Ver PAM existente
+                          Ver PAM Existente
                         </button>
                       ) : (
                         <button
@@ -309,7 +312,7 @@ export function PamManager({ projectId }: { projectId: string }) {
             <div className="mt-3 space-y-2">
               {pams.length === 0 ? (
                 <p className="rounded-lg bg-[#042558]/5 p-3 text-sm text-[#042558]/55">
-                  Crie um PAM a partir de uma avaliacao finalizada.
+                  Crie um PAM a partir de uma avaliação finalizada.
                 </p>
               ) : (
                 pams.map((pam) => {
@@ -328,8 +331,12 @@ export function PamManager({ projectId }: { projectId: string }) {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-semibold text-[#042558]">{pam.employee_name}</p>
-                          <p className="text-xs text-[#042558]/55">{pam.job_title || "Cargo nao informado"}</p>
+                          <p className="text-sm font-semibold text-[#042558]">
+                            {pam.employee_name}
+                          </p>
+                          <p className="text-xs text-[#042558]/55">
+                            {pam.job_title || "Cargo Não Informado"}
+                          </p>
                         </div>
                         <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-[11px] font-medium text-[#042558]">
                           {statusLabel(pam.link_revoked_at ? "revoked" : pam.status)}
@@ -338,11 +345,13 @@ export function PamManager({ projectId }: { projectId: string }) {
                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#042558]/10">
                         <div
                           className="h-full rounded-full bg-emerald-500"
-                          style={{ width: `${pamItems.length ? (completed / pamItems.length) * 100 : 0}%` }}
+                          style={{
+                            width: `${pamItems.length ? (completed / pamItems.length) * 100 : 0}%`,
+                          }}
                         />
                       </div>
                       <p className="mt-1 text-xs text-[#042558]/55">
-                        {completed} de {pamItems.length} pontos concluidos
+                        {completed} De {pamItems.length} Pontos Concluidos
                       </p>
                     </button>
                   );
@@ -432,11 +441,11 @@ function PamDetail({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-              PAM - Plano de Acao de Melhorias
+              PAM - Plano de Ação de Melhorias
             </p>
             <h2 className="mt-1 text-xl font-semibold text-[#042558]">{pam.employee_name}</h2>
             <p className="mt-1 text-sm text-[#042558]/60">
-              {pam.job_title || "Cargo nao informado"} - Feedback: {formatDate(pam.feedback_date)}
+              {pam.job_title || "Cargo Não Informado"} - Feedback: {formatDate(pam.feedback_date)}
             </p>
             <span className="mt-3 inline-flex rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
               {statusLabel(pam.link_revoked_at ? "revoked" : pam.status)}
@@ -447,7 +456,7 @@ function PamDetail({
               onClick={onRelease}
               className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
             >
-              <Link2 className="h-4 w-4" /> Liberar/copiar link
+              <Link2 className="h-4 w-4" /> Liberar/copiar Link
             </button>
             {linkAvailable && (
               <>
@@ -485,8 +494,10 @@ function PamDetail({
         </div>
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#042558]/55">
-            <span>{completed} de {items.length} pontos concluidos</span>
-            <span>{filled} preenchidos</span>
+            <span>
+              {completed} De {items.length} Pontos Concluidos
+            </span>
+            <span>{filled} Preenchidos</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
             <div
@@ -498,19 +509,27 @@ function PamDetail({
       </section>
 
       <section className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-[#042558]">Adicionar ponto extra</h3>
+        <h3 className="text-sm font-semibold text-[#042558]">Adicionar Ponto Extra</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_220px_auto] md:items-end">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-              Ponto de melhoria
+              Ponto de Melhoria
             </span>
-            <input value={manualTitle} onChange={(event) => onManualTitle(event.target.value)} className={inputClass} />
+            <input
+              value={manualTitle}
+              onChange={(event) => onManualTitle(event.target.value)}
+              className={inputClass}
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
               Habilidade
             </span>
-            <input value={manualSkill} onChange={(event) => onManualSkill(event.target.value)} className={inputClass} />
+            <input
+              value={manualSkill}
+              onChange={(event) => onManualSkill(event.target.value)}
+              className={inputClass}
+            />
           </label>
           <button
             onClick={onAddManual}
@@ -528,7 +547,10 @@ function PamDetail({
           </div>
         ) : (
           items.map((item) => (
-            <article key={item.id} className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm">
+            <article
+              key={item.id}
+              className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -542,7 +564,8 @@ function PamDetail({
                     )}
                   </div>
                   <p className="mt-1 text-sm text-[#042558]/55">
-                    Habilidade: {item.skill_label || "Nao informada"} - {item.source === "manual" ? "Manual" : "Avaliacao"}
+                    Habilidade: {item.skill_label || "Não Informada"} -{" "}
+                    {item.source === "manual" ? "Manual" : "Avaliação"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -577,7 +600,7 @@ function AnswerPreview({ label, value }: { label: string; value?: string | null 
     <div className="rounded-lg bg-[#042558]/5 p-3">
       <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm text-[#042558]">
-        {value?.trim() || <span className="italic text-[#042558]/35">Sem resposta</span>}
+        {value?.trim() || <span className="italic text-[#042558]/35">Sem Resposta</span>}
       </p>
     </div>
   );
@@ -600,6 +623,5 @@ function fallbackItemTitle(item: PamItemRow) {
   if (item.source_key?.startsWith("activities_")) {
     return `Atividade ${item.source_key.match(/\d+$/)?.[0] ?? ""}`.trim();
   }
-  return item.skill_label || "Ponto de melhoria";
+  return item.skill_label || "Ponto de Melhoria";
 }
-

@@ -107,7 +107,7 @@ function AtrelarUsuarios() {
       setUserId("");
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao vincular");
+      toast.error(e instanceof Error ? e.message : "Erro ao Vincular");
     } finally {
       setSaving(false);
     }
@@ -120,7 +120,7 @@ function AtrelarUsuarios() {
       toast.success("Vínculo removido");
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao remover");
+      toast.error(e instanceof Error ? e.message : "Erro ao Remover");
     }
   };
 
@@ -129,7 +129,7 @@ function AtrelarUsuarios() {
       await updateRoleFn({ data: { memberId: id, role: novoRole as RoleValue } });
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao alterar cargo");
+      toast.error(e instanceof Error ? e.message : "Erro ao Alterar Cargo");
     }
   };
 
@@ -177,14 +177,14 @@ function AtrelarUsuarios() {
         </button>
       </form>
 
-      <h2 className="mb-3 font-display text-2xl">Vínculos existentes</h2>
+      <h2 className="mb-3 font-display text-2xl">Vínculos Existentes</h2>
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-5 py-3 text-left">Projeto</th>
               <th className="px-5 py-3 text-left">Usuário</th>
-              <th className="px-5 py-3 text-left">Cargo no projeto</th>
+              <th className="px-5 py-3 text-left">Cargo no Projeto</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -222,7 +222,7 @@ function AtrelarUsuarios() {
             {members.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                  Nenhum vínculo
+                  Nenhum Vínculo
                 </td>
               </tr>
             )}

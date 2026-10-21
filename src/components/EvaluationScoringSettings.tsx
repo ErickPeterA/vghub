@@ -91,19 +91,19 @@ const DEFAULT_WEIGHTS: Record<CriterionKey, string> = {
 const DEFAULT_SCORE_RULES: Record<CriterionKey, ScoreRule[]> = {
   instruction: [
     { id: "two_plus_above", label: "Duas ou mais instruções acima do mínimo", score: "100" },
-    { id: "one_above", label: "Uma instrução acima do mínimo", score: "90" },
-    { id: "minimum", label: "Atende à instrução mínima", score: "80" },
-    { id: "one_below", label: "Uma instrução abaixo do mínimo", score: "64" },
+    { id: "one_above", label: "Uma Instrução Acima do Mínimo", score: "90" },
+    { id: "minimum", label: "Atende À Instrução Mínima", score: "80" },
+    { id: "one_below", label: "Uma Instrução Abaixo do Mínimo", score: "64" },
     { id: "two_plus_below", label: "Duas ou mais instruções abaixo do mínimo", score: "0" },
   ],
   experience: [
-    { id: "three_above", label: "Três níveis acima do mínimo", score: "100" },
-    { id: "two_above", label: "Dois níveis acima do mínimo", score: "93" },
-    { id: "one_above", label: "Um nível acima do mínimo", score: "87" },
-    { id: "minimum", label: "Atende à experiência mínima", score: "80" },
-    { id: "one_below", label: "Um nível abaixo do mínimo", score: "64" },
-    { id: "two_below", label: "Dois níveis abaixo do mínimo", score: "57" },
-    { id: "three_plus_below", label: "Três ou mais níveis abaixo", score: "0" },
+    { id: "three_above", label: "Três Níveis Acima do Mínimo", score: "100" },
+    { id: "two_above", label: "Dois Níveis Acima do Mínimo", score: "93" },
+    { id: "one_above", label: "Um Nível Acima do Mínimo", score: "87" },
+    { id: "minimum", label: "Atende À Experiência Mínima", score: "80" },
+    { id: "one_below", label: "Um Nível Abaixo do Mínimo", score: "64" },
+    { id: "two_below", label: "Dois Níveis Abaixo do Mínimo", score: "57" },
+    { id: "three_plus_below", label: "Três Ou Mais Níveis Abaixo", score: "0" },
   ],
   activities: [
     {
@@ -111,7 +111,7 @@ const DEFAULT_SCORE_RULES: Record<CriterionKey, ScoreRule[]> = {
       label: "Domina o processo e ensina outras pessoas",
       score: "100",
     },
-    { id: "executes_alone", label: "Executa sem necessidade de auxílio", score: "80" },
+    { id: "executes_alone", label: "Executa Sem Necessidade de Auxílio", score: "80" },
     {
       id: "sometimes_needs_help",
       label: "Executa algumas vezes com necessidade de auxílio",
@@ -119,11 +119,11 @@ const DEFAULT_SCORE_RULES: Record<CriterionKey, ScoreRule[]> = {
     },
     {
       id: "often_with_difficulty",
-      label: "Executa muitas vezes com dificuldade",
+      label: "Executa Muitas Vezes com Dificuldade",
       score: "40",
     },
-    { id: "always_needs_help", label: "Sempre necessita de auxílio", score: "0" },
-    { id: "not_applicable", label: "Não se aplica", score: "", notApplicable: true },
+    { id: "always_needs_help", label: "Sempre Necessita de Auxílio", score: "0" },
+    { id: "not_applicable", label: "Não Se Aplica", score: "", notApplicable: true },
   ],
   indicators: [],
   cultural_skills: [],
@@ -169,7 +169,7 @@ function toScoreValue(value: number | null | undefined) {
 
 function isNotApplicable(label: string) {
   const normalized = normalizeLookup(label);
-  return normalized === "nao se aplica" || normalized === "nao se aplica.";
+  return normalized === "Não Se Aplica" || normalized === "não se aplica.";
 }
 
 function criterionForQuestion(question: PerformanceQuestion): CriterionKey | null {
@@ -269,7 +269,7 @@ function defaultScoreForOption(label: string) {
   if (
     normalized.includes("urgente") ||
     normalized.includes("sempre necessita") ||
-    normalized.includes("nao atinjo") ||
+    normalized.includes("não atinjo") ||
     normalized.includes("ruim")
   ) {
     return "0";
@@ -303,7 +303,7 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
     try {
       result = await apiJson<ScoringData>(`/api/projects/${projectId}/performance?view=scoring`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar os pesos.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível carregar os pesos.");
       setLoading(false);
       return;
     }
@@ -409,7 +409,7 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
       toast.success("Pesos salvos");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel salvar os pesos.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar os pesos.");
     } finally {
       setSaving(false);
     }
@@ -517,7 +517,7 @@ export function EvaluationWeightsSettings({ projectId }: { projectId: string }) 
           className="bg-[#042558] text-white hover:bg-[#042558]/90"
         >
           <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : "Salvar pesos"}
+          {saving ? "Salvando..." : "Salvar Pesos"}
         </Button>
       </div>
     </div>
@@ -538,7 +538,7 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
       result = await apiJson<ScoringData>(`/api/projects/${projectId}/performance?view=scoring`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Nao foi possivel carregar as pontuacoes.",
+        error instanceof Error ? error.message : "Não foi possível carregar as pontuacoes.",
       );
       setLoading(false);
       return;
@@ -606,7 +606,7 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
       await load();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Nao foi possivel salvar as pontuacoes.",
+        error instanceof Error ? error.message : "Não foi possível salvar as pontuacoes.",
       );
     } finally {
       setSaving(false);
@@ -654,7 +654,7 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Situação ou resposta</TableHead>
+              <TableHead>Situação Ou Resposta</TableHead>
               <TableHead className="w-44 text-right">Pontuação</TableHead>
               <TableHead className="w-48">Regra</TableHead>
             </TableRow>
@@ -708,7 +708,7 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
                       }
                       className="h-4 w-4 rounded border-[#042558]/20"
                     />
-                    Não contabilizar
+                    Não Contabilizar
                   </label>
                 </TableCell>
               </TableRow>
@@ -724,7 +724,7 @@ export function CriterionScoringSettings({ projectId }: { projectId: string }) {
           className="bg-[#042558] text-white hover:bg-[#042558]/90"
         >
           <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : "Salvar pontuações"}
+          {saving ? "Salvando..." : "Salvar Pontuações"}
         </Button>
       </div>
     </div>

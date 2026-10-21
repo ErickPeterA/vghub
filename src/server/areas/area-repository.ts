@@ -38,7 +38,7 @@ async function requireCanReadProject(userId: string, projectId: string) {
   );
 
   if (!result.rows[0]?.allowed) {
-    throw new HttpError(403, "forbidden", "Sem permissao para acessar este projeto.");
+    throw new HttpError(403, "forbidden", "Sem permissão para acessar este projeto.");
   }
 }
 
@@ -49,7 +49,7 @@ async function requireCanManageProjectAreas(userId: string, projectId: string) {
   );
 
   if (!result.rows[0]?.allowed) {
-    throw new HttpError(403, "forbidden", "Sem permissao para gerenciar areas deste projeto.");
+    throw new HttpError(403, "forbidden", "Sem permissão para gerenciar áreas deste projeto.");
   }
 }
 
@@ -105,7 +105,7 @@ export async function createProjectArea(input: {
   );
 
   if (!result.rows[0]) {
-    throw new HttpError(400, "invalid_parent", "Area pai invalida para este projeto.");
+    throw new HttpError(400, "invalid_parent", "Área pai inválida para este projeto.");
   }
 
   return mapArea(result.rows[0]);
@@ -132,7 +132,13 @@ export async function updateProjectArea(input: {
         and project_id = $2::uuid
       returning id, project_id, parent_id, nome, cor, display_order, created_by, created_at, updated_at
     `,
-    [input.areaId, input.projectId, input.nome ?? null, input.cor ?? null, input.displayOrder ?? null],
+    [
+      input.areaId,
+      input.projectId,
+      input.nome ?? null,
+      input.cor ?? null,
+      input.displayOrder ?? null,
+    ],
   );
 
   return result.rows[0] ? mapArea(result.rows[0]) : null;

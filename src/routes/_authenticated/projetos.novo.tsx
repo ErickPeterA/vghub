@@ -36,7 +36,7 @@ function NovoProjeto() {
     apiJson<{ ok: boolean; users: AssignableUser[] }>("/api/users")
       .then((payload) => setUsers(payload.users ?? []))
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Erro ao carregar usuarios");
+        toast.error(error instanceof Error ? error.message : "Erro ao Carregar Usuários");
       });
   }, [isAdmin, loading]);
 
@@ -51,7 +51,7 @@ function NovoProjeto() {
       toast.success("Projeto criado");
       navigate({ to: "/projetos/$projectId/areas", params: { projectId: payload.project.id } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao criar projeto");
+      toast.error(e instanceof Error ? e.message : "Erro ao Criar Projeto");
     } finally {
       setSaving(false);
     }
@@ -59,21 +59,21 @@ function NovoProjeto() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="mb-8 font-display text-4xl">Novo projeto</h1>
+      <h1 className="mb-8 font-display text-4xl">Novo Projeto</h1>
       <form onSubmit={submit} className="space-y-4 rounded-xl border border-border bg-card p-6">
-        <Field label="Nome do projeto">
+        <Field label="Nome do Projeto">
           <input required value={nome} onChange={(e) => setNome(e.target.value)} className={inp} />
         </Field>
         <Field label="Empresa">
           <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} className={inp} />
         </Field>
-        <Field label="Responsavel">
+        <Field label="Responsável">
           <select
             value={responsavelId}
             onChange={(e) => setResponsavelId(e.target.value)}
             className={inp}
           >
-            <option value="">-- sem responsavel --</option>
+            <option value="">-- Sem Responsável --</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.nome}
@@ -93,7 +93,7 @@ function NovoProjeto() {
             disabled={saving}
             className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
           >
-            {saving ? "Salvando..." : "Criar projeto"}
+            {saving ? "Salvando..." : "Criar Projeto"}
           </button>
         </div>
       </form>

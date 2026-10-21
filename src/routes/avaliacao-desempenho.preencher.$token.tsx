@@ -185,13 +185,13 @@ function PublicPerformanceForm() {
               {draftState === "saving" && <span>Salvando rascunho...</span>}
               {draftState === "saved" && (
                 <span>
-                  Rascunho salvo{" "}
+                  Rascunho Salvo{" "}
                   {draftSavedAt
                     ? `às ${new Date(draftSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                     : ""}
                 </span>
               )}
-              {draftState === "error" && <span>Erro ao salvar rascunho</span>}
+              {draftState === "error" && <span>Erro ao Salvar Rascunho</span>}
               {draftState === "idle" && draftSavedAt && (
                 <span>Rascunho de {new Date(draftSavedAt).toLocaleString("pt-BR")}</span>
               )}
@@ -284,7 +284,7 @@ function PublicPerformanceForm() {
                     disabled={state === "submitting"}
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-6 py-3 text-sm font-medium text-white hover:bg-[#042558]/90 disabled:opacity-50"
                   >
-                    {state === "submitting" ? "Enviando..." : "Enviar respostas"}
+                    {state === "submitting" ? "Enviando..." : "Enviar Respostas"}
                   </button>
                 )}
               </div>
@@ -297,7 +297,7 @@ function PublicPerformanceForm() {
           <div className="mx-auto max-w-3xl">
             <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
               <span>
-                {answeredCount} de {totalQuestions} perguntas respondidas
+                {answeredCount} De {totalQuestions} Perguntas Respondidas
               </span>
               <span>{progressPercent}%</span>
             </div>
@@ -351,9 +351,9 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
     title: string;
   }> = [
     { source: "indicators", title: "Indicadores" },
-    { source: "culture_skills", title: "Habilidade cultural" },
-    { source: "role_skills", title: "Habilidade específica do cargo" },
-    { source: "behavior", title: "Postura e comportamento" },
+    { source: "culture_skills", title: "Habilidade Cultural" },
+    { source: "role_skills", title: "Habilidade Específica do Cargo" },
+    { source: "behavior", title: "Postura e Comportamento" },
   ];
 
   const sectionSteps = dynamicSections
@@ -369,7 +369,7 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
     {
       kind: "intro",
       id: "intro",
-      title: "Instrução e experiência",
+      title: "Instrução e Experiência",
       questions: introQuestions,
     },
     ...activityGroups,
@@ -419,7 +419,9 @@ function questionOptions(
 ) {
   return participantType === "leader" && question.leaderOptions?.length
     ? question.leaderOptions
-    : (question.options ?? []).map((option) => responseOptionForParticipant(option, participantType));
+    : (question.options ?? []).map((option) =>
+        responseOptionForParticipant(option, participantType),
+      );
 }
 
 type QuestionBlock =
@@ -569,7 +571,7 @@ function ActivityStep({
     <section className="space-y-6">
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-wide text-[#042558]/60">
-          Atividade {index} de {total}
+          Atividade {index} De {total}
         </p>
         <h2 className="mx-auto mt-3 max-w-2xl whitespace-pre-wrap text-lg font-medium leading-relaxed text-gray-800">
           {title}
@@ -608,7 +610,7 @@ function BlockCommentField({
   return (
     <label className="block rounded-xl border border-[#042558]/10 bg-white p-4">
       <span className="mb-1 block text-sm font-semibold text-gray-700">
-        Observações sobre este bloco
+        Observações Sobre Este Bloco
       </span>
       <span className="mb-2 block text-xs text-gray-400">
         Use este campo se quiser explicar alguma resposta ou registrar um ponto importante.
@@ -688,7 +690,7 @@ function QuestionInput({
         onChange={(event) => onChange(event.target.value)}
         className={inputClass}
       >
-        <option value="">Selecione uma opção</option>
+        <option value="">Selecione uma Opção</option>
         {questionOptions(question, participantType).map((option) => (
           <option key={option} value={option}>
             {option}

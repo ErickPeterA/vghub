@@ -48,7 +48,7 @@ function NovaDC() {
         }>(`/api/projects/${projectId}/dc?mode=linked-position&positionId=${positionId}`);
         if (cancelled) return;
         if (!position) {
-          toast.error("Cargo do organograma nao encontrado.");
+          toast.error("Cargo do organograma não encontrado.");
           setLinkedPosition(null);
           return;
         }
@@ -119,18 +119,18 @@ function NovaDC() {
         entidadeId: created.id,
         detalhes: { cargo: dc.cargo },
       });
-      toast.success("Descricao criada");
+      toast.success("Descrição criada");
       navigate({
         to: "/projetos/$projectId/descricao-cargo/$dcId",
         params: { projectId, dcId: created.id },
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar descricao.");
+      toast.error(error instanceof Error ? error.message : "Erro ao criar descrição.");
     }
   };
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="mb-6 font-display text-4xl">Nova descricao de cargo</h1>
+      <h1 className="mb-6 font-display text-4xl">Nova Descrição de Cargo</h1>
       {loadingLinkedPosition ? (
         <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
           Carregando cargo vinculado...
@@ -147,7 +147,7 @@ function NovaDC() {
             projectId={projectId}
             initial={initial}
             onSubmit={onSubmit}
-            submitLabel="Criar descricao"
+            submitLabel="Criar Descrição"
           />
         </>
       )}

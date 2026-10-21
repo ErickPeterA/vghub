@@ -1,13 +1,7 @@
 import { query } from "@/server/db/pool";
 import { requireCanReadProject } from "@/server/projects/project-permissions";
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export async function getProjectHistoryPageData(userId: string, projectId: string) {
   await requireCanReadProject(userId, projectId);

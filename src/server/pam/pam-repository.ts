@@ -2,13 +2,7 @@ import { query, withTransaction } from "@/server/db/pool";
 import { HttpError } from "@/server/http/errors";
 import { requireCanManageProject } from "@/server/projects/project-permissions";
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 type PamStatus = "draft" | "released" | "in_progress" | "completed";
 type PamItemStatus = "not_started" | "in_progress" | "completed";
@@ -182,7 +176,7 @@ export async function addPamItem(input: {
       input.displayOrder,
     ],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM nao encontrado.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM não encontrado.");
   return result.rows[0];
 }
 
@@ -203,7 +197,7 @@ export async function deletePamItem(input: {
     `,
     [input.itemId, input.projectId],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "Item nao encontrado.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "Item não encontrado.");
 }
 
 export async function updatePam(input: {
@@ -236,22 +230,19 @@ export async function updatePam(input: {
       input.patch.link_revoked_at ?? null,
     ],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM nao encontrado.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM não encontrado.");
   return result.rows[0];
 }
 
 function assertPublicToken(token: string) {
   if (!token || token.length < 32) {
-    throw new HttpError(400, "invalid_token", "Link invalido.");
+    throw new HttpError(400, "invalid_token", "Link inválido.");
   }
 }
 
 async function getPublicPam(token: string) {
   assertPublicToken(token);
-  const result = await query(
-    `select * from public.pam where token = $1 limit 1`,
-    [token],
-  );
+  const result = await query(`select * from public.pam where token = $1 limit 1`, [token]);
   return result.rows[0] as
     | {
         id: string;
@@ -274,9 +265,9 @@ function assertPublicPamAccessible(
       }
     | undefined,
 ) {
-  if (!pam) throw new HttpError(404, "not_found", "Link nao encontrado.");
+  if (!pam) throw new HttpError(404, "not_found", "Link não encontrado.");
   if (pam.link_revoked_at) throw new HttpError(410, "revoked", "Link revogado.");
-  if (pam.status === "draft") throw new HttpError(403, "not_released", "PAM nao liberado.");
+  if (pam.status === "draft") throw new HttpError(403, "not_released", "PAM não liberado.");
 }
 
 function itemFilled(item: {
@@ -370,7 +361,7 @@ export async function savePublicPamDraft(input: {
         input.status,
       ],
     );
-    if (!result.rows[0]) throw new HttpError(404, "not_found", "Item nao encontrado.");
+    if (!result.rows[0]) throw new HttpError(404, "not_found", "Item não encontrado.");
 
     if (pam!.status === "released") {
       await client.query(`update public.pam set status = 'in_progress' where id = $1::uuid`, [
@@ -402,10 +393,9 @@ export async function completePublicPam(token: string) {
     }
 
     const completedAt = new Date().toISOString();
-    await client.query(
-      `update public.pam_items set status = 'completed' where pam_id = $1::uuid`,
-      [pam!.id],
-    );
+    await client.query(`update public.pam_items set status = 'completed' where pam_id = $1::uuid`, [
+      pam!.id,
+    ]);
     await client.query(
       `
         update public.pam

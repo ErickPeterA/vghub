@@ -97,7 +97,7 @@ function EditDC() {
       setProjectRole(data.projectRole ?? null);
       setIsResponsavel(data.isResponsavel ?? false);
     } catch {
-      toast.error("Nao encontrado");
+      toast.error("Não encontrado");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
     }
   };
@@ -112,7 +112,10 @@ function EditDC() {
   const canDecideComment = isAdmin || projectRole === "gp" || projectRole === "admin";
   const hasFullControl = canDecideComment || isResponsavel;
   const canEditDraft =
-    isLider && !hasFullControl && current?.etapa === "em_criacao" && current.created_by === user?.id;
+    isLider &&
+    !hasFullControl &&
+    current?.etapa === "em_criacao" &&
+    current.created_by === user?.id;
   const readOnly = (!canEditDraft && isLider && !hasFullControl) || viewingVersionId !== null;
 
   const currentVersion = versions.length > 0 ? versions[versions.length - 1] : null;
@@ -173,22 +176,26 @@ function EditDC() {
       });
       if (versionId) {
         await loadVersions();
-        toast.success("Nova versao gerada com os comentarios resolvidos");
+        toast.success("Nova versão gerada com os comentários resolvidos");
         return;
       }
       toast.success("Atualizado");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao atualizar");
+      toast.error(error instanceof Error ? error.message : "Erro ao Atualizar");
     }
   };
   const finalizarRevisao = async () => {
     if (!currentVersion) return;
     setFinalizando(true);
     try {
-      const { comments, target } = await apiJson<{ ok: boolean; comments: number; target: DCRow["etapa"] }>(
-        `/api/projects/${projectId}/dc/${dcId}`,
-        { method: "PATCH", body: { action: "finalize_review", versionId: currentVersion.id } },
-      );
+      const { comments, target } = await apiJson<{
+        ok: boolean;
+        comments: number;
+        target: DCRow["etapa"];
+      }>(`/api/projects/${projectId}/dc/${dcId}`, {
+        method: "PATCH",
+        body: { action: "finalize_review", versionId: currentVersion.id },
+      });
       await logAction({
         projectId,
         acao: "dc_revisao_finalizada",
@@ -196,10 +203,10 @@ function EditDC() {
         entidadeId: dcId,
         detalhes: { comentarios: comments, para: target },
       });
-      toast.success(comments > 0 ? "Item retornou para Em Criacao" : "Revisao concluida");
+      toast.success(comments > 0 ? "Item Retornou para em Criação" : "Revisão Concluida");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao finalizar");
+      toast.error(e instanceof Error ? e.message : "Erro ao Finalizar");
     } finally {
       setFinalizando(false);
     }
@@ -218,10 +225,10 @@ function EditDC() {
         entidadeId: dcId,
         detalhes: { para: "concluido" },
       });
-      toast.success("Descricao aprovada");
+      toast.success("Descrição aprovada");
       navigate({ to: "/projetos/$projectId/descricao-cargo", params: { projectId } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao aprovar");
+      toast.error(e instanceof Error ? e.message : "Erro ao Aprovar");
     } finally {
       setFinalizando(false);
     }
@@ -240,7 +247,7 @@ function EditDC() {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-4xl">
-          {readOnly ? "Descrição (leitura)" : "Editar descrição"}
+          {readOnly ? "Descrição (Leitura)" : "Editar Descrição"}
         </h1>
         <button
           type="button"
@@ -257,14 +264,14 @@ function EditDC() {
       {viewingVersion && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           <span>
-            Visualizando versão {viewingVersion.version_number} de {versions.length}
+            Visualizando Versão {viewingVersion.version_number} De {versions.length}
           </span>
           <button
             type="button"
             onClick={() => setViewingVersionId(null)}
             className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-3 py-1 text-xs font-medium hover:bg-amber-200"
           >
-            <ArrowLeft className="h-3 w-3" /> Voltar à versão atual
+            <ArrowLeft className="h-3 w-3" /> Voltar À Versão Atual
           </button>
         </div>
       )}
@@ -273,7 +280,7 @@ function EditDC() {
         projectId={projectId}
         initial={displayedInitial}
         onSubmit={onSubmit}
-        submitLabel="Salvar alterações"
+        submitLabel="Salvar Alterações"
         readOnly={readOnly}
         focusFieldKey={focusFieldKey}
         commentTarget={{
@@ -325,7 +332,7 @@ function EditDC() {
                   >
                     <span className="font-medium">
                       Versão {v.version_number}
-                      {isCurrent ? " (atual)" : ""}
+                      {isCurrent ? " (Atual)" : ""}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(v.created_at).toLocaleString("pt-BR")}
@@ -339,4 +346,3 @@ function EditDC() {
     </main>
   );
 }
-

@@ -28,7 +28,7 @@ async function requireCanManageConfigScope(userId: string, projectId: string | n
     userId,
   ]);
   if (!result.rows[0]?.allowed) {
-    throw new HttpError(403, "forbidden", "Sem permissao para gerenciar modelos gerais.");
+    throw new HttpError(403, "forbidden", "Sem permissão para gerenciar modelos gerais.");
   }
 }
 
@@ -185,7 +185,7 @@ export async function getPerformanceComparisonData(
     [reviewId, projectId],
   );
   const review = reviewResult.rows[0];
-  if (!review) throw new HttpError(404, "not_found", "Avaliacao nao encontrada.");
+  if (!review) throw new HttpError(404, "not_found", "Avaliação não encontrada.");
 
   const [participants, comments, history, weights, scores, canManage] = await Promise.all([
     query(
@@ -258,8 +258,8 @@ export async function listPerformanceConfigs(
         userId,
         projectId,
         JSON.stringify([
-          { name: "Avaliacao de experiencia", review_type: "experience", questions_schema: [] },
-          { name: "Avaliacao de desempenho", review_type: "performance", questions_schema: [] },
+          { name: "Avaliação de Experiência", review_type: "experience", questions_schema: [] },
+          { name: "Avaliação de Desempenho", review_type: "performance", questions_schema: [] },
         ]),
       ],
     );
@@ -339,7 +339,7 @@ export async function savePerformanceConfig(args: {
       args.isActive,
     ],
   );
-  if (!result.rowCount) throw new HttpError(404, "not_found", "Modelo nao encontrado.");
+  if (!result.rowCount) throw new HttpError(404, "not_found", "Modelo não encontrado.");
   return result.rows[0];
 }
 
@@ -479,7 +479,7 @@ export async function createPerformanceReview(args: {
       throw new HttpError(
         400,
         "invalid_review_relationships",
-        "Colaborador, lider, cargo ou modelo invalido para este projeto.",
+        "Colaborador, líder, cargo ou modelo inválido para este projeto.",
       );
     }
     const reviewResult = await client.query<{ id: string }>(
@@ -547,7 +547,7 @@ async function lockReviewForManage(
     `select id, status::text, employee_id, due_date from public.performance_reviews where id = $1::uuid and project_id = $2::uuid for update`,
     [reviewId, projectId],
   );
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "Avaliacao nao encontrada.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "Avaliação não encontrada.");
   await requireCanManageProject(actorUserId, projectId);
   return result.rows[0];
 }
@@ -571,7 +571,7 @@ export async function addPerformanceComment(args: {
     [args.reviewId, args.projectId, args.questionKey.trim(), args.actorUserId, args.content.trim()],
   );
   if (!result.rowCount)
-    throw new HttpError(409, "review_locked", "Avaliacao finalizada ou inexistente.");
+    throw new HttpError(409, "review_locked", "Avaliação finalizada ou inexistente.");
   return result.rows[0];
 }
 
@@ -592,12 +592,12 @@ export async function updatePerformanceAnswer(args: {
       args.reviewId,
     );
     if (review.status === "finalized")
-      throw new HttpError(409, "review_locked", "Avaliacao finalizada.");
+      throw new HttpError(409, "review_locked", "Avaliação finalizada.");
     const participant = await client.query<{ response_answers: Record<string, string> }>(
       `select response_answers from public.performance_review_participants where id = $1::uuid and review_id = $2::uuid and project_id = $3::uuid for update`,
       [args.participantId, args.reviewId, args.projectId],
     );
-    if (!participant.rows[0]) throw new HttpError(404, "not_found", "Participante nao encontrado.");
+    if (!participant.rows[0]) throw new HttpError(404, "not_found", "Participante não encontrado.");
     const currentAnswers = participant.rows[0].response_answers ?? {};
     const previousAnswer = currentAnswers[args.questionKey] ?? "";
     if (previousAnswer === args.nextAnswer) return;
@@ -647,7 +647,7 @@ export async function finalizePerformanceReview(args: {
       throw new HttpError(
         409,
         "responses_pending",
-        "A avaliacao so pode ser finalizada depois das duas respostas.",
+        "A avaliação so pode ser finalizada depois das duas respostas.",
       );
     }
     await client.query(
@@ -688,7 +688,7 @@ export async function reopenPerformanceReview(args: {
     `update public.performance_reviews set status = 'ready_for_comparison', reopened_by = $3::uuid, reopened_at = now(), finalized_by = null, finalized_at = null where id = $1::uuid and project_id = $2::uuid returning id`,
     [args.reviewId, args.projectId, args.actorUserId],
   );
-  if (!result.rowCount) throw new HttpError(404, "not_found", "Avaliacao nao encontrada.");
+  if (!result.rowCount) throw new HttpError(404, "not_found", "Avaliação não encontrada.");
 }
 
 export async function markPerformanceLinksSent(args: {
@@ -709,6 +709,6 @@ export async function markPerformanceLinksSent(args: {
       `select 1 from public.performance_review_participants where id = $1::uuid and project_id = $2::uuid`,
       [args.participantId, args.projectId],
     );
-    if (!exists.rowCount) throw new HttpError(404, "not_found", "Participante nao encontrado.");
+    if (!exists.rowCount) throw new HttpError(404, "not_found", "Participante não encontrado.");
   }
 }

@@ -73,7 +73,7 @@ function sourceFallbackTitle(question: PerformanceQuestionLike) {
     role_skills: "Habilidade do cargo",
     behavior: "Postura e comportamento",
   };
-  const base = labels[question.dynamicSource ?? ""] ?? "Ponto de melhoria";
+  const base = labels[question.dynamicSource ?? ""] ?? "Ponto de Melhoria";
   const suffix = question.groupId?.match(/_(\d+)$/)?.[1];
   return suffix ? `${base} ${suffix}` : base;
 }
@@ -107,13 +107,13 @@ export function displayPamImprovementPoint(
 
 function estimateScoreFromAnswer(answer: string) {
   const text = normalizeLookup(answer);
-  if (!text || text.includes("nao se aplica")) return null;
+  if (!text || text.includes("não se aplica")) return null;
   if (
     text.includes("urgentemente") ||
     text.includes("muito") ||
     text.includes("muitas") ||
-    text.includes("nao atinjo") ||
-    text.includes("nao atinge") ||
+    text.includes("não atinjo") ||
+    text.includes("não atinge") ||
     text.includes("menos que 80") ||
     text.includes("abaixo")
   ) {
@@ -123,7 +123,7 @@ function estimateScoreFromAnswer(answer: string) {
     text.includes("regular") ||
     text.includes("pouco") ||
     text.includes("algumas") ||
-    text.includes("na maioria das vezes, nao")
+    text.includes("na maioria das vezes, não")
   ) {
     return 60;
   }
@@ -183,7 +183,7 @@ export function statusLabel(status?: string | null) {
     released: "Liberado",
     in_progress: "Em andamento",
     completed: "Concluido",
-    not_started: "Nao iniciado",
+    not_started: "Não iniciado",
     revoked: "Revogado",
   };
   return labels[status ?? ""] ?? status ?? "-";
@@ -191,7 +191,7 @@ export function statusLabel(status?: string | null) {
 
 export function itemStatusLabel(status?: string | null) {
   const labels: Record<string, string> = {
-    not_started: "Nao iniciado",
+    not_started: "Não iniciado",
     in_progress: "Em andamento",
     completed: "Concluido",
   };
@@ -266,9 +266,10 @@ function suggestionsFromAnswers(
     .map((item) => ({
       source: "performance_review" as const,
       source_key: item.sourceKey,
-      source_score: Math.round(
-        (item.scores.reduce((sum, score) => sum + score, 0) / item.scores.length) * 100,
-      ) / 100,
+      source_score:
+        Math.round(
+          (item.scores.reduce((sum, score) => sum + score, 0) / item.scores.length) * 100,
+        ) / 100,
       improvement_point: item.title,
       skill_label: item.skill,
     }));

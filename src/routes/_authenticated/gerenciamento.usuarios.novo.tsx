@@ -69,7 +69,7 @@ function NovoUsuario() {
             checked={makeAdmin}
             onChange={(e) => setMakeAdmin(e.target.checked)}
           />{" "}
-          Conceder permissão de Administrador
+          Conceder Permissão de Administrador
         </label>
         <div className="flex gap-2 pt-2">
           <button

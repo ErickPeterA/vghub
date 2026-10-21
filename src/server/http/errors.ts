@@ -15,7 +15,7 @@ export function toErrorResponse(error: unknown) {
   }
 
   if (error instanceof Error && error.name === "ZodError") {
-    return Response.json({ error: "invalid_body", message: "Payload invalido." }, { status: 400 });
+    return Response.json({ error: "invalid_body", message: "Payload inválido." }, { status: 400 });
   }
 
   console.error(error);

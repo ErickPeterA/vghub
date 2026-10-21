@@ -63,7 +63,7 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   },
   {
     id: "data_inicio",
-    label: "Data de início",
+    label: "Data de Início",
     type: "date",
     required: true,
     active: true,
@@ -71,7 +71,7 @@ export const DEFAULT_ACTIVITY_HEADER: ActivityField[] = [
   },
   {
     id: "data_finalizacao",
-    label: "Data de finalização",
+    label: "Data de Finalização",
     type: "date",
     required: true,
     active: true,
@@ -118,7 +118,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
   },
   {
     id: "complexidade",
-    label: "Complexidade da atividade",
+    label: "Complexidade da Atividade",
     type: "select",
     required: true,
     active: true,
@@ -126,7 +126,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
   },
   {
     id: "autonomia_responsabilidade",
-    label: "Autonomia e responsabilidade",
+    label: "Autonomia e Responsabilidade",
     type: "select",
     required: true,
     active: true,
@@ -142,7 +142,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
   },
   {
     id: "fim_atividade",
-    label: "Fim da atividade",
+    label: "Fim da Atividade",
     type: "textarea",
     required: false,
     active: true,
@@ -150,7 +150,7 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
   },
   {
     id: "indicador_relacionado",
-    label: "Indicador relacionado",
+    label: "Indicador Relacionado",
     type: "textarea",
     required: false,
     active: true,
@@ -160,9 +160,9 @@ export const DEFAULT_ACTIVITY_QUESTIONS: ActivityField[] = [
 
 const types: Array<{ value: FieldType; label: string }> = [
   { value: "text", label: "Texto" },
-  { value: "textarea", label: "Texto longo" },
+  { value: "textarea", label: "Texto Longo" },
   { value: "date", label: "Data" },
-  { value: "select", label: "Seleção única" },
+  { value: "select", label: "Seleção Única" },
 ];
 
 const filledByOptions: Array<{ value: FilledBy; label: string }> = [
@@ -254,10 +254,10 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
           isActive,
         },
       });
-      toast.success("Configuracao salva");
+      toast.success("Configuração salva");
       void load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar configuracao.");
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar configuração.");
     } finally {
       setSaving(false);
     }
@@ -304,7 +304,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#042558]">
-              Formulário de atividades
+              Formulário de Atividades
             </h2>
             <p className="mt-1 text-sm text-[#042558]/60">
               Configure os campos do mesmo jeito da Base do Projeto.
@@ -324,7 +324,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
               onClick={restoreDefault}
               className="rounded-lg border border-[#042558]/20 bg-white/50 px-4 py-2 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5 hover:shadow-md"
             >
-              Restaurar padrão
+              Restaurar Padrão
             </button>
             <button
               onClick={save}
@@ -340,7 +340,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
       <FieldsEditor
         title="Cabeçalho"
         blockNumber="01"
-        addPlaceholder="Novo campo em Cabeçalho"
+        addPlaceholder="Novo Campo em Cabeçalho"
         fields={header}
         setFields={setHeader}
         newLabel={newLabel.header}
@@ -353,7 +353,7 @@ export function ActivityConfigManager({ projectId }: { projectId: string }) {
       <FieldsEditor
         title="Perguntas"
         blockNumber="02"
-        addPlaceholder="Nova pergunta"
+        addPlaceholder="Nova Pergunta"
         fields={questions}
         setFields={setQuestions}
         newLabel={newLabel.questions}
@@ -416,11 +416,11 @@ function FieldsEditor({
             </p>
             <h3 className="text-xl font-bold text-[#042558]">{title}</h3>
             <p className="mt-0.5 text-xs text-[#042558]/40">
-              Arraste os campos pela alça <GripVertical className="inline h-3 w-3" /> para reordenar
+              Arraste os Campos pela Alça <GripVertical className="inline h-3 w-3" /> Para Reordenar
             </p>
           </div>
           <span className="rounded-full bg-[#042558]/10 px-3 py-1 text-xs font-medium text-[#042558]">
-            {fields.length} campo{fields.length !== 1 ? "s" : ""}
+            {fields.length} Campo{fields.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -439,14 +439,14 @@ function FieldsEditor({
             onClick={onAdd}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#042558] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#042558]/20 transition-all hover:bg-[#042558]/90 hover:shadow-xl hover:shadow-[#042558]/30"
           >
-            <Plus className="h-4 w-4" /> Criar campo
+            <Plus className="h-4 w-4" /> Criar Campo
           </button>
         </div>
 
         {fields.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#042558]/20 p-8">
             <Layers className="mb-2 h-8 w-8 text-[#042558]/20" />
-            <p className="text-sm font-medium text-[#042558]/40">Nenhum campo neste bloco</p>
+            <p className="text-sm font-medium text-[#042558]/40">Nenhum Campo Neste Bloco</p>
           </div>
         ) : (
           <DndContext
@@ -530,7 +530,7 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
           {...attributes}
           {...listeners}
           className="flex cursor-grab items-center justify-center rounded-lg border border-[#042558]/20 bg-white/50 px-2 transition-colors hover:bg-[#042558]/10 active:cursor-grabbing"
-          title="Arrastar para reordenar"
+          title="Arrastar para Reordenar"
         >
           <GripVertical className="h-4 w-4 text-[#042558]/40" />
         </button>
@@ -666,4 +666,3 @@ const SortableActivityFieldRow = memo(function SortableActivityFieldRow({
     </div>
   );
 });
-

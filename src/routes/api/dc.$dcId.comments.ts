@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/dc/$dcId/comments")({
         try {
           const [{ requireAuthenticatedUser }, { requireLocalUser }, { getFieldComments }] =
             await Promise.all([
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/dc/dc-repository"),
             ]);
@@ -61,13 +61,17 @@ export const Route = createFileRoute("/api/dc/$dcId/comments")({
       },
       PATCH: async ({ request }) => {
         try {
-          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { decideFieldComment }] =
-            await Promise.all([
-              import("zod"),
-              import("@/server/auth/session"),
-              import("@/server/auth/local-user"),
-              import("@/server/dc/dc-repository"),
-            ]);
+          const [
+            { z },
+            { requireAuthenticatedUser },
+            { requireLocalUser },
+            { decideFieldComment },
+          ] = await Promise.all([
+            import("zod"),
+            import("@/server/auth/session"),
+            import("@/server/auth/local-user"),
+            import("@/server/dc/dc-repository"),
+          ]);
           const input = z
             .object({
               commentId: z.string().uuid(),

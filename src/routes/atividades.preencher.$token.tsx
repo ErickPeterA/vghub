@@ -206,7 +206,7 @@ function PublicForm() {
                     <>
                       <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                       <span>
-                        Rascunho salvo{" "}
+                        Rascunho Salvo{" "}
                         {draftSavedAt
                           ? `às ${new Date(draftSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                           : ""}
@@ -216,7 +216,7 @@ function PublicForm() {
                   {draftState === "error" && (
                     <>
                       <AlertCircle className="h-3 w-3 text-red-500" />
-                      <span>Erro ao salvar rascunho</span>
+                      <span>Erro ao Salvar Rascunho</span>
                     </>
                   )}
                   {draftState === "idle" && draftSavedAt && (
@@ -312,7 +312,7 @@ function PublicForm() {
                                 type="button"
                                 onClick={() => removeQuestionGroup(index)}
                                 className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                                title="Remover pergunta"
+                                title="Remover Pergunta"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -342,7 +342,7 @@ function PublicForm() {
                         className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#042558]/30 bg-white px-4 py-3 text-sm font-medium text-[#042558] transition-all hover:bg-[#042558]/5"
                       >
                         <Plus className="h-4 w-4" />
-                        Adicionar mais uma pergunta
+                        Adicionar Mais uma Pergunta
                       </button>
                     </div>
                   </section>
@@ -400,7 +400,7 @@ function FieldInput({
   areas?: ProjectArea[];
   parentAreaId?: string;
 }) {
-  const base = `w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 ${readOnly ? "bg-gray-50 text-gray-500" : "hover:border-gray-300"}`;
+  const base = `w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/20 ${readOnly ? "Bg-gray-50 Text-gray-500" : "hover:border-gray-300"}`;
   const areaOptions = areas.filter((area) => !area.parent_id);
   const setorOptions = areas.filter(
     (area) => area.parent_id && (!parentAreaId || area.parent_id === parentAreaId),
@@ -412,7 +412,7 @@ function FieldInput({
         {field.label}
         {field.required && <span className="text-red-500">*</span>}
         {readOnly && (
-          <span className="ml-auto text-xs font-normal text-gray-400">(pré-preenchido)</span>
+          <span className="ml-auto text-xs font-normal text-gray-400">(Pré-preenchido)</span>
         )}
       </label>
 
@@ -433,7 +433,7 @@ function FieldInput({
           className={`${base} appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10`}
           disabled={readOnly}
         >
-          <option value="">Selecione uma opção</option>
+          <option value="">Selecione uma Opção</option>
           {areaOptions.map((area) => (
             <option key={area.id} value={area.id}>
               {area.nome}
@@ -448,7 +448,7 @@ function FieldInput({
           disabled={readOnly || !parentAreaId}
         >
           <option value="">
-            {parentAreaId ? "Selecione uma opção" : "Selecione a Área primeiro"}
+            {parentAreaId ? "Selecione uma Opção" : "Selecione a Área Primeiro"}
           </option>
           {setorOptions.map((area) => (
             <option key={area.id} value={area.id}>
@@ -463,7 +463,7 @@ function FieldInput({
           className={`${base} appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10`}
           disabled={readOnly}
         >
-          <option value="">Selecione uma opção</option>
+          <option value="">Selecione uma Opção</option>
           {(field.options ?? []).map((o) => (
             <option key={o} value={o}>
               {o}

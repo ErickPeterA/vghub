@@ -73,7 +73,7 @@ export async function createProjectForAdmin(input: {
       [input.nome, input.empresa ?? null, input.responsavelId ?? null, input.actorUserId],
     );
     const projectId = projectResult.rows[0]?.id;
-    if (!projectId) throw new Error("Projeto nao foi criado.");
+    if (!projectId) throw new Error("Projeto não foi criado.");
 
     await client.query(
       `

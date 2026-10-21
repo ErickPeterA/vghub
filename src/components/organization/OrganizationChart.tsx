@@ -64,10 +64,10 @@ const selectedEdgeStyle = {
   filter: "drop-shadow(0 0 4px rgba(245, 158, 11, 0.65))",
 };
 const connectionHandles: Array<{ id: ConnectionHandle; position: Position; title: string }> = [
-  { id: "top", position: Position.Top, title: "Conectar por cima" },
-  { id: "right", position: Position.Right, title: "Conectar pela direita" },
-  { id: "bottom", position: Position.Bottom, title: "Conectar por baixo" },
-  { id: "left", position: Position.Left, title: "Conectar pela esquerda" },
+  { id: "top", position: Position.Top, title: "Conectar por Cima" },
+  { id: "right", position: Position.Right, title: "Conectar pela Direita" },
+  { id: "bottom", position: Position.Bottom, title: "Conectar por Baixo" },
+  { id: "left", position: Position.Left, title: "Conectar pela Esquerda" },
 ];
 
 function fallbackPositions(positions: OrganizationPosition[]) {
@@ -155,10 +155,10 @@ function PositionCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
           ) : (
             <FileText className="h-3 w-3" />
           )}
-          {data.hasDescription ? "Descrição criada" : "Sem descrição"}
+          {data.hasDescription ? "Descrição Criada" : "Sem Descrição"}
         </span>
         <span className="mt-2 block text-[11px] text-[#042558]/45">
-          {position.status === "active" ? "Ativo" : "Inativo"} · {data.descendants} abaixo
+          {position.status === "active" ? "Ativo" : "Inativo"} · {data.descendants} Abaixo
         </span>
       </button>
 
@@ -167,7 +167,7 @@ function PositionCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
           type="button"
           onClick={() => data.onAddChild(position)}
           className="rounded-md p-1.5 text-[#042558]/55 hover:bg-[#042558]/8 hover:text-[#042558]"
-          title="Criar cargo conectado abaixo"
+          title="Criar Cargo Conectado Abaixo"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -175,7 +175,7 @@ function PositionCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
           type="button"
           onClick={() => data.onEdit(position)}
           className="rounded-md p-1.5 text-[#042558]/55 hover:bg-[#042558]/8 hover:text-[#042558]"
-          title="Editar cargo"
+          title="Editar Cargo"
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -183,7 +183,7 @@ function PositionCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
           type="button"
           onClick={() => data.onDelete(position)}
           className="rounded-md p-1.5 text-red-500/75 hover:bg-red-50 hover:text-red-600"
-          title="Excluir cargo"
+          title="Excluir Cargo"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -380,11 +380,11 @@ export function OrganizationChart({
           nodeColor={(node) =>
             (node.data as CanvasNodeData).position.status === "active" ? "#2f6fed" : "#94a3b8"
           }
-          maskColor="rgba(241, 245, 249, 0.75)"
+          maskColor="Rgba(241, 245, 249, 0.75)"
         />
         <Panel position="top-left" className="!m-3">
           <div className="rounded-lg border border-[#042558]/10 bg-white/90 px-3 py-2 text-[11px] leading-5 text-[#042558]/60 shadow-sm backdrop-blur">
-            <strong className="block text-[#042558]">Canvas livre</strong>
+            <strong className="block text-[#042558]">Canvas Livre</strong>
             Arraste os cargos · conecte pelas bolinhas · duplo clique para criar
           </div>
         </Panel>
@@ -401,7 +401,7 @@ export function OrganizationChart({
             className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/10 bg-white/90 px-3 py-2 text-xs font-semibold text-[#042558] shadow-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
             title="Selecione uma conexão e clique para removê-la"
           >
-            <Unlink className="h-3.5 w-3.5" /> Remover conexão
+            <Unlink className="h-3.5 w-3.5" /> Remover Conexão
           </button>
         </Panel>
       </ReactFlow>

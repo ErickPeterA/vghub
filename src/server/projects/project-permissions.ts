@@ -13,7 +13,7 @@ export async function requireCanReadProject(userId: string, projectId: string) {
   );
 
   if (!result.rows[0]?.allowed) {
-    throw new HttpError(403, "forbidden", "Sem permissao para acessar este projeto.");
+    throw new HttpError(403, "forbidden", "Sem permissão para acessar este projeto.");
   }
 }
 
@@ -24,6 +24,6 @@ export async function requireCanManageProject(userId: string, projectId: string)
   );
 
   if (!result.rows[0]?.allowed) {
-    throw new HttpError(403, "forbidden", "Sem permissao para gerenciar este projeto.");
+    throw new HttpError(403, "forbidden", "Sem permissão para gerenciar este projeto.");
   }
 }

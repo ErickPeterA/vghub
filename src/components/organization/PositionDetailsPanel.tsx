@@ -175,7 +175,7 @@ export function PositionDetailsPanel({
 
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-          Subordinados diretos
+          Subordinados Diretos
         </h3>
         <div className="mt-2 space-y-2">
           {children.length === 0 ? (
@@ -207,7 +207,7 @@ export function PositionDetailsPanel({
           ) : (
             <FileText className="h-4 w-4" />
           )}
-          {linkedDescription ? "Abrir descrição de cargo" : "Criar descrição de cargo"}
+          {linkedDescription ? "Abrir Descrição de Cargo" : "Criar Descrição de Cargo"}
         </button>
         {!linkedDescription && (
           <div
@@ -248,7 +248,7 @@ export function PositionDetailsPanel({
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              Importar descrição de cargo
+              Importar Descrição de Cargo
             </div>
             <p className="mt-1 text-xs text-[#042558]/55">
               <FileSpreadsheet className="mr-1 inline h-3.5 w-3.5" />
@@ -262,7 +262,7 @@ export function PositionDetailsPanel({
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
         >
           <Pencil className="h-4 w-4" />
-          Editar cargo
+          Editar Cargo
         </button>
         <button
           type="button"
@@ -270,7 +270,7 @@ export function PositionDetailsPanel({
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
         >
           <MoveDown className="h-4 w-4" />
-          Alterar superior
+          Alterar Superior
         </button>
         <button
           type="button"
@@ -278,7 +278,7 @@ export function PositionDetailsPanel({
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/20 bg-white px-4 py-2.5 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
         >
           <Plus className="h-4 w-4" />
-          Adicionar subordinado
+          Adicionar Subordinado
         </button>
       </div>
 
@@ -294,9 +294,9 @@ export function PositionDetailsPanel({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Escolha a aba da descrição</DialogTitle>
+            <DialogTitle>Escolha a Aba da Descrição</DialogTitle>
             <DialogDescription>
-              Selecione uma aba de {pendingFile?.name}. Somente ela será lida e usada para preencher
+              Selecione uma Aba de {pendingFile?.name}. Somente ela será lida e usada para preencher
               a descrição de cargo.
             </DialogDescription>
           </DialogHeader>
@@ -339,7 +339,7 @@ export function PositionDetailsPanel({
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {importing && <Loader2 className="h-4 w-4 animate-spin" />}
-              Importar aba selecionada
+              Importar Aba Selecionada
             </button>
           </DialogFooter>
         </DialogContent>

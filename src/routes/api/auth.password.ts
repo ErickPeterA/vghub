@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/auth/password")({
           );
           if (!valid) {
             const { HttpError } = await import("@/server/http/errors");
-            throw new HttpError(401, "invalid_credentials", "Senha atual invalida.");
+            throw new HttpError(401, "invalid_credentials", "Senha atual inválida.");
           }
 
           const passwordHash = await password.hashPassword(data.newPassword);
@@ -41,7 +41,11 @@ export const Route = createFileRoute("/api/auth/password")({
           const created = await session.createSession(identity.userId, request);
           return Response.json(
             { ok: true },
-            { headers: { "Set-Cookie": session.createSessionCookie(created.token, created.expiresAt) } },
+            {
+              headers: {
+                "Set-Cookie": session.createSessionCookie(created.token, created.expiresAt),
+              },
+            },
           );
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");

@@ -89,7 +89,7 @@ export const Route = createFileRoute("/api/projects")({
 
           if (!project) {
             return Response.json(
-              { error: "not_found", message: "Projeto nao encontrado." },
+              { error: "not_found", message: "Projeto não encontrado." },
               { status: 404 },
             );
           }

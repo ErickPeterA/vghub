@@ -21,21 +21,28 @@ export const Route = createFileRoute("/api/auth/login")({
             [email],
           );
           const user = result.rows[0];
-          const verificationHash = user?.password_hash ?? (await password.hashPassword("invalid-login"));
+          const verificationHash =
+            user?.password_hash ?? (await password.hashPassword("invalid-login"));
           const valid = await password.verifyPassword(data.password, verificationHash);
 
           if (!user || !valid) {
             const { HttpError } = await import("@/server/http/errors");
-            throw new HttpError(401, "invalid_credentials", "E-mail ou senha invalidos.");
+            throw new HttpError(401, "invalid_credentials", "E-mail ou senha inválidos.");
           }
 
           await session.revokeRequestSession(request);
           const created = await session.createSession(user.id, request);
-          await query(`update public.users set last_login_at = now() where id = $1::uuid`, [user.id]);
+          await query(`update public.users set last_login_at = now() where id = $1::uuid`, [
+            user.id,
+          ]);
 
           return Response.json(
             { ok: true },
-            { headers: { "Set-Cookie": session.createSessionCookie(created.token, created.expiresAt) } },
+            {
+              headers: {
+                "Set-Cookie": session.createSessionCookie(created.token, created.expiresAt),
+              },
+            },
           );
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");
@@ -45,4 +52,3 @@ export const Route = createFileRoute("/api/auth/login")({
     },
   },
 });
-

@@ -7,12 +7,12 @@ export async function requireLocalUser(userId: string): Promise<LocalUser> {
     throw new HttpError(
       403,
       "local_user_not_provisioned",
-      "Usuario autenticado ainda nao foi provisionado no PostgreSQL.",
+      "Usuário autenticado ainda não foi provisionado no PostgreSQL.",
     );
   }
 
   if (user.status !== "ativo" || user.profile?.status === "inativo") {
-    throw new HttpError(403, "local_user_inactive", "Usuario local inativo.");
+    throw new HttpError(403, "local_user_inactive", "Usuário local inativo.");
   }
 
   return user;

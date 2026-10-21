@@ -50,12 +50,12 @@ export function DeletePositionModal({
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Excluir cargo</DialogTitle>
+          <DialogTitle>Excluir Cargo</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-sm text-[#042558]/65">
-            Você está excluindo <strong>{position.nome}</strong>.
+            Você Está Excluindo <strong>{position.nome}</strong>.
           </p>
 
           {children.length === 0 ? (
@@ -65,7 +65,7 @@ export function DeletePositionModal({
           ) : (
             <>
               <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                Este cargo possui {children.length} subordinado(s). Eles não serão excluídos
+                Este Cargo Possui {children.length} subordinado(s). Eles não serão excluídos
                 automaticamente.
               </p>
               <div className="space-y-2">
@@ -83,7 +83,7 @@ export function DeletePositionModal({
                     checked={mode === "chosenParent"}
                     onChange={() => setMode("chosenParent")}
                   />
-                  Escolher outro superior para os subordinados
+                  Escolher Outro Superior para os Subordinados
                 </label>
                 {mode === "chosenParent" && (
                   <select
@@ -91,7 +91,7 @@ export function DeletePositionModal({
                     onChange={(event) => setChosenParentId(event.target.value || null)}
                     className="w-full rounded-lg border border-[#042558]/20 bg-white px-3 py-2 text-sm text-[#042558] outline-none focus:border-[#042558]"
                   >
-                    <option value="">Sem superior imediato</option>
+                    <option value="">Sem Superior Imediato</option>
                     {options.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.nome}
@@ -101,7 +101,7 @@ export function DeletePositionModal({
                 )}
                 <label className="flex items-center gap-2 rounded-lg border border-[#042558]/10 p-3 text-sm text-[#042558]">
                   <input type="radio" checked={mode === "root"} onChange={() => setMode("root")} />
-                  Deixar os subordinados sem superior imediato
+                  Deixar os Subordinados Sem Superior Imediato
                 </label>
               </div>
             </>
@@ -120,7 +120,7 @@ export function DeletePositionModal({
               onClick={submit}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
             >
-              Excluir cargo
+              Excluir Cargo
             </button>
           </div>
         </div>

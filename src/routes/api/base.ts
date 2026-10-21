@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/base")({
           const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { listBaseConfig }] =
             await Promise.all([
               import("zod"),
-            import("@/server/auth/session"),
+              import("@/server/auth/session"),
               import("@/server/auth/local-user"),
               import("@/server/base/base-repository"),
             ]);
