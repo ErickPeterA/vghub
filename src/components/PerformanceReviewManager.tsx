@@ -15,6 +15,7 @@ import {
   Send,
   Settings,
   SplitSquareVertical,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -233,12 +234,12 @@ const EXPERIENCE_LIMIT_DAYS = 90;
 const EDUCATION_LEVEL_OPTIONS = [
   "Ensino Fundamental Incompleto",
   "Ensino Fundamental Completo",
-  "Ensino Medio Incompleto",
-  "Ensino Medio Completo",
+  "Ensino Médio Incompleto",
+  "Ensino Médio Completo",
   "Ensino Técnico",
   "Ensino Superior Incompleto",
   "Ensino Superior Completo",
-  "Pos-graduacao",
+  "Pós-graduação",
 ];
 const EXPERIENCE_YEARS_OPTIONS = [
   "Menos de 1 ano",
@@ -251,18 +252,18 @@ const EXPERIENCE_YEARS_OPTIONS = [
   "10 ou mais",
 ];
 const ACTIVITY_EFFICIENCY_OPTIONS = [
-  "Domina o processo/método desta atividade a ponto de também ensinar alguem a executa-la",
-  "Executa o processo/método desta atividade sem necessitar de auxilio.",
-  "Algumas vezes executa o processo/método desta atividade necessitando de auxilio.",
-  "Muitas vezes executa o processo/método desta atividade necessitando de auxilio.",
-  "Sempre executa o processo/método desta atividade necessitando de auxilio.",
+  "Domina o processo/método desta atividade a ponto de também ensinar alguém a executá-la",
+  "Executa o processo/método desta atividade sem necessitar de auxílio.",
+  "Algumas vezes executa o processo/método desta atividade necessitando de auxílio.",
+  "Muitas vezes executa o processo/método desta atividade necessitando de auxílio.",
+  "Sempre executa o processo/método desta atividade necessitando de auxílio.",
   "Não se aplica.",
 ];
 const ACTIVITY_EFFICACY_OPTIONS = [
   "Supero os resultados propostos.",
   "Atinjo os resultados propostos.",
   "Na maioria das vezes, atinjo os resultados propostos.",
-  "Na maioria das vezes, NAO atinjo os resultados propostos.",
+  "Na maioria das vezes, NÃO atinjo os resultados propostos.",
   "Não atinjo os resultados propostos.",
   "Não se aplica.",
 ];
@@ -276,17 +277,17 @@ const INDICATOR_OPTIONS = [
 ];
 const SKILL_OPTIONS = [
   "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
-  "Utilizo na pratica esta habilidade para garantir bons resultados nas minhas atividades",
-  "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
-  "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
-  "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
+  "Utilizo na prática esta habilidade para garantir bons resultados nas minhas atividades",
+  "Preciso melhorar UM POUCO na aplicação desta habilidade, nas minhas atividades.",
+  "Preciso melhorar MUITO na aplicação desta habilidade, nesta atividade.",
+  "Preciso melhorar URGENTEMENTE na aplicação desta habilidade, nas minhas atividades.",
   "Não se aplica.",
 ];
 const BEHAVIOR_OPTIONS = [
   "Demonstro este comportamento no dia a dia, a ponto de me DESTACAR perante os demais colaboradores.",
   "Demonstro este comportamento no dia a dia.",
-  "Preciso MELHORAR neste comportamento em POUCAS situacoes.",
-  "Preciso MELHORAR neste comportamento em MUITAS situacoes.",
+  "Preciso MELHORAR neste comportamento em POUCAS situações.",
+  "Preciso MELHORAR neste comportamento em MUITAS situações.",
   "Preciso MELHORAR URGENTEMENTE neste comportamento.",
   "Não se aplica.",
 ];
@@ -335,12 +336,12 @@ const DEFAULT_PERFORMANCE_QUESTIONS: PerformanceQuestion[] = [
 const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   {
     id: "avdp_instrucao",
-    label: "Responda aqui a maior instrucao que o avaliado possui:",
+    label: "Responda aqui a maior instrução que o avaliado possui:",
     type: "select",
     required: true,
     active: true,
     options: EDUCATION_LEVEL_OPTIONS,
-    sectionTitle: "Instrucao",
+    sectionTitle: "Instrução",
   },
   {
     id: "avdp_experiencia",
@@ -349,11 +350,11 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
     required: true,
     active: true,
     options: EXPERIENCE_YEARS_OPTIONS,
-    sectionTitle: "Experiencia",
+    sectionTitle: "Experiência",
   },
   {
     id: "avdp_atividade_eficiencia",
-    label: "EFICIENCIA - FAZER da FORMA CORRETA",
+    label: "EFICIÊNCIA - FAZER DA FORMA CORRETA",
     type: "select",
     required: true,
     active: true,
@@ -364,7 +365,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
   },
   {
     id: "avdp_atividade_eficacia",
-    label: "EFICACIA - RESULTADO e QUALIDADE",
+    label: "EFICÁCIA - RESULTADO E QUALIDADE",
     type: "select",
     required: true,
     active: true,
@@ -422,7 +423,7 @@ const DEFAULT_AVDP_QUESTIONS: PerformanceQuestion[] = [
     required: true,
     active: true,
     options: SKILL_OPTIONS,
-    sectionTitle: "Habilidades especificas do cargo",
+    sectionTitle: "Habilidades específicas do cargo",
     dynamicSource: "role_skills",
     dynamicRole: "rating",
   },
@@ -4522,6 +4523,22 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     }
   };
 
+  const deleteReview = async (review: ReviewRow) => {
+    if (!confirm(`Excluir a avaliação "${review.name}"? Esta ação ficará registrada no histórico.`)) {
+      return;
+    }
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: { action: "deleteReview", reviewId: review.id },
+      });
+      toast.success("Avaliação excluída e registrada no histórico.");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível excluir a avaliação.");
+    }
+  };
+
   const prepareAgendaReview = async (_item: AgendaItem) => undefined;
 
   const markSentAndCopy = async (participant: ParticipantRow) => {
@@ -4834,12 +4851,21 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                       {REVIEW_STATUS_LABEL[review.status]}
                     </span>
                   </div>
-                  <a
-                    href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${review.id}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
-                  >
-                    <SplitSquareVertical className="h-4 w-4" /> Comparar Avaliações
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={`/projetos/${projectId}/avaliacao-desempenho/comparar/${review.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
+                    >
+                      <SplitSquareVertical className="h-4 w-4" /> Comparar Avaliações
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => void deleteReview(review)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" /> Excluir
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <ParticipantCard

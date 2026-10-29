@@ -532,6 +532,47 @@ export async function createPerformanceReview(args: {
   });
 }
 
+export async function deletePerformanceReview(args: {
+  actorUserId: string;
+  projectId: string;
+  reviewId: string;
+}) {
+  await requireCanManageProject(args.actorUserId, args.projectId);
+  await withTransaction(async (client) => {
+    const result = await client.query<{
+      id: string;
+      name: string;
+      employee_name: string;
+      review_type: ReviewType;
+    }>(
+      `select id, name, employee_name, review_type
+         from public.performance_reviews
+        where id = $1::uuid and project_id = $2::uuid
+        for update`,
+      [args.reviewId, args.projectId],
+    );
+    const review = result.rows[0];
+    if (!review) throw new HttpError(404, "not_found", "Avaliação não encontrada.");
+
+    await client.query(
+      `insert into public.project_history
+         (project_id, user_id, acao, entidade, entidade_id, detalhes)
+       values ($1::uuid, $2::uuid, 'avaliacao_excluida', 'avaliacao_desempenho', $3::uuid, $4::jsonb)`,
+      [
+        args.projectId,
+        args.actorUserId,
+        review.id,
+        JSON.stringify({
+          nome: review.name,
+          colaborador: review.employee_name,
+          tipo: review.review_type,
+        }),
+      ],
+    );
+    await client.query(`delete from public.performance_reviews where id = $1::uuid`, [review.id]);
+  });
+}
+
 async function lockReviewForManage(
   client: PoolClient,
   actorUserId: string,

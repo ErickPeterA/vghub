@@ -55,9 +55,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "Viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vg Hub" },
-      { property: "og:title", content: "Vg Hub" },
-      { name: "Twitter:title", content: "Vg Hub" },
+      { title: "VG Pessoas" },
+      { property: "og:title", content: "VG Pessoas" },
+      { name: "Twitter:title", content: "VG Pessoas" },
       {
         name: "Description",
         content: "DescCargo creates dynamic database-driven websites for managing structured data.",

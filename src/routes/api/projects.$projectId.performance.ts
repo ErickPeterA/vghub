@@ -108,6 +108,7 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
                 criterionScoring: z.unknown().optional(),
               }),
               z.object({ action: z.literal("reopen"), reviewId: z.string().uuid() }),
+              z.object({ action: z.literal("deleteReview"), reviewId: z.string().uuid() }),
               z.object({
                 action: z.literal("markSent"),
                 participantId: z.string().uuid().optional(),
@@ -178,6 +179,12 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
             });
           } else if (input.action === "reopen") {
             await repo.reopenPerformanceReview({
+              actorUserId: user.userId,
+              projectId: params.projectId,
+              reviewId: input.reviewId,
+            });
+          } else if (input.action === "deleteReview") {
+            await repo.deletePerformanceReview({
               actorUserId: user.userId,
               projectId: params.projectId,
               reviewId: input.reviewId,

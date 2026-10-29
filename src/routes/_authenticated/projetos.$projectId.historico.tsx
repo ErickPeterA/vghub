@@ -31,6 +31,7 @@ const labelMap: Record<string, string> = {
   modelo_removido: "Modelo removido",
   hub_item_criado: "Item adicionado à Página Central",
   hub_item_removido: "Item removido da Página Central",
+  avaliacao_excluida: "Avaliação excluída",
 };
 
 const acaoColors: Record<string, string> = {
@@ -48,6 +49,7 @@ const acaoColors: Record<string, string> = {
   modelo_removido: "bg-orange-50 text-orange-700",
   hub_item_criado: "bg-indigo-50 text-indigo-700",
   hub_item_removido: "bg-rose-50 text-rose-700",
+  avaliacao_excluida: "bg-red-50 text-red-700",
 };
 
 const stageLabels: Record<string, string> = {
@@ -71,6 +73,8 @@ const detailLabels: Record<string, string> = {
   de: "De",
   para: "Para",
   comentarios: "Comentários",
+  colaborador: "Colaborador",
+  tipo: "Tipo",
 };
 
 function formatDate(date: string) {
@@ -129,6 +133,8 @@ function formatDetails(item: Item, users: Record<string, string>) {
       return `Membro: ${targetUser}. Novo papel: ${role}`;
     case "membro_removido":
       return `Membro removido: ${targetUser}`;
+    case "avaliacao_excluida":
+      return `Avaliação: ${formatValue("nome", details.nome, users)}. Colaborador: ${formatValue("colaborador", details.colaborador, users)}. Tipo: ${details.tipo === "experience" ? "Experiência" : "Desempenho"}`;
     default: {
       const entries = Object.entries(details);
       if (!entries.length) return "Sem alteração detalhada";

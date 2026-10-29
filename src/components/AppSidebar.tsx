@@ -90,7 +90,7 @@ export function AppSidebar() {
           />
           <img
             src="/logobranca.png"
-            alt="VG Hub"
+            alt="VG Pessoas"
             className="block w-30 object-contain group-data-[collapsible=icon]:hidden"
           />
         </div>
