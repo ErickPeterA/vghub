@@ -27,6 +27,7 @@ import {
 type PositionRow = {
   id: string;
   nome: string;
+  email: string | null;
   parent_id: string | null;
   display_order: number;
   created_at: string;
@@ -37,6 +38,7 @@ type AreaRow = {
   project_id: string;
   parent_id: string | null;
   nome: string;
+  email: string;
   display_order: number;
   created_at: string;
 };
@@ -66,6 +68,7 @@ type EmployeeFormState = {
 
 const emptyForm: EmployeeFormState = {
   nome: "",
+  email: "",
   positionId: "",
   areaId: "",
   sectorId: "",
@@ -204,6 +207,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
     setEditingEmployeeId(employee.id);
     setForm({
       nome: employee.nome,
+      email: employee.email ?? "",
       positionId: employee.position_id,
       areaId: employee.area_id ?? "",
       sectorId: employee.sector_id ?? "",
@@ -244,6 +248,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
           sectorId: form.sectorId || null,
           superiorImediatoId: form.superiorImediatoId || null,
           nome,
+          email: form.email.trim() || null,
           admissionDate: form.admissionDate,
           lastPerformanceReviewDate: form.lastPerformanceReviewDate || null,
         },
@@ -333,6 +338,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
               <TableHeader>
                 <TableRow className="border-[#042558]/10">
                   <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Área / Setor</TableHead>
                   <TableHead>Superior Imediato</TableHead>
@@ -345,6 +351,7 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                 {employees.map((employee) => (
                   <TableRow key={employee.id} className="border-[#042558]/10">
                     <TableCell className="font-medium text-[#042558]">{employee.nome}</TableCell>
+                    <TableCell className="text-[#042558]/70">{employee.email ?? "-"}</TableCell>
                     <TableCell className="text-[#042558]/70">
                       {positionsById.get(employee.position_id)?.nome ?? "Cargo Removido"}
                     </TableCell>
@@ -428,6 +435,20 @@ export function EmployeesManager({ projectId }: { projectId: string }) {
                   onChange={(event) => setField("nome", event.target.value)}
                   className={inputClass}
                   placeholder="Nome completo"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[#042558]/70">
+                  E-mail (opcional)
+                </span>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setField("email", event.target.value)}
+                  className={inputClass}
+                  placeholder="nome@empresa.com.br"
+                  autoComplete="email"
                 />
               </label>
 

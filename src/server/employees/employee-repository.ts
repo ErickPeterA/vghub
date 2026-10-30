@@ -13,6 +13,7 @@ type EmployeeRow = {
   sector_id: string | null;
   superior_imediato_id: string | null;
   nome: string;
+  email: string | null;
   admission_date: Date | string;
   last_performance_review_date: Date | string | null;
   created_at: Date | string;
@@ -37,7 +38,7 @@ export async function getEmployeesPageData(userId: string, projectId: string) {
   const [employees, positions, areas] = await Promise.all([
     query<EmployeeRow>(
       `
-        select id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome,
+        select id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome, email,
                admission_date, last_performance_review_date, created_at
         from public.project_employees
         where project_id = $1::uuid
@@ -80,6 +81,7 @@ export async function createEmployee(input: {
   sectorId?: string | null;
   superiorImediatoId?: string | null;
   nome: string;
+  email?: string | null;
   admissionDate: string;
   lastPerformanceReviewDate?: string | null;
 }) {
@@ -87,11 +89,11 @@ export async function createEmployee(input: {
   const result = await query<EmployeeRow>(
     `
       insert into public.project_employees (
-        project_id, position_id, area_id, sector_id, superior_imediato_id, nome,
+        project_id, position_id, area_id, sector_id, superior_imediato_id, nome, email,
         admission_date, last_performance_review_date, created_by
       )
-      values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7::date, $8::date, $9::uuid)
-      returning id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome,
+      values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8::date, $9::date, $10::uuid)
+      returning id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome, email,
                 admission_date, last_performance_review_date, created_at
     `,
     [
@@ -101,6 +103,7 @@ export async function createEmployee(input: {
       input.sectorId ?? null,
       input.superiorImediatoId ?? null,
       input.nome,
+      input.email?.trim() || null,
       input.admissionDate,
       input.lastPerformanceReviewDate ?? null,
       input.actorUserId,
@@ -119,6 +122,7 @@ export async function updateEmployee(input: {
   sectorId?: string | null;
   superiorImediatoId?: string | null;
   nome: string;
+  email?: string | null;
   admissionDate: string;
   lastPerformanceReviewDate?: string | null;
 }) {
@@ -133,12 +137,13 @@ export async function updateEmployee(input: {
                sector_id = $5::uuid,
                superior_imediato_id = $6::uuid,
                nome = $7,
-               admission_date = $8::date,
-               last_performance_review_date = $9::date,
+               email = $8,
+               admission_date = $9::date,
+               last_performance_review_date = $10::date,
                updated_at = now()
          where id = $1::uuid
            and project_id = $2::uuid
-        returning id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome,
+        returning id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome, email,
                   admission_date, last_performance_review_date, created_at
       `,
       [
@@ -149,6 +154,7 @@ export async function updateEmployee(input: {
         input.sectorId ?? null,
         input.superiorImediatoId ?? null,
         input.nome,
+        input.email?.trim() || null,
         input.admissionDate,
         input.lastPerformanceReviewDate ?? null,
       ],

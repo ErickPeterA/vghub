@@ -39,6 +39,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
               sectorId: z.string().uuid().optional().nullable().or(z.literal("")),
               superiorImediatoId: z.string().uuid().optional().nullable().or(z.literal("")),
               nome: z.string().trim().min(1),
+              email: z.string().trim().email().optional().nullable().or(z.literal("")),
               admissionDate: z.string().min(1),
               lastPerformanceReviewDate: z.string().optional().nullable().or(z.literal("")),
             })
@@ -53,6 +54,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
             sectorId: input.sectorId || null,
             superiorImediatoId: input.superiorImediatoId || null,
             nome: input.nome,
+            email: input.email || null,
             admissionDate: input.admissionDate,
             lastPerformanceReviewDate: input.lastPerformanceReviewDate || null,
           });
@@ -80,6 +82,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
               sectorId: z.string().uuid().optional().nullable().or(z.literal("")),
               superiorImediatoId: z.string().uuid().optional().nullable().or(z.literal("")),
               nome: z.string().trim().min(1),
+              email: z.string().trim().email().optional().nullable().or(z.literal("")),
               admissionDate: z.string().min(1),
               lastPerformanceReviewDate: z.string().optional().nullable().or(z.literal("")),
             })
@@ -95,6 +98,7 @@ export const Route = createFileRoute("/api/projects/$projectId/employees")({
             sectorId: input.sectorId || null,
             superiorImediatoId: input.superiorImediatoId || null,
             nome: input.nome,
+            email: input.email || null,
             admissionDate: input.admissionDate,
             lastPerformanceReviewDate: input.lastPerformanceReviewDate || null,
           });

@@ -105,7 +105,7 @@ export async function getPerformanceWorkspaceData(userId: string, projectId: str
       [projectId],
     ),
     query(
-      `select id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome, admission_date, last_performance_review_date from public.project_employees where project_id = $1::uuid order by nome`,
+      `select id, project_id, position_id, area_id, sector_id, superior_imediato_id, nome, email, admission_date, last_performance_review_date from public.project_employees where project_id = $1::uuid order by nome`,
       [projectId],
     ),
     query(`select * from public.descricoes_cargo where project_id = $1::uuid`, [projectId]),

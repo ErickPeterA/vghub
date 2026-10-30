@@ -383,7 +383,7 @@ function isActivityQuestion(question: PerformanceQuestion) {
 
 function displayActivityTitle(question: PerformanceQuestion | undefined, index: number) {
   const title = question?.groupTitle?.trim();
-  if (title && !isInternalOptionValue(title)) return title;
+  if (title && !isInternalOptionValue(title)) return withPortugueseAccents(title);
   return `Atividade ${index + 1}`;
 }
 
@@ -404,13 +404,50 @@ function isInternalOptionValue(value: string) {
   );
 }
 
+function withPortugueseAccents(value: string) {
+  const replacements: Array<[RegExp, string]> = [
+    [/\binstrucao\b/gi, "instrução"],
+    [/\bexperiencia\b/gi, "experiência"],
+    [/\bavaliacao\b/gi, "avaliação"],
+    [/\beficiencia\b/gi, "eficiência"],
+    [/\beficacia\b/gi, "eficácia"],
+    [/\bmedio\b/gi, "médio"],
+    [/\btecnico\b/gi, "técnico"],
+    [/\bpos-graduacao\b/gi, "pós-graduação"],
+    [/\bmetodo\b/gi, "método"],
+    [/\btambem\b/gi, "também"],
+    [/\balguem\b/gi, "alguém"],
+    [/\bexecuta-la\b/gi, "executá-la"],
+    [/\bauxilio\b/gi, "auxílio"],
+    [/\bnao\b/gi, "não"],
+    [/\bpratica\b/gi, "prática"],
+    [/\baplicacao\b/gi, "aplicação"],
+    [/\bsituacoes\b/gi, "situações"],
+    [/\bespecificas\b/gi, "específicas"],
+    [/\bobservacoes\b/gi, "observações"],
+    [/\bopcao\b/gi, "opção"],
+  ];
+  return replacements.reduce(
+    (text, [pattern, replacement]) =>
+      text.replace(pattern, (match) => {
+        if (match === match.toUpperCase()) return replacement.toUpperCase();
+        if (match[0] === match[0]?.toUpperCase()) {
+          return replacement[0].toUpperCase() + replacement.slice(1);
+        }
+        return replacement;
+      }),
+    value,
+  );
+}
+
 function displayQuestionLabel(
   question: PerformanceQuestion,
   participantType?: FormData["participantType"],
 ) {
-  return participantType === "leader" && question.leaderLabel?.trim()
+  const label = participantType === "leader" && question.leaderLabel?.trim()
     ? question.leaderLabel
     : question.label;
+  return withPortugueseAccents(label);
 }
 
 function questionOptions(
@@ -466,7 +503,7 @@ function buildQuestionBlocks(questions: PerformanceQuestion[]) {
 
 function displayGroupTitle(question: PerformanceQuestion | undefined, index: number) {
   const title = question?.groupTitle?.trim();
-  if (title && !isInternalOptionValue(title)) return title;
+  if (title && !isInternalOptionValue(title)) return withPortugueseAccents(title);
   const sourceLabel: Record<string, string> = {
     activities: "Atividade",
     indicators: "Indicador",
@@ -512,7 +549,7 @@ function SectionStep({
               </p>
               {block.description && (
                 <p className="mb-4 whitespace-pre-wrap rounded-lg border border-[#042558]/10 bg-white px-3 py-2 text-sm leading-relaxed text-gray-600">
-                  {block.description}
+                  {withPortugueseAccents(block.description)}
                 </p>
               )}
               <div className="grid gap-3 md:grid-cols-2">
@@ -654,7 +691,9 @@ function QuestionField({
         {question.required && <span className="text-red-500">*</span>}
       </span>
       {question.helpText && !compact && (
-        <span className="mb-2 block text-xs text-gray-400">{question.helpText}</span>
+        <span className="mb-2 block text-xs text-gray-400">
+          {withPortugueseAccents(question.helpText)}
+        </span>
       )}
       <QuestionInput
         question={question}
@@ -693,7 +732,7 @@ function QuestionInput({
         <option value="">Selecione uma Opção</option>
         {questionOptions(question, participantType).map((option) => (
           <option key={option} value={option}>
-            {option}
+            {withPortugueseAccents(option)}
           </option>
         ))}
       </select>

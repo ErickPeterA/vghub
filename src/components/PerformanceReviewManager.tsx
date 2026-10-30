@@ -8,6 +8,7 @@ import {
   Copy,
   Eye,
   History,
+  Mail,
   MessageSquare,
   Plus,
   RotateCcw,
@@ -89,6 +90,7 @@ type PerfEmployeeRow = {
   sector_id: string | null;
   superior_imediato_id: string | null;
   nome: string;
+  email?: string | null;
   admission_date: string | null;
   last_performance_review_date: string | null;
 };
@@ -4558,6 +4560,96 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     }
   };
 
+  const sendByGmail = async (participant: ParticipantRow, review: ReviewRow) => {
+    const link = `${window.location.origin}/avaliacao-desempenho/preencher/${participant.token}`;
+    const participantName =
+      participant.participant_type === "leader" ? review.leader_name : review.employee_name;
+    const reviewedEmployee = employees.find((employee) => employee.id === review.employee_id);
+    const recipientEmployee =
+      participant.participant_type === "leader"
+        ? employees.find((employee) => employee.id === reviewedEmployee?.superior_imediato_id)
+        : reviewedEmployee;
+    const recipientEmail = recipientEmployee?.email?.trim() ?? "";
+    const deadline = new Date(participant.expires_at).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    const reviewType =
+      (review.review_type ?? "experience") === "experience"
+        ? "Avaliação de Experiência"
+        : "Avaliação de Desempenho";
+    const isLeader = participant.participant_type === "leader";
+    const collaboratorBody = `Boa tarde, ${participantName}!
+
+Segue o link para preenchimento da sua ${reviewType}, que deverá ser concluída até o dia ${deadline}.
+
+Link ${reviewType}: ${link}
+
+O processo tem como objetivo avaliar o desempenho apresentado no período, considerando tanto a sua percepção quanto a do seu líder.
+
+Orientações para o preenchimento:
+
+Para cada atividade listada, você deverá realizar uma autoavaliação considerando dois aspectos:
+
+- Eficiência: sua capacidade de executar a atividade corretamente.
+- Eficácia: os resultados alcançados e a qualidade do seu trabalho.
+
+Durante o preenchimento, reserve um momento para refletir e anotar os pontos positivos e os aspectos que identifica como oportunidades de desenvolvimento. Essas anotações poderão contribuir para a conversa de feedback.
+
+Próximas etapas
+
+Após o preenchimento das avaliações pelo colaborador e por seu líder, será agendada uma reunião de feedback, intermediada pelo time de Gestão de Pessoas, para comparar as percepções, alinhar entendimentos e discutir oportunidades de desenvolvimento.
+
+Ao finalizar a avaliação, por favor, responda a este e-mail confirmando a conclusão do preenchimento.
+
+Contamos com seu comprometimento nesse processo!
+
+Estou à disposição para eventuais dúvidas!`;
+    const leaderBody = `Boa tarde, ${participantName}!
+
+Segue o link para preenchimento da ${reviewType} do seu liderado, que deverá ser concluída até o dia ${deadline}.
+
+Link ${reviewType}: ${link}
+
+O objetivo é avaliar o desempenho apresentado pelo colaborador nos últimos seis meses, considerando as atividades realizadas e os resultados alcançados.
+
+Orientações para o preenchimento:
+
+Para cada atividade listada, você deverá avaliar dois aspectos:
+
+- Eficiência: a capacidade do colaborador de executar a atividade corretamente.
+- Eficácia: os resultados alcançados e a qualidade do trabalho realizado.
+
+Durante o preenchimento, reserve um momento para refletir e anotar os pontos positivos e as oportunidades de desenvolvimento identificadas. Essas observações serão importantes para orientar a conversa de feedback.
+
+Próximas etapas
+
+Após o preenchimento das avaliações por você e pelo colaborador, será agendada uma reunião de feedback entre ambos, intermediada pelo time de Gestão de Pessoas, para comparar as percepções, alinhar entendimentos e discutir oportunidades de desenvolvimento.
+
+Ao finalizar a avaliação, por favor, responda a este e-mail confirmando a conclusão do preenchimento.
+
+Contamos com seu comprometimento nesse processo!
+
+Estou à disposição para eventuais dúvidas!`;
+    const body = isLeader ? leaderBody : collaboratorBody;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${encodeURIComponent(
+      `${reviewType} - ${participantName}`,
+    )}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank", "noopener,noreferrer");
+
+    try {
+      if (!participant.sent_at) {
+        await apiJson(`/api/projects/${projectId}/performance`, {
+          method: "POST",
+          body: { action: "markSent", participantId: participant.id },
+        });
+        await load();
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível registrar o envio.");
+    }
+  };
+
   return (
     <div className="space-y-5">
       <section className="hidden">
@@ -4872,8 +4964,14 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
                     title="Colaborador"
                     participant={collaborator}
                     onCopy={markSentAndCopy}
+                    onGmail={(participant) => sendByGmail(participant, review)}
                   />
-                  <ParticipantCard title="Líder" participant={leader} onCopy={markSentAndCopy} />
+                  <ParticipantCard
+                    title="Líder"
+                    participant={leader}
+                    onCopy={markSentAndCopy}
+                    onGmail={(participant) => sendByGmail(participant, review)}
+                  />
                 </div>
               </article>
             );
@@ -4888,10 +4986,12 @@ function ParticipantCard({
   title,
   participant,
   onCopy,
+  onGmail,
 }: {
   title: string;
   participant?: ParticipantRow;
   onCopy: (participant: ParticipantRow) => void;
+  onGmail: (participant: ParticipantRow) => void;
 }) {
   const answered = participant?.status === "answered";
   return (
@@ -4914,16 +5014,26 @@ function ParticipantCard({
           </p>
         </div>
         {participant ? (
-          <button
-            onClick={() => onCopy(participant)}
-            className={`inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${
-              answered
-                ? "border-emerald-200 text-emerald-800 hover:bg-emerald-100"
-                : "border-[#042558]/20 text-[#042558] hover:bg-[#042558]/5"
-            }`}
-          >
-            <Copy className="h-3.5 w-3.5" /> Enviar Link
-          </button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onCopy(participant)}
+              className={`inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-xs font-medium ${
+                answered
+                  ? "border-emerald-200 text-emerald-800 hover:bg-emerald-100"
+                  : "border-[#042558]/20 text-[#042558] hover:bg-[#042558]/5"
+              }`}
+            >
+              <Copy className="h-3.5 w-3.5" /> Copiar Link
+            </button>
+            <button
+              type="button"
+              onClick={() => onGmail(participant)}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
+            >
+              <Mail className="h-3.5 w-3.5" /> Enviar por Gmail
+            </button>
+          </div>
         ) : (
           <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
             Recrie a Avaliação
