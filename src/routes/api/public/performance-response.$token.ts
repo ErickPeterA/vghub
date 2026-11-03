@@ -27,7 +27,11 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
           const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
           await withTransaction(async (client) => {
             const participantResult = await client.query(
-              `select id, review_id, status, expires_at from public.performance_review_participants where token::text = $1 limit 1`,
+              `select id, review_id, participant_type, status, expires_at, draft_answers
+                 from public.performance_review_participants
+                where token::text = $1
+                limit 1
+                for update`,
               [token],
             );
             const participant = participantResult.rows[0];
@@ -47,7 +51,7 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
               });
 
             const review = await client.query(
-              `select status from public.performance_reviews where id = $1::uuid limit 1`,
+              `select status, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
               [participant.review_id],
             );
             if (review.rows[0]?.status === "finalized")
@@ -55,6 +59,48 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
                 JSON.stringify({ error: "finalized", message: "Avaliação finalizada." }),
                 { status: 410 },
               );
+
+            const draftAnswers =
+              participant.draft_answers && typeof participant.draft_answers === "object"
+                ? participant.draft_answers
+                : {};
+            const submittedAnswers =
+              body.answers && typeof body.answers === "object" ? body.answers : {};
+            const answers = { ...draftAnswers, ...submittedAnswers } as Record<string, unknown>;
+            const questions = Array.isArray(review.rows[0]?.questions_snapshot)
+              ? review.rows[0].questions_snapshot
+              : [];
+            const missingQuestion = questions.find(
+              (question: {
+                id?: unknown;
+                label?: unknown;
+                required?: unknown;
+                active?: unknown;
+              }) => {
+                if (
+                  question.active === false ||
+                  question.required !== true ||
+                  typeof question.id !== "string"
+                ) {
+                  return false;
+                }
+                const answer = answers[question.id];
+                return typeof answer !== "string" || !answer.trim();
+              },
+            );
+            if (missingQuestion) {
+              const label =
+                typeof missingQuestion.label === "string"
+                  ? missingQuestion.label
+                  : "uma pergunta obrigatória";
+              throw new Response(
+                JSON.stringify({
+                  error: "missing_required_answer",
+                  message: `Preencha: ${label}`,
+                }),
+                { status: 400 },
+              );
+            }
 
             await client.query(
               `
@@ -67,7 +113,7 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
                        submitted_ip = $3::text
                  where id = $1::uuid
               `,
-              [participant.id, JSON.stringify(body.answers ?? {}), ip],
+              [participant.id, JSON.stringify(answers), ip],
             );
             await client.query(`select public.refresh_performance_review_status($1::uuid)`, [
               participant.review_id,

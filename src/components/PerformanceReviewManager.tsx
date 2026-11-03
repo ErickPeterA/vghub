@@ -30,7 +30,11 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiJson } from "@/lib/api";
-import { leaderOptionsFor, responseOptionForParticipant } from "@/lib/performance-response-labels";
+import {
+  leaderOptionsFor,
+  responseOptionForParticipant,
+  responseValueForParticipant,
+} from "@/lib/performance-response-labels";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };
 type FieldType = "text" | "textarea" | "select";
@@ -1936,14 +1940,19 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   const activityQuestions = activeQuestions.filter(
     (question) => question.dynamicSource === "activities",
   );
-  if (activityQuestions.length) {
+  const activityGroups = new Map<string, PerformanceQuestion[]>();
+  activityQuestions.forEach((question) => {
+    const groupKey = `${question.sectionTitle ?? ""}:${question.groupId ?? ""}`;
+    activityGroups.set(groupKey, [...(activityGroups.get(groupKey) ?? []), question]);
+  });
+  activityGroups.forEach((groupQuestions, groupKey) => {
     blocks.push({
-      id: "section:activities",
-      title: "Atividades",
-      eyebrow: "Bloco",
-      questions: activityQuestions,
+      id: `activity:${groupKey}`,
+      title: displayQuestionGroupTitle(groupQuestions[0]),
+      eyebrow: "Atividade",
+      questions: groupQuestions,
     });
-  }
+  });
 
   const dynamicSections: Array<{
     source: NonNullable<PerformanceQuestion["dynamicSource"]>;
@@ -2392,12 +2401,6 @@ export function PerformanceComparisonPage({
                 </p>
                 <h2 className="mt-1 whitespace-pre-wrap text-lg font-semibold">{block.title}</h2>
               </div>
-              <BlockObservationComparison
-                blockId={block.id}
-                collaborator={collaborator}
-                leader={leader}
-                mobileSide={mobileSide}
-              />
               <div className="space-y-3">
                 {block.questions.map((question) => {
                   const leftAnswer = collaborator?.response_answers?.[question.id] ?? "";
@@ -2414,13 +2417,17 @@ export function PerformanceComparisonPage({
                     >
                       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                            {question.sectionTitle ?? "Pergunta"}
-                          </p>
-                          {question.groupId && (
-                            <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
-                              {displayQuestionGroupTitle(question)}
-                            </p>
+                          {question.dynamicSource !== "activities" && (
+                            <>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
+                                {question.sectionTitle ?? "Pergunta"}
+                              </p>
+                              {question.groupId && (
+                                <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
+                                  {displayQuestionGroupTitle(question)}
+                                </p>
+                              )}
+                            </>
                           )}
                           <h3 className="text-base font-semibold">{question.label}</h3>
                           {question.leaderLabel?.trim() &&
@@ -2472,6 +2479,12 @@ export function PerformanceComparisonPage({
                   );
                 })}
               </div>
+              <BlockObservationComparison
+                blockId={block.id}
+                collaborator={collaborator}
+                leader={leader}
+                mobileSide={mobileSide}
+              />
             </section>
           ))}
         </div>
@@ -4526,7 +4539,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
   };
 
   const deleteReview = async (review: ReviewRow) => {
-    if (!confirm(`Excluir a avaliação "${review.name}"? Esta ação ficará registrada no histórico.`)) {
+    if (
+      !confirm(`Excluir a avaliação "${review.name}"? Esta ação ficará registrada no histórico.`)
+    ) {
       return;
     }
     try {
@@ -5123,10 +5138,9 @@ function BlockObservationComparison({
   const questionKey = performanceBlockCommentKey(blockId);
   const collaboratorComment = collaborator?.response_answers?.[questionKey]?.trim() ?? "";
   const leaderComment = leader?.response_answers?.[questionKey]?.trim() ?? "";
-  if (!collaboratorComment && !leaderComment) return null;
 
   return (
-    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-amber-900/60">
         Observações do Bloco
       </p>
@@ -5171,7 +5185,13 @@ function AnswerCell({
   canEdit: boolean;
   onChange: (participant: ParticipantRow, questionKey: string, nextAnswer: string) => void;
 }) {
-  const value = participant?.response_answers?.[question.id] ?? "";
+  const storedValue = participant?.response_answers?.[question.id] ?? "";
+  const value = responseValueForParticipant(
+    storedValue,
+    question.options,
+    participant?.participant_type,
+    question.leaderOptions,
+  );
   return (
     <div>
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#042558]/50">

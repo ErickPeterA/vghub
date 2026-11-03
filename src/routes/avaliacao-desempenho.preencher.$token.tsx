@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import {
   performanceBlockCommentKey,
@@ -444,9 +444,10 @@ function displayQuestionLabel(
   question: PerformanceQuestion,
   participantType?: FormData["participantType"],
 ) {
-  const label = participantType === "leader" && question.leaderLabel?.trim()
-    ? question.leaderLabel
-    : question.label;
+  const label =
+    participantType === "leader" && question.leaderLabel?.trim()
+      ? question.leaderLabel
+      : question.label;
   return withPortugueseAccents(label);
 }
 
@@ -528,7 +529,7 @@ function SectionStep({
   blockId: string;
   participantType: FormData["participantType"];
   answers: Record<string, string>;
-  onChange: (answers: Record<string, string>) => void;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
 }) {
   const blocks = buildQuestionBlocks(questions);
   return (
@@ -559,7 +560,9 @@ function SectionStep({
                     question={question}
                     participantType={participantType}
                     value={answers[question.id] ?? ""}
-                    onChange={(value) => onChange({ ...answers, [question.id]: value })}
+                    onChange={(value) =>
+                      onChange((current) => ({ ...current, [question.id]: value }))
+                    }
                     unframed
                   />
                 ))}
@@ -571,7 +574,9 @@ function SectionStep({
               question={block.question}
               participantType={participantType}
               value={answers[block.question.id] ?? ""}
-              onChange={(value) => onChange({ ...answers, [block.question.id]: value })}
+              onChange={(value) =>
+                onChange((current) => ({ ...current, [block.question.id]: value }))
+              }
             />
           ),
         )
@@ -579,7 +584,12 @@ function SectionStep({
       <BlockCommentField
         blockId={blockId}
         value={answers[performanceBlockCommentKey(blockId)] ?? ""}
-        onChange={(value) => onChange({ ...answers, [performanceBlockCommentKey(blockId)]: value })}
+        onChange={(value) =>
+          onChange((current) => ({
+            ...current,
+            [performanceBlockCommentKey(blockId)]: value,
+          }))
+        }
       />
     </section>
   );
@@ -602,7 +612,7 @@ function ActivityStep({
   questions: PerformanceQuestion[];
   participantType: FormData["participantType"];
   answers: Record<string, string>;
-  onChange: (answers: Record<string, string>) => void;
+  onChange: Dispatch<SetStateAction<Record<string, string>>>;
 }) {
   return (
     <section className="space-y-6">
@@ -621,7 +631,7 @@ function ActivityStep({
             question={question}
             participantType={participantType}
             value={answers[question.id] ?? ""}
-            onChange={(value) => onChange({ ...answers, [question.id]: value })}
+            onChange={(value) => onChange((current) => ({ ...current, [question.id]: value }))}
             compact
           />
         ))}
@@ -629,7 +639,12 @@ function ActivityStep({
       <BlockCommentField
         blockId={blockId}
         value={answers[performanceBlockCommentKey(blockId)] ?? ""}
-        onChange={(value) => onChange({ ...answers, [performanceBlockCommentKey(blockId)]: value })}
+        onChange={(value) =>
+          onChange((current) => ({
+            ...current,
+            [performanceBlockCommentKey(blockId)]: value,
+          }))
+        }
       />
     </section>
   );

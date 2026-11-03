@@ -61,3 +61,34 @@ export function leaderOptionsFor(options?: string[]) {
     ? leaderOptions
     : undefined;
 }
+
+export function responseValueForParticipant(
+  value: string,
+  options: string[] | undefined,
+  participantType?: PerformanceParticipantType,
+  participantOptions?: string[],
+) {
+  if (!value || !options?.length) return value;
+
+  const normalize = (text: string) =>
+    text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  const resolvedOptions =
+    participantType === "leader"
+      ? (participantOptions ??
+        options.map((option) => responseOptionForParticipant(option, participantType)))
+      : options;
+  const normalizedValue = normalize(value);
+  const canonicalOption = resolvedOptions.find((option) => normalize(option) === normalizedValue);
+  if (canonicalOption) return canonicalOption;
+
+  if (participantType !== "leader") return value;
+
+  const originalIndex = options.indexOf(value);
+  if (originalIndex < 0) return value;
+
+  return resolvedOptions[originalIndex] ?? value;
+}
