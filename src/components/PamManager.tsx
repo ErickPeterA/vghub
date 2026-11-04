@@ -351,7 +351,7 @@ export function PamManager({ projectId }: { projectId: string }) {
                         />
                       </div>
                       <p className="mt-1 text-xs text-[#042558]/55">
-                        {completed} De {pamItems.length} Pontos Concluidos
+                        {completed} de {pamItems.length} pontos concluídos
                       </p>
                     </button>
                   );
@@ -495,7 +495,7 @@ function PamDetail({
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#042558]/55">
             <span>
-              {completed} De {items.length} Pontos Concluidos
+              {completed} de {items.length} pontos concluídos
             </span>
             <span>{filled} Preenchidos</span>
           </div>

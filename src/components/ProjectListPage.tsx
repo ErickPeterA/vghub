@@ -52,7 +52,7 @@ export function ProjectListPage() {
     const novo = atual === "desativado" ? "ativo" : "desativado";
     if (novo === "desativado") {
       const confirmado = confirm(
-        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuarios vinculados perdem acesso, exceto GPs e administradores.`,
+        `Desativar o projeto "${nome}"?\n\nOs dados continuam salvos, mas todos os usuários vinculados perdem acesso, exceto GPs e administradores.`,
       );
       if (!confirmado) return;
     }

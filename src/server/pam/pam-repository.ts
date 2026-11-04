@@ -336,7 +336,7 @@ export async function savePublicPamDraft(input: {
     const pam = await getPublicPam(input.token);
     assertPublicPamAccessible(pam);
     if (pam!.status === "completed") {
-      throw new HttpError(410, "completed", "PAM concluido. Edicao bloqueada.");
+      throw new HttpError(410, "completed", "PAM concluído. Edição bloqueada.");
     }
 
     const result = await client.query(

@@ -249,7 +249,7 @@ function PublicPamPage() {
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#042558]/55">
                   <span>
-                    {completedCount} De {items.length} Pontos Concluidos
+                    {completedCount} de {items.length} pontos concluídos
                   </span>
                   <span>{progressPercent}%</span>
                 </div>
@@ -265,7 +265,7 @@ function PublicPamPage() {
             {state === "success" && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
                 <div className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="h-5 w-5" /> Plano de Ação Concluido
+                  <CheckCircle2 className="h-5 w-5" /> Plano de Ação Concluído
                 </div>
                 <p className="mt-1 text-sm text-emerald-700">
                   As respostas foram registradas e agora ficam disponíveis para o gestor.
@@ -461,7 +461,7 @@ function SaveFeedback({
   completed: boolean;
 }) {
   if (completed) {
-    return <span className="text-sm font-medium text-emerald-700">Concluido</span>;
+    return <span className="text-sm font-medium text-emerald-700">Concluído</span>;
   }
   if (state === "saving") {
     return (

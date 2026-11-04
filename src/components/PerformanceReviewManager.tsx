@@ -957,9 +957,11 @@ function defaultQuestionsForConfig(reviewType: ReviewType) {
 }
 
 function displayQuestionLabel(question: PerformanceQuestion, participantType?: ParticipantType) {
-  return participantType === "leader" && question.leaderLabel?.trim()
-    ? question.leaderLabel
-    : question.label;
+  const label =
+    participantType === "leader" && question.leaderLabel?.trim()
+      ? question.leaderLabel
+      : question.label;
+  return withPortugueseAccents(label);
 }
 
 function questionOptions(question: PerformanceQuestion, participantType?: ParticipantType) {
@@ -976,6 +978,52 @@ function normalizeLookup(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function withPortugueseAccents(value: string) {
+  const replacements: Array<[RegExp, string]> = [
+    [/\binstrucao\b/gi, "instrução"],
+    [/\bexperiencia\b/gi, "experiência"],
+    [/\bavaliacoes\b/gi, "avaliações"],
+    [/\bavaliacao\b/gi, "avaliação"],
+    [/\bcomparacao\b/gi, "comparação"],
+    [/\bdescricao\b/gi, "descrição"],
+    [/\bobservacoes\b/gi, "observações"],
+    [/\bobservacao\b/gi, "observação"],
+    [/\bcompetencias\b/gi, "competências"],
+    [/\bcompetencia\b/gi, "competência"],
+    [/\bcriterios\b/gi, "critérios"],
+    [/\bcriterio\b/gi, "critério"],
+    [/\bperiodo\b/gi, "período"],
+    [/\beficiencia\b/gi, "eficiência"],
+    [/\beficacia\b/gi, "eficácia"],
+    [/\bmedio\b/gi, "médio"],
+    [/\btecnico\b/gi, "técnico"],
+    [/\bpos-graduacao\b/gi, "pós-graduação"],
+    [/\bmetodo\b/gi, "método"],
+    [/\btambem\b/gi, "também"],
+    [/\balguem\b/gi, "alguém"],
+    [/\bexecuta-la\b/gi, "executá-la"],
+    [/\bauxilio\b/gi, "auxílio"],
+    [/\bnao\b/gi, "não"],
+    [/\bpratica\b/gi, "prática"],
+    [/\baplicacao\b/gi, "aplicação"],
+    [/\bsituacoes\b/gi, "situações"],
+    [/\bespecificas\b/gi, "específicas"],
+    [/\bopcoes\b/gi, "opções"],
+    [/\bopcao\b/gi, "opção"],
+  ];
+  return replacements.reduce(
+    (text, [pattern, replacement]) =>
+      text.replace(pattern, (match) => {
+        if (match === match.toUpperCase()) return replacement.toUpperCase();
+        if (match[0] === match[0]?.toUpperCase()) {
+          return replacement[0].toUpperCase() + replacement.slice(1);
+        }
+        return replacement;
+      }),
+    value,
+  );
 }
 
 function evaluationCareerKey(value: string) {
@@ -1905,7 +1953,7 @@ function buildComparisonScoreSummary(
 
 function displayQuestionGroupTitle(question: PerformanceQuestion) {
   if (question.groupTitle && !isInternalOptionValue(question.groupTitle))
-    return question.groupTitle;
+    return withPortugueseAccents(question.groupTitle);
   const sourceLabel: Record<string, string> = {
     activities: "Atividade",
     indicators: "Indicador",
@@ -1931,7 +1979,7 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   if (introQuestions.length) {
     blocks.push({
       id: "intro",
-      title: introQuestions[0]?.sectionTitle || "Instrução e Experiência",
+      title: withPortugueseAccents(introQuestions[0]?.sectionTitle || "Instrução e Experiência"),
       eyebrow: "Bloco",
       questions: introQuestions,
     });
@@ -2008,7 +2056,9 @@ function buildPerformanceBlockScores(
       return [
         {
           id: question.id,
-          criterionLabel: criterion?.label ?? question.sectionTitle ?? "Criterio",
+          criterionLabel: withPortugueseAccents(
+            criterion?.label ?? question.sectionTitle ?? "Critério",
+          ),
           contextLabel:
             question.dynamicSource === "activities" && question.groupId
               ? displayQuestionGroupTitle(question)
@@ -2295,7 +2345,7 @@ export function PerformanceComparisonPage({
             <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
               Comparação de Avaliação
             </p>
-            <h1 className="text-xl font-bold">{review.name}</h1>
+            <h1 className="text-xl font-bold">{withPortugueseAccents(review.name)}</h1>
             <p className="text-sm text-[#042558]/60">
               {review.employee_name} · {review.job_title} · Líder: {review.leader_name}
             </p>
@@ -2420,7 +2470,7 @@ export function PerformanceComparisonPage({
                           {question.dynamicSource !== "activities" && (
                             <>
                               <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/50">
-                                {question.sectionTitle ?? "Pergunta"}
+                                {withPortugueseAccents(question.sectionTitle ?? "Pergunta")}
                               </p>
                               {question.groupId && (
                                 <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-[#042558]/75">
@@ -2429,11 +2479,13 @@ export function PerformanceComparisonPage({
                               )}
                             </>
                           )}
-                          <h3 className="text-base font-semibold">{question.label}</h3>
+                          <h3 className="text-base font-semibold">
+                            {displayQuestionLabel(question)}
+                          </h3>
                           {question.leaderLabel?.trim() &&
                             question.leaderLabel !== question.label && (
                               <p className="mt-1 text-sm text-[#042558]/55">
-                                Líder: {question.leaderLabel}
+                                Líder: {withPortugueseAccents(question.leaderLabel)}
                               </p>
                             )}
                         </div>
@@ -2534,7 +2586,7 @@ function LegacyPerformanceScoreSummaryPanel({
             label="Nota Final"
             value={formatSummaryNumber(summary.collaboratorFinalScore)}
           />
-          <MetricTile label="Referencia" value={formatSummaryNumber(summary.leaderFinalScore)} />
+          <MetricTile label="Referência" value={formatSummaryNumber(summary.leaderFinalScore)} />
           <MetricTile
             label="Aderência"
             value={
@@ -2635,14 +2687,14 @@ function PerformanceScoreSummaryPanel({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-            Resumo de Aderencia
+            Resumo de Aderência
           </p>
           <h2 className="mt-1 text-2xl font-bold text-[#042558]">
             Nota Contra a Descrição de Cargo
           </h2>
           <p className="mt-1 text-sm text-[#042558]/60">
             {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
-            Compara as respostas validas com os requisitos do cargo e aplica os pesos configurados.
+            Compara as respostas válidas com os requisitos do cargo e aplica os pesos configurados.
           </p>
         </div>
         <div className="grid min-w-full gap-3 sm:grid-cols-2 md:min-w-[380px]">
@@ -2678,7 +2730,7 @@ function PerformanceScoreSummaryPanel({
                   <h3 className="font-semibold text-[#042558]">{criterion.label}</h3>
                   <p className="text-xs text-[#042558]/55">
                     Peso {formatSummaryNumber(criterion.weight)}% - {criterion.scored} Resposta(s)
-                    Válida(s) no Calculo
+                    Válida(s) no Cálculo
                   </p>
                   {criterion.requirementLabel && (
                     <p className="mt-1 text-xs text-[#042558]/55">
@@ -2688,7 +2740,7 @@ function PerformanceScoreSummaryPanel({
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs font-medium">
                   <span className="rounded-full bg-[#042558]/10 px-2 py-1 text-[#042558]">
-                    Aderencia {formatSummaryNumber(criterion.collaboratorAverage)}%
+                    Aderência {formatSummaryNumber(criterion.collaboratorAverage)}%
                   </span>
                   <span className="rounded-full bg-sky-50 px-2 py-1 text-sky-700">
                     Pontos {formatSummaryNumber(criterion.collaboratorPoints)}
@@ -2786,7 +2838,7 @@ function PerformanceFinalVisualizationPanel({
           </div>
 
           <p className="text-xs font-medium text-[#042558]/50">
-            {validAnswers} resposta(s) válida(s) entraram no calculo.
+            {validAnswers} resposta(s) válida(s) entraram no cálculo.
           </p>
         </div>
       </div>
@@ -3516,7 +3568,7 @@ export function PerformancePeriodConfigPanel({
                         >
                           <option value="text">Texto</option>
                           <option value="textarea">Texto Longo</option>
-                          <option value="select">Selecao Única</option>
+                          <option value="select">Seleção Única</option>
                         </select>
                         <button
                           type="button"
@@ -3640,7 +3692,7 @@ function reviewPeriodLabel(days: number | null | undefined, type?: ReviewType | 
     ? reviewPeriodOptionsForType(type)
     : [...EXPERIENCE_REVIEW_PERIOD_OPTIONS, ...PERFORMANCE_REVIEW_PERIOD_OPTIONS];
   const option = options.find((item) => item.days === days);
-  return option?.label ?? (days ? `${days} dias` : "Periodo");
+  return option?.label ?? (days ? `${days} dias` : "Período");
 }
 
 function automaticReviewName(
@@ -3762,7 +3814,7 @@ function SelectOptionsEditor({
                 key={option}
                 className="inline-flex items-center gap-2 rounded-full border border-[#042558]/20 bg-white/60 px-3 py-1 text-sm text-[#042558]"
               >
-                {option}
+                {withPortugueseAccents(option)}
                 <button
                   type="button"
                   onClick={() => removeOption(option)}
@@ -4188,7 +4240,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <option value="upcoming">Links Não Enviados</option>
           <option value="sent">Links Enviados</option>
           <option value="late">Somente Atrasadas</option>
-          <option value="done">Concluidas</option>
+          <option value="done">Concluídas</option>
         </select>
       </div>
 
@@ -4262,7 +4314,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${AGENDA_STATE_DOT[dominant]}`}
                         />
-                        {dayEntries.length} {dayEntries.length === 1 ? "avaliacao" : "avaliacoes"}
+                        {dayEntries.length} {dayEntries.length === 1 ? "avaliação" : "avaliações"}
                       </span>
                     )}
                   </button>
@@ -4274,7 +4326,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <aside className="rounded-xl border border-[#042558]/10 bg-white p-4">
             {!selectedDate ? (
               <p className="text-sm text-[#042558]/45">
-                Selecione um dia no calendario para ver as avaliações previstas.
+                Selecione um dia no calendário para ver as avaliações previstas.
               </p>
             ) : (
               <>
@@ -4766,7 +4818,7 @@ Estou à disposição para eventuais dúvidas!`;
               Tipo de Avaliação
             </h2>
             <p className="mt-1 text-xs text-[#042558]/50">
-              A separacao e feita automaticamente pela data de admissão do funcionário.
+              A separação é feita automaticamente pela data de admissão do funcionário.
             </p>
           </div>
           <div className="flex min-w-fit gap-6">
@@ -4941,14 +4993,16 @@ Estou à disposição para eventuais dúvidas!`;
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h3 className="font-semibold text-[#042558]">{review.name}</h3>
+                    <h3 className="font-semibold text-[#042558]">
+                      {withPortugueseAccents(review.name)}
+                    </h3>
                     <p className="mt-1 text-sm text-[#042558]/60">
                       {review.employee_name} · {review.job_title} · Líder: {review.leader_name}
                     </p>
                     {(review.period_name || review.due_date) && (
                       <p className="mt-1 text-xs text-[#042558]/45">
                         {review.review_type ? `${reviewTypeLabel(review.review_type)} - ` : ""}
-                        {review.period_name ?? "Periodo"}{" "}
+                        {withPortugueseAccents(review.period_name ?? "Período")}{" "}
                         {review.due_date
                           ? `- prevista para ${formatDateOnly(review.due_date)}`
                           : ""}
@@ -5235,7 +5289,7 @@ function QuestionInput({
         <option value="">Selecione</option>
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {withPortugueseAccents(option)}
           </option>
         ))}
       </select>

@@ -231,9 +231,9 @@ function itemsForQuestion(snapshot: JsonRecord, question: PerformanceQuestion) {
 const CULTURAL_SKILL_OPTIONS = [
   "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
   "Utilizo na pratica esta habilidade para garantir bons resultados nas minhas atividades",
-  "Preciso melhorar UM POUCO na aplicacao desta habilidade, nas minhas atividades.",
-  "Preciso melhorar MUITO na aplicacao desta habilidade, nesta atividade.",
-  "Preciso melhorar URGENTEMENTE na aplicacao desta habilidade, nas minhas atividades.",
+  "Preciso melhorar UM POUCO na aplicação desta habilidade, nas minhas atividades.",
+  "Preciso melhorar MUITO na aplicação desta habilidade, nesta atividade.",
+  "Preciso melhorar URGENTEMENTE na aplicação desta habilidade, nas minhas atividades.",
   "Não se aplica.",
 ];
 

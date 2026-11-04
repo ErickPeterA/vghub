@@ -182,7 +182,7 @@ export function statusLabel(status?: string | null) {
     draft: "Rascunho",
     released: "Liberado",
     in_progress: "Em andamento",
-    completed: "Concluido",
+    completed: "Concluído",
     not_started: "Não iniciado",
     revoked: "Revogado",
   };
@@ -193,7 +193,7 @@ export function itemStatusLabel(status?: string | null) {
   const labels: Record<string, string> = {
     not_started: "Não iniciado",
     in_progress: "Em andamento",
-    completed: "Concluido",
+    completed: "Concluído",
   };
   return labels[status ?? ""] ?? status ?? "-";
 }

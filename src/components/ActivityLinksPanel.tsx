@@ -802,7 +802,7 @@ function buildActivityResponsesPdf({
 }) {
   const sections = buildCompilationSections(responses, fields);
   const lines: Array<{ text: string; size?: number; gap?: number }> = [
-    { text: "Compilacao de respostas das atividades", size: 18, gap: 10 },
+    { text: "Compilação de respostas das atividades", size: 18, gap: 10 },
     { text: `Gerado em ${new Date().toLocaleString("pt-BR")}`, size: 10, gap: 18 },
     { text: `Total de respostas: ${responses.length}`, size: 11, gap: 20 },
   ];
