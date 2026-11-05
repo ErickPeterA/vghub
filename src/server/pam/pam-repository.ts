@@ -1,6 +1,7 @@
 import { query, withTransaction } from "@/server/db/pool";
 import { HttpError } from "@/server/http/errors";
 import { requireCanManageProject } from "@/server/projects/project-permissions";
+import { buildPamSuggestions } from "@/lib/pam";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -16,7 +17,7 @@ type PamPatch = {
 
 export async function getPamPageData(userId: string, projectId: string) {
   await requireCanManageProject(userId, projectId);
-  const [reviews, participants, pams, items] = await Promise.all([
+  const [reviews, participants, currentPams] = await Promise.all([
     query(
       `
         select id, project_id, employee_id, employee_name, job_title, name, review_type,
@@ -46,6 +47,20 @@ export async function getPamPageData(userId: string, projectId: string) {
       `,
       [projectId],
     ),
+  ]);
+
+  await syncPamItemsFromReviews(projectId, reviews.rows, participants.rows, currentPams.rows);
+
+  const [pams, items] = await Promise.all([
+    query(
+      `
+        select *
+          from public.pam
+         where project_id = $1::uuid
+         order by created_at desc
+      `,
+      [projectId],
+    ),
     query(
       `
         select pi.*
@@ -66,6 +81,79 @@ export async function getPamPageData(userId: string, projectId: string) {
   };
 }
 
+async function syncPamItemsFromReviews(
+  projectId: string,
+  reviews: Array<Record<string, unknown>>,
+  participants: Array<Record<string, unknown>>,
+  pams: Array<Record<string, unknown>>,
+) {
+  const reviewById = new Map(reviews.map((review) => [String(review.id), review]));
+  const answersByReview = new Map(
+    participants.map((participant) => [
+      String(participant.review_id),
+      (participant.response_answers ?? {}) as Record<string, string>,
+    ]),
+  );
+
+  for (const pam of pams) {
+    const reviewId = String(pam.review_id ?? "");
+    const pamId = String(pam.id ?? "");
+    const review = reviewById.get(reviewId);
+    if (!review || !pamId) continue;
+
+    const suggestions = buildPamSuggestions(review, answersByReview.get(reviewId) ?? {}, 80);
+    const detailedKeys = suggestions.map((suggestion) => suggestion.source_key);
+
+    for (const [index, suggestion] of suggestions.entries()) {
+      await query(
+        `
+          insert into public.pam_items (
+            pam_id, source, source_key, source_score, improvement_point, skill_label,
+            category_label, question_label, source_answer, display_order
+          ) values (
+            $1::uuid, $2::text, $3::text, $4::numeric, $5::text, $6::text,
+            $7::text, $8::text, $9::text, $10::integer
+          )
+          on conflict (pam_id, source, source_key) where source_key is not null
+          do update set
+            source_score = excluded.source_score,
+            improvement_point = excluded.improvement_point,
+            skill_label = excluded.skill_label,
+            category_label = excluded.category_label,
+            question_label = excluded.question_label,
+            source_answer = excluded.source_answer,
+            display_order = excluded.display_order
+        `,
+        [
+          pamId,
+          suggestion.source,
+          suggestion.source_key,
+          suggestion.source_score,
+          suggestion.improvement_point,
+          suggestion.skill_label,
+          suggestion.category_label,
+          suggestion.question_label,
+          suggestion.source_answer,
+          index + 1,
+        ],
+      );
+    }
+
+    await query(
+      `
+        delete from public.pam_items
+         where pam_id = $1::uuid
+           and source = 'performance_review'
+           and not (source_key = any($2::text[]))
+           and trim(problem_reason) = ''
+           and trim(improvement_plan) = ''
+           and trim(evidence_plan) = ''
+      `,
+      [pamId, detailedKeys],
+    );
+  }
+}
+
 export async function createPam(input: {
   actorUserId: string;
   projectId: string;
@@ -81,6 +169,9 @@ export async function createPam(input: {
     improvement_point: string;
     skill_label: string | null;
     display_order: number;
+    category_label?: string;
+    question_label?: string;
+    source_answer?: string;
   }>;
 }) {
   await requireCanManageProject(input.actorUserId, input.projectId);
@@ -122,9 +213,12 @@ export async function createPam(input: {
             source_score,
             improvement_point,
             skill_label,
+            category_label,
+            question_label,
+            source_answer,
             display_order
           )
-          values ($1::uuid, $2::text, $3::text, $4::numeric, $5::text, $6::text, $7::integer)
+          values ($1::uuid, $2::text, $3::text, $4::numeric, $5::text, $6::text, $7::text, $8::text, $9::text, $10::integer)
         `,
         [
           pam.id,
@@ -133,6 +227,9 @@ export async function createPam(input: {
           item.source_score,
           item.improvement_point,
           item.skill_label,
+          item.category_label ?? null,
+          item.question_label ?? null,
+          item.source_answer ?? null,
           item.display_order,
         ],
       );

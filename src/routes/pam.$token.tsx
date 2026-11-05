@@ -39,6 +39,9 @@ type PamItem = {
   source_score: number | null;
   improvement_point: string;
   skill_label: string | null;
+  category_label: string | null;
+  question_label: string | null;
+  source_answer: string | null;
   problem_reason: string;
   improvement_plan: string;
   evidence_plan: string;
@@ -300,6 +303,11 @@ function PublicPamPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        {item.category_label && (
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#042558]/45">
+                            {item.category_label}
+                          </p>
+                        )}
                         <p className="font-semibold text-[#042558]">
                           {displayPamImprovementPoint(
                             item.improvement_point,
@@ -307,7 +315,7 @@ function PublicPamPage() {
                           )}
                         </p>
                         <p className="mt-1 text-sm text-[#042558]/55">
-                          {item.skill_label || "Habilidade Não Informada"}
+                          {item.skill_label || "Item Não Informado"}
                         </p>
                       </div>
                       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[#042558]/35 md:hidden" />
@@ -396,9 +404,24 @@ function ActionPlanEditor({
           <h2 className="mt-1 text-xl font-semibold text-[#042558]">
             {displayPamImprovementPoint(item.improvement_point, fallbackItemTitle(item))}
           </h2>
-          <p className="mt-1 text-sm text-[#042558]/60">
-            Habilidade: {item.skill_label || "Não Informada"}
-          </p>
+          {item.category_label && (
+            <p className="mt-2 text-xs font-bold uppercase tracking-wider text-[#042558]/45">
+              Categoria: {item.category_label}
+            </p>
+          )}
+          {item.skill_label && item.skill_label !== item.improvement_point && (
+            <p className="mt-2 text-lg font-semibold text-[#042558]">{item.skill_label}</p>
+          )}
+          {item.question_label && item.question_label !== item.improvement_point && (
+            <p className="mt-3 text-base font-semibold leading-relaxed text-[#042558]">
+              {item.question_label}
+            </p>
+          )}
+          {item.source_answer && (
+            <p className="mt-2 rounded-lg bg-[#042558]/5 p-3 text-base leading-relaxed text-[#042558]/75">
+              {item.source_answer}
+            </p>
+          )}
         </div>
       </div>
 

@@ -144,6 +144,7 @@ type ReviewRow = {
   status: ReviewStatus;
   finalized_by: string | null;
   finalized_at: string | null;
+  has_pam?: boolean;
   created_at: string;
 };
 type EvaluationWeightConfigRow = {
@@ -2060,7 +2061,7 @@ function buildPerformanceBlockScores(
             criterion?.label ?? question.sectionTitle ?? "Critério",
           ),
           contextLabel:
-            question.dynamicSource === "activities" && question.groupId
+            question.dynamicSource && question.groupId
               ? displayQuestionGroupTitle(question)
               : null,
           questionLabel: displayQuestionLabel(question, collaborator.participant_type),
@@ -2165,6 +2166,7 @@ export function PerformanceComparisonPage({
   const [opinionOpen, setOpinionOpen] = useState(false);
   const [managementOpinion, setManagementOpinion] = useState("");
   const [finalizing, setFinalizing] = useState(false);
+  const [resultVisible, setResultVisible] = useState(false);
   const [weightConfigs, setWeightConfigs] = useState<EvaluationWeightConfigRow[]>([]);
   const [scoringConfigs, setScoringConfigs] = useState<CriterionScoringConfigRow[]>([]);
 
@@ -2211,11 +2213,19 @@ export function PerformanceComparisonPage({
   const questions = allReviewQuestions(effectiveReview);
   const comparisonBlocks = buildPerformanceComparisonBlocks(questions);
   const locked = review.status === "finalized";
+  const canShowResult =
+    collaborator?.status === "answered" && leader?.status === "answered";
   const scoreSummary = buildComparisonScoreSummary(
     effectiveReview,
     questions,
     collaborator,
     leader,
+  );
+  const scoreBlocks = buildPerformanceBlockScores(
+    effectiveReview,
+    questions,
+    collaborator,
+    scoreSummary,
   );
 
   const addComment = async (questionKey: string, content: string) => {
@@ -2280,6 +2290,24 @@ export function PerformanceComparisonPage({
     }
   };
 
+  const showResult = () => {
+    if (!canShowResult) {
+      toast.error("O resultado só pode ser visualizado depois das duas respostas.");
+      return;
+    }
+    setResultVisible(true);
+    window.setTimeout(() => {
+      document.getElementById("evaluation-result")?.scrollIntoView({ behavior: "smooth" });
+    }, 0);
+  };
+
+  const backToAnswers = () => {
+    setResultVisible(false);
+    window.setTimeout(() => {
+      document.getElementById("evaluation-answers")?.scrollIntoView({ behavior: "smooth" });
+    }, 0);
+  };
+
   const openFinalizeOpinion = () => {
     if (
       !collaborator ||
@@ -2307,7 +2335,7 @@ export function PerformanceComparisonPage({
           action: "finalize",
           reviewId: review.id,
           managementOpinion: opinion,
-          scoreSummary: toJson(scoreSummary),
+          scoreSummary: toJson({ ...scoreSummary, blocks: scoreBlocks }),
           evaluationWeights: toJson(effectiveReview.evaluation_weights_snapshot ?? {}),
           criterionScoring: toJson(effectiveReview.criterion_scoring_snapshot ?? {}),
         },
@@ -2358,12 +2386,19 @@ export function PerformanceComparisonPage({
               >
                 <RotateCcw className="h-4 w-4" /> Reabrir
               </button>
-            ) : (
+            ) : resultVisible ? (
               <button
                 onClick={openFinalizeOpinion}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
               >
                 <CheckCircle2 className="h-4 w-4" /> Finalizar Avaliação
+              </button>
+            ) : (
+              <button
+                onClick={showResult}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
+              >
+                Ver Resultado
               </button>
             )}
           </div>
@@ -2427,19 +2462,33 @@ export function PerformanceComparisonPage({
           </button>
         </div>
 
-        <div className="mb-4 rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4 text-sm">
+        <div
+          id="evaluation-answers"
+          className="mb-4 rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4 text-sm"
+        >
           <span className="font-semibold">Modo de apresentação:</span> respostas alinhadas lado a
           lado, observações por bloco, comentários por pergunta e histórico disponível quando houver
           alteração.
         </div>
 
-        {locked && (
-          <PerformanceScoreSummaryPanel
-            review={effectiveReview}
-            summary={scoreSummary}
-            questions={questions}
-            collaborator={collaborator}
-          />
+        {(locked || resultVisible) && (
+          <div id="evaluation-result">
+            {resultVisible && !locked && (
+              <button
+                type="button"
+                onClick={backToAnswers}
+                className="mb-3 inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+              >
+                <ChevronLeft className="h-4 w-4" /> Voltar para as Respostas
+              </button>
+            )}
+            <PerformanceScoreSummaryPanel
+              review={effectiveReview}
+              summary={scoreSummary}
+              questions={questions}
+              collaborator={collaborator}
+            />
+          </div>
         )}
 
         <div className="space-y-4">
@@ -3848,21 +3897,24 @@ const MONTH_LABELS = [
   "Dezembro",
 ];
 
-type AgendaState = "done" | "late" | "sent" | "upcoming";
+type AgendaState = "pam" | "done" | "late" | "sent" | "upcoming";
 
 const AGENDA_STATE_DOT: Record<AgendaState, string> = {
+  pam: "bg-violet-500",
   done: "bg-[#042558]/25",
   late: "bg-red-500",
   sent: "bg-emerald-500",
   upcoming: "bg-[#042558]",
 };
 const AGENDA_STATE_BADGE: Record<AgendaState, string> = {
+  pam: "bg-violet-50 text-violet-700",
   done: "bg-[#042558]/5 text-[#042558]/50",
   late: "bg-red-50 text-red-700",
   sent: "bg-emerald-50 text-emerald-700",
   upcoming: "bg-[#042558]/10 text-[#042558]",
 };
 const AGENDA_STATE_LABEL: Record<AgendaState, string> = {
+  pam: "PAM gerado",
   done: "Concluida",
   late: "Atrasada",
   sent: "Link enviado",
@@ -4003,7 +4055,9 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
       );
       const isFinalized = item.existingReview?.status === "finalized";
       const state: AgendaState = isFinalized
-        ? "done"
+        ? item.existingReview?.has_pam
+          ? "pam"
+          : "done"
         : item.dueDate < today && !linkSent
           ? "late"
           : linkSent
@@ -4240,6 +4294,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
           <option value="upcoming">Links Não Enviados</option>
           <option value="sent">Links Enviados</option>
           <option value="late">Somente Atrasadas</option>
+          <option value="pam">PAM gerado</option>
           <option value="done">Concluídas</option>
         </select>
       </div>
@@ -4273,7 +4328,7 @@ function PerformanceAgendaPanel({ projectId }: { projectId: string }) {
                 const isToday = key === today;
                 const isSelected = key === selectedDate;
                 const dominant: AgendaState | null = dayEntries.length
-                  ? ((["late", "upcoming", "sent", "done"] as AgendaState[]).find((state) =>
+                  ? ((["late", "upcoming", "sent", "pam", "done"] as AgendaState[]).find((state) =>
                       dayEntries.some((entry) => entry.state === state),
                     ) ?? null)
                   : null;
@@ -5009,7 +5064,9 @@ Estou à disposição para eventuais dúvidas!`;
                       </p>
                     )}
                     <span className="mt-2 inline-flex rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs font-medium text-[#042558]">
-                      {REVIEW_STATUS_LABEL[review.status]}
+                      {review.status === "finalized" && review.has_pam
+                        ? "PAM gerado"
+                        : REVIEW_STATUS_LABEL[review.status]}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">

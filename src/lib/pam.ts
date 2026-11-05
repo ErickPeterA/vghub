@@ -7,6 +7,9 @@ export type PamSuggestion = {
   source_score: number | null;
   improvement_point: string;
   skill_label: string;
+  category_label: string;
+  question_label: string;
+  source_answer: string;
 };
 
 type ScoreCriterion = {
@@ -23,6 +26,20 @@ type PerformanceQuestionLike = {
   groupTitle?: string;
   sectionTitle?: string;
   dynamicSource?: string;
+};
+
+type DetailedScoreItem = {
+  id?: unknown;
+  criterionLabel?: unknown;
+  contextLabel?: unknown;
+  questionLabel?: unknown;
+  answer?: unknown;
+  score?: unknown;
+};
+
+type DetailedScoreBlock = {
+  title?: unknown;
+  items?: unknown;
 };
 
 const NON_TITLE_VALUES = new Set([
@@ -167,6 +184,18 @@ function dynamicSkillLabel(question: PerformanceQuestionLike) {
   return labels[question.dynamicSource ?? ""] ?? (stringValue(question.sectionTitle) || "Geral");
 }
 
+function categoryLabel(question: PerformanceQuestionLike) {
+  const labels: Record<string, string> = {
+    activities: "Atividades",
+    indicators: "Indicadores",
+    culture_skills: "Habilidades Culturais",
+    role_skills: "Habilidades do Cargo",
+    behavior: "Postura e Comportamento",
+  };
+  if (question.dynamicSource) return labels[question.dynamicSource] ?? dynamicSkillLabel(question);
+  return cleanQuestionTitle(stringValue(question.sectionTitle), question) || "Instrução";
+}
+
 export function isPamItemFilled(item: {
   problem_reason?: string | null;
   improvement_plan?: string | null;
@@ -206,30 +235,75 @@ export function buildPamSuggestions(
   collaboratorAnswers?: Record<string, string>,
   threshold = 80,
 ): PamSuggestion[] {
-  const fromSummary = suggestionsFromScoreSummary(review.score_summary_snapshot, threshold);
-  if (fromSummary.length) return fromSummary;
-  return suggestionsFromAnswers(review.questions_snapshot, collaboratorAnswers ?? {}, threshold);
+  const fromDetailedSummary = suggestionsFromDetailedScoreSummary(
+    review.score_summary_snapshot,
+    threshold,
+  );
+  if (fromDetailedSummary.length) return fromDetailedSummary;
+  const fromAnswers = suggestionsFromAnswers(
+    review.questions_snapshot,
+    collaboratorAnswers ?? {},
+    threshold,
+  );
+  if (fromAnswers.length) return fromAnswers;
+  return suggestionsFromScoreSummary(review.score_summary_snapshot, threshold);
+}
+
+function suggestionsFromDetailedScoreSummary(
+  scoreSummary: unknown,
+  threshold: number,
+): PamSuggestion[] {
+  const blocks = asRecord(scoreSummary).blocks;
+  if (!Array.isArray(blocks)) return [];
+
+  return (blocks as DetailedScoreBlock[]).flatMap((block) => {
+    if (!Array.isArray(block.items)) return [];
+    const blockTitle = stringValue(block.title);
+    return (block.items as DetailedScoreItem[]).flatMap((item) => {
+      const score = numberValue(item.score);
+      const sourceKey = stringValue(item.id);
+      const question = stringValue(item.questionLabel);
+      const context = stringValue(item.contextLabel);
+      const category = context
+        ? blockTitle || stringValue(item.criterionLabel)
+        : stringValue(item.criterionLabel) || blockTitle;
+      if (score === null || score >= threshold || !sourceKey || !question) return [];
+      return [
+        {
+          source: "performance_review" as const,
+          source_key: sourceKey,
+          source_score: score,
+          improvement_point: context || question,
+          skill_label: context || category,
+          category_label: category,
+          question_label: question,
+          source_answer: stringValue(item.answer),
+        },
+      ];
+    });
+  });
 }
 
 function suggestionsFromScoreSummary(scoreSummary: unknown, threshold: number): PamSuggestion[] {
   const criteria = asRecord(scoreSummary).criteria;
   if (!Array.isArray(criteria)) return [];
 
-  return (criteria as ScoreCriterion[])
-    .map((criterion) => {
+  return (criteria as ScoreCriterion[]).flatMap((criterion): PamSuggestion[] => {
       const score = numberValue(criterion.collaboratorAverage);
       const label = stringValue(criterion.label);
       const key = stringValue(criterion.key) || label;
-      if (score === null || score >= threshold || !label) return null;
-      return {
+      if (score === null || score >= threshold || !label) return [];
+      return [{
         source: "performance_review" as const,
         source_key: key,
         source_score: score,
         improvement_point: label,
         skill_label: stringValue(criterion.requirementLabel) || label,
-      };
-    })
-    .filter((item): item is PamSuggestion => Boolean(item));
+        category_label: label,
+        question_label: label,
+        source_answer: "",
+      }];
+    });
 }
 
 function suggestionsFromAnswers(
@@ -238,39 +312,27 @@ function suggestionsFromAnswers(
   threshold: number,
 ) {
   if (!Array.isArray(questionsSnapshot)) return [];
-  const grouped = new Map<
-    string,
-    { title: string; skill: string; scores: number[]; order: number; sourceKey: string }
-  >();
+  return (questionsSnapshot as PerformanceQuestionLike[])
+    .flatMap((question, index): Array<{ order: number; suggestion: PamSuggestion }> => {
+      const score = estimateScoreFromAnswer(answers[question.id] ?? "");
+      if (score === null || score >= threshold) return [];
 
-  (questionsSnapshot as PerformanceQuestionLike[]).forEach((question, index) => {
-    const score = estimateScoreFromAnswer(answers[question.id] ?? "");
-    if (score === null || score >= threshold) return;
-    const key = question.groupId || question.id;
-    const current = grouped.get(key);
-    if (current) {
-      current.scores.push(score);
-      return;
-    }
-    grouped.set(key, {
-      title: groupTitle(question),
-      skill: dynamicSkillLabel(question),
-      scores: [score],
-      order: index,
-      sourceKey: key,
-    });
-  });
-
-  return Array.from(grouped.values())
+      const questionTitle = cleanQuestionTitle(stringValue(question.label), question);
+      const contextTitle = groupTitle(question);
+      return [{
+        order: index,
+        suggestion: {
+          source: "performance_review" as const,
+          source_key: question.id,
+          source_score: score,
+          improvement_point: questionTitle || contextTitle,
+          skill_label: contextTitle !== questionTitle ? contextTitle : categoryLabel(question),
+          category_label: categoryLabel(question),
+          question_label: questionTitle || contextTitle,
+          source_answer: answers[question.id] ?? "",
+        },
+      }];
+    })
     .sort((a, b) => a.order - b.order)
-    .map((item) => ({
-      source: "performance_review" as const,
-      source_key: item.sourceKey,
-      source_score:
-        Math.round(
-          (item.scores.reduce((sum, score) => sum + score, 0) / item.scores.length) * 100,
-        ) / 100,
-      improvement_point: item.title,
-      skill_label: item.skill,
-    }));
+    .map((item) => item.suggestion);
 }

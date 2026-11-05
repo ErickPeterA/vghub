@@ -94,7 +94,11 @@ export async function getPerformanceWorkspaceData(userId: string, projectId: str
     areas,
   ] = await Promise.all([
     query(
-      `select * from public.performance_reviews where project_id = $1::uuid order by created_at desc`,
+      `select r.*,
+              exists(select 1 from public.pam p where p.review_id = r.id) as has_pam
+         from public.performance_reviews r
+        where r.project_id = $1::uuid
+        order by r.created_at desc`,
       [projectId],
     ),
     query(`select * from public.performance_review_participants where project_id = $1::uuid`, [

@@ -1,12 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
-  ClipboardCopy,
-  ExternalLink,
-  Link2,
   Plus,
   RefreshCw,
-  RotateCcw,
   ShieldOff,
   Trash2,
 } from "lucide-react";
@@ -64,9 +60,12 @@ type PamItemRow = {
   pam_id: string;
   source: string;
   source_key: string | null;
-  source_score: number | null;
+  source_score: number | string | null;
   improvement_point: string;
   skill_label: string | null;
+  category_label: string | null;
+  question_label: string | null;
+  source_answer: string | null;
   problem_reason: string;
   improvement_plan: string;
   evidence_plan: string;
@@ -153,6 +152,9 @@ export function PamManager({ projectId }: { projectId: string }) {
               source_score: suggestion.source_score,
               improvement_point: suggestion.improvement_point,
               skill_label: suggestion.skill_label,
+              category_label: suggestion.category_label,
+              question_label: suggestion.question_label,
+              source_answer: suggestion.source_answer,
               display_order: index + 1,
             })),
           },
@@ -217,29 +219,25 @@ export function PamManager({ projectId }: { projectId: string }) {
       toast.error(error instanceof Error ? error.message : "Erro ao atualizar PAM.");
     }
   };
-  const releaseAndCopy = async (pam: PamRow) => {
+  const openPam = async (pam: PamRow) => {
     try {
-      await apiJson(`/api/projects/${projectId}/pam`, {
-        method: "PATCH",
-        body: {
-          pamId: pam.id,
-          patch: {
-            status: pam.status === "draft" ? "released" : pam.status,
-            released_at: pam.released_at ?? new Date().toISOString(),
-            link_revoked_at: null,
+      if (pam.status === "draft" || pam.link_revoked_at) {
+        await apiJson(`/api/projects/${projectId}/pam`, {
+          method: "PATCH",
+          body: {
+            pamId: pam.id,
+            patch: {
+              status: pam.status === "draft" ? "released" : pam.status,
+              released_at: pam.released_at ?? new Date().toISOString(),
+              link_revoked_at: null,
+            },
           },
-        },
-      });
-      await navigator.clipboard.writeText(publicPamUrl(pam.token));
-      toast.success("Link liberado e copiado");
-      await load();
+        });
+      }
+      window.location.assign(publicPamUrl(pam.token));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao liberar link.");
+      toast.error(error instanceof Error ? error.message : "Erro ao abrir o PAM.");
     }
-  };
-  const copyLink = async (pam: PamRow) => {
-    await navigator.clipboard.writeText(publicPamUrl(pam.token));
-    toast.success("Link copiado");
   };
 
   if (loading) {
@@ -371,24 +369,12 @@ export function PamManager({ projectId }: { projectId: string }) {
               onManualTitle={setManualTitle}
               onManualSkill={setManualSkill}
               onAddManual={() => void addManualItem()}
-              onRelease={() => void releaseAndCopy(selectedPam)}
-              onCopy={() => void copyLink(selectedPam)}
+              onOpen={() => void openPam(selectedPam)}
               onRevoke={() =>
                 void updatePam(
                   selectedPam,
                   { link_revoked_at: new Date().toISOString() } as Partial<PamRow>,
-                  "Link revogado",
-                )
-              }
-              onReopen={() =>
-                void updatePam(
-                  selectedPam,
-                  {
-                    status: "released",
-                    completed_at: null,
-                    link_revoked_at: null,
-                  } as Partial<PamRow>,
-                  "PAM reaberto",
+                  "PAM revogado",
                 )
               }
               onDeleteItem={(item) => void deleteItem(item)}
@@ -412,10 +398,8 @@ function PamDetail({
   onManualTitle,
   onManualSkill,
   onAddManual,
-  onRelease,
-  onCopy,
+  onOpen,
   onRevoke,
-  onReopen,
   onDeleteItem,
 }: {
   pam: PamRow;
@@ -425,15 +409,13 @@ function PamDetail({
   onManualTitle: (value: string) => void;
   onManualSkill: (value: string) => void;
   onAddManual: () => void;
-  onRelease: () => void;
-  onCopy: () => void;
+  onOpen: () => void;
   onRevoke: () => void;
-  onReopen: () => void;
   onDeleteItem: (item: PamItemRow) => void;
 }) {
   const completed = items.filter((item) => item.status === "completed").length;
   const filled = items.filter(isPamItemFilled).length;
-  const linkAvailable = pam.status !== "draft" && !pam.link_revoked_at;
+  const canRevoke = pam.status !== "draft" && !pam.link_revoked_at;
 
   return (
     <div className="space-y-4">
@@ -453,42 +435,18 @@ function PamDetail({
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={onRelease}
+              onClick={onOpen}
               className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
             >
-              <Link2 className="h-4 w-4" /> Liberar/copiar Link
+              Abrir
             </button>
-            {linkAvailable && (
-              <>
-                <button
-                  onClick={onCopy}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
-                >
-                  <ClipboardCopy className="h-4 w-4" /> Copiar
-                </button>
-                <a
-                  href={publicPamUrl(pam.token)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
-                >
-                  <ExternalLink className="h-4 w-4" /> Abrir
-                </a>
+            {canRevoke && (
                 <button
                   onClick={onRevoke}
                   className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
                 >
                   <ShieldOff className="h-4 w-4" /> Revogar
                 </button>
-              </>
-            )}
-            {pam.status === "completed" && (
-              <button
-                onClick={onReopen}
-                className="inline-flex items-center gap-2 rounded-lg border border-amber-200 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50"
-              >
-                <RotateCcw className="h-4 w-4" /> Reabrir
-              </button>
             )}
           </div>
         </div>
@@ -553,6 +511,11 @@ function PamDetail({
             >
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
+                  {item.category_label && (
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#042558]/45">
+                      {item.category_label}
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-[#042558]">
                       {displayPamImprovementPoint(item.improvement_point, fallbackItemTitle(item))}
@@ -563,10 +526,21 @@ function PamDetail({
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-[#042558]/55">
-                    Habilidade: {item.skill_label || "Não Informada"} -{" "}
-                    {item.source === "manual" ? "Manual" : "Avaliação"}
-                  </p>
+                  {item.skill_label && item.skill_label !== item.improvement_point && (
+                    <p className="mt-2 text-lg font-semibold text-[#042558]">
+                      {item.skill_label}
+                    </p>
+                  )}
+                  {item.question_label && item.question_label !== item.improvement_point && (
+                    <p className="mt-3 text-base font-semibold leading-relaxed text-[#042558]">
+                      {item.question_label}
+                    </p>
+                  )}
+                  {item.source_answer && (
+                    <p className="mt-2 rounded-lg bg-[#042558]/5 p-3 text-base leading-relaxed text-[#042558]/75">
+                      {item.source_answer}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
@@ -615,8 +589,12 @@ function formatDate(value?: string | null) {
   return new Date(value.length === 10 ? `${value}T00:00:00` : value).toLocaleDateString("pt-BR");
 }
 
-function formatScore(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(".", ",");
+function formatScore(value: number | string) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return "-";
+  return Number.isInteger(numericValue)
+    ? String(numericValue)
+    : numericValue.toFixed(1).replace(".", ",");
 }
 
 function fallbackItemTitle(item: PamItemRow) {
