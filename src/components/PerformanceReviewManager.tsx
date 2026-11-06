@@ -1939,7 +1939,7 @@ function roundScore(value: number | null) {
   return value === null ? null : Math.round(value * 100) / 100;
 }
 
-function buildComparisonScoreSummary(
+export function buildComparisonScoreSummary(
   review: ReviewRow,
   questions: PerformanceQuestion[],
   collaborator: ParticipantRow | null,
@@ -1953,14 +1953,14 @@ function buildComparisonScoreSummary(
   const careerLabel = stringFromUnknown(weightSnapshot.careerLabel) || null;
   let comparedTotal = 0;
   let matchesTotal = 0;
-  const collaboratorScoresTotal: number[] = [];
+  const leaderScoresTotal: number[] = [];
 
   const criteria = SCORE_CRITERIA.map((criterion) => {
     const criterionQuestions = questions.filter(
       (question) => criterionKeyForQuestion(question) === criterion.key,
     );
     const rules = scoreRulesForCriterion(review, criterion.key);
-    const collaboratorScores: number[] = [];
+    const leaderScores: number[] = [];
     let compared = 0;
     let matches = 0;
     const requirementLabels = new Set<string>();
@@ -1995,33 +1995,30 @@ function buildComparisonScoreSummary(
       // devem influenciar a nota final nem a classificação do resultado.
       if (!question.required) return;
 
-      const collaboratorScore = scoreAgainstJobRequirement(
-        collaboratorAnswer,
-        rules,
-        question,
-        review,
-      );
-      if (collaboratorScore !== null) {
-        collaboratorScores.push(collaboratorScore);
-        collaboratorScoresTotal.push(collaboratorScore);
+      const leaderScore = scoreAgainstJobRequirement(leaderAnswer, rules, question, review);
+      if (leaderScore !== null) {
+        leaderScores.push(leaderScore);
+        leaderScoresTotal.push(leaderScore);
       }
     });
 
     const weight = numberFromUnknown(weights[criterion.key]);
-    const collaboratorAverage = average(collaboratorScores);
+    const leaderAverage = average(leaderScores);
     return {
       key: criterion.key,
       label: criterion.label,
       weight,
       matches,
       compared,
-      scored: collaboratorScores.length,
-      collaboratorAverage: roundScore(collaboratorAverage),
-      leaderAverage: null,
+      scored: leaderScores.length,
+      // Mantidos por compatibilidade com o formato de snapshots já existente;
+      // a nota oficial é calculada exclusivamente pelas respostas do líder.
+      collaboratorAverage: roundScore(leaderAverage),
+      leaderAverage: roundScore(leaderAverage),
       collaboratorPoints: roundScore(
-        collaboratorAverage === null ? null : (weight * collaboratorAverage) / 100,
+        leaderAverage === null ? null : (weight * leaderAverage) / 100,
       ),
-      leaderPoints: null,
+      leaderPoints: roundScore(leaderAverage === null ? null : (weight * leaderAverage) / 100),
       requirementLabel: Array.from(requirementLabels).slice(0, 3).join(" | ") || null,
     };
   });
@@ -2031,8 +2028,8 @@ function buildComparisonScoreSummary(
     totalWeight: criteria.reduce((sum, criterion) => sum + criterion.weight, 0),
     matchPercent:
       comparedTotal > 0 ? Math.round((matchesTotal / comparedTotal) * 10000) / 100 : null,
-    collaboratorFinalScore: roundScore(average(collaboratorScoresTotal)) ?? 0,
-    leaderFinalScore: 0,
+    collaboratorFinalScore: roundScore(average(leaderScoresTotal)) ?? 0,
+    leaderFinalScore: roundScore(average(leaderScoresTotal)) ?? 0,
     criteria,
   };
 }
@@ -2114,19 +2111,19 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   return blocks;
 }
 
-function buildPerformanceBlockScores(
+export function buildPerformanceBlockScores(
   review: ReviewRow,
   questions: PerformanceQuestion[],
-  collaborator: ParticipantRow | null,
+  leader: ParticipantRow | null,
   summary: ComparisonScoreSummary,
 ): PerformanceBlockScore[] {
-  if (!collaborator || collaborator.status !== "answered") return [];
+  if (!leader || leader.status !== "answered") return [];
 
   return buildPerformanceComparisonBlocks(questions).flatMap((block) => {
     const items = block.questions.flatMap((question): PerformanceBlockScoreItem[] => {
       if (!question.required) return [];
 
-      const answer = collaborator.response_answers?.[question.id]?.trim() ?? "";
+      const answer = leader.response_answers?.[question.id]?.trim() ?? "";
       if (!answer) return [];
 
       const criterionKey = criterionKeyForQuestion(question);
@@ -2149,7 +2146,7 @@ function buildPerformanceBlockScores(
           ),
           contextLabel:
             question.dynamicSource && question.groupId ? displayQuestionGroupTitle(question) : null,
-          questionLabel: displayQuestionLabel(question, collaborator.participant_type),
+          questionLabel: displayQuestionLabel(question, leader.participant_type),
           answer,
           score: roundScore(score) ?? score,
           requirementLabel: requirementLabelForCriterion(review, question, criterionKey),
@@ -2305,12 +2302,7 @@ export function PerformanceComparisonPage({
     collaborator,
     leader,
   );
-  const scoreBlocks = buildPerformanceBlockScores(
-    effectiveReview,
-    questions,
-    collaborator,
-    scoreSummary,
-  );
+  const scoreBlocks = buildPerformanceBlockScores(effectiveReview, questions, leader, scoreSummary);
 
   const addComment = async (questionKey: string, content: string) => {
     if (locked) return;
@@ -2463,6 +2455,12 @@ export function PerformanceComparisonPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/projetos/${projectId}/avaliacao-desempenho`}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+            >
+              <ChevronLeft className="h-4 w-4" /> Voltar às Avaliações
+            </a>
             {review.status === "finalized" ? (
               <button
                 onClick={reopen}
@@ -2477,14 +2475,7 @@ export function PerformanceComparisonPage({
               >
                 <CheckCircle2 className="h-4 w-4" /> Finalizar Avaliação
               </button>
-            ) : (
-              <button
-                onClick={showResult}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
-              >
-                Ver Resultado
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -2570,7 +2561,7 @@ export function PerformanceComparisonPage({
               review={effectiveReview}
               summary={scoreSummary}
               questions={questions}
-              collaborator={collaborator}
+              leader={leader}
             />
           </div>
         )}
@@ -2683,6 +2674,19 @@ export function PerformanceComparisonPage({
             </section>
           ))}
         </div>
+
+        {!locked && !resultVisible && (
+          <div className="mt-6 flex justify-end border-t border-[#042558]/10 pt-5">
+            <button
+              type="button"
+              onClick={showResult}
+              disabled={!canShowResult}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#0a3472] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Ver Resultado
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -2805,12 +2809,12 @@ function PerformanceScoreSummaryPanel({
   review,
   summary,
   questions,
-  collaborator,
+  leader,
 }: {
   review: ReviewRow;
   summary: ComparisonScoreSummary;
   questions: PerformanceQuestion[];
-  collaborator: ParticipantRow | null;
+  leader: ParticipantRow | null;
 }) {
   const validAnswers = summary.criteria.reduce((sum, criterion) => sum + criterion.scored, 0);
 
@@ -2820,7 +2824,7 @@ function PerformanceScoreSummaryPanel({
         review={review}
         summary={summary}
         questions={questions}
-        collaborator={collaborator}
+        leader={leader}
       />
     );
   }
@@ -2843,10 +2847,10 @@ function PerformanceScoreSummaryPanel({
         <div className="grid min-w-full gap-3 sm:grid-cols-2 md:min-w-[380px]">
           <MetricTile
             tone="blue"
-            label="Nota Final"
+            label="Nota Final do Líder"
             value={formatSummaryNumber(summary.collaboratorFinalScore)}
           />
-          <MetricTile label="Respostas Validas" value={String(validAnswers)} />
+          <MetricTile label="Respostas Válidas do Líder" value={String(validAnswers)} />
         </div>
       </div>
 
@@ -2883,7 +2887,7 @@ function PerformanceScoreSummaryPanel({
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs font-medium">
                   <span className="rounded-full bg-[#042558]/10 px-2 py-1 text-[#042558]">
-                    Aderência {formatSummaryNumber(criterion.collaboratorAverage)}%
+                    Líder · Aderência {formatSummaryNumber(criterion.collaboratorAverage)}%
                   </span>
                   <span className="rounded-full bg-sky-50 px-2 py-1 text-sky-700">
                     Pontos {formatSummaryNumber(criterion.collaboratorPoints)}
@@ -2892,7 +2896,7 @@ function PerformanceScoreSummaryPanel({
               </div>
               <div className="mt-3">
                 <ScoreBar
-                  label={`Nota do colaborador: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
+                  label={`Nota do líder: ${formatSummaryNumber(criterion.collaboratorPoints)} pts`}
                   value={criterion.collaboratorAverage}
                   color="Bg-[#042558]"
                 />
@@ -2909,14 +2913,14 @@ function PerformanceFinalVisualizationPanel({
   review,
   summary,
   questions,
-  collaborator,
+  leader,
 }: {
   review: ReviewRow;
   summary: ComparisonScoreSummary;
   questions: PerformanceQuestion[];
-  collaborator: ParticipantRow | null;
+  leader: ParticipantRow | null;
 }) {
-  const blockScores = buildPerformanceBlockScores(review, questions, collaborator, summary);
+  const blockScores = buildPerformanceBlockScores(review, questions, leader, summary);
   const positiveBlocks = blockScores
     .filter((block) => block.score >= 80)
     .sort((a, b) => b.score - a.score);
@@ -2936,12 +2940,12 @@ function PerformanceFinalVisualizationPanel({
             <h2 className="text-2xl font-bold">Resultado da Avaliação</h2>
             <p className="mt-1 text-sm text-white/70">
               {summary.careerLabel ? `Carreira: ${summary.careerLabel} - ` : ""}
-              Nota total tirada na avaliação.
+              Nota calculada exclusivamente com as respostas do líder.
             </p>
           </div>
           <div className="grid min-w-full gap-2 sm:grid-cols-3 md:min-w-[520px]">
             <ResultPill
-              label="Nota Total"
+              label="Nota do Líder"
               value={formatSummaryNumber(summary.collaboratorFinalScore)}
             />
             <ResultPill label="Notas Positivas" value={String(positiveBlocks.length)} />
@@ -2981,7 +2985,7 @@ function PerformanceFinalVisualizationPanel({
           </div>
 
           <p className="text-xs font-medium text-[#042558]/50">
-            {validAnswers} resposta(s) válida(s) entraram no cálculo.
+            {validAnswers} resposta(s) válida(s) do líder entraram no cálculo.
           </p>
         </div>
       </div>
@@ -3104,9 +3108,14 @@ function PerformanceBlockScoreCard({
                 {formatSummaryNumber(item.score)}%
               </span>
             </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]/75">
-              {item.answer}
-            </p>
+            <div className="mt-2 rounded-md border border-[#042558]/10 bg-white px-3 py-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#042558]/50">
+                Líder
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]/75">
+                {item.answer}
+              </p>
+            </div>
             {item.requirementLabel && (
               <p className="mt-2 text-xs text-[#042558]/55">Requisito: {item.requirementLabel}</p>
             )}

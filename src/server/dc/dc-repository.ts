@@ -115,10 +115,15 @@ export async function getDcListPageData(userId: string, projectId: string) {
   const [dcs, areas, profiles, role] = await Promise.all([
     query(
       `
-        select id, cargo, departamento, unidade_negocio, created_by, created_at, etapa
-          from public.descricoes_cargo
-         where project_id = $1::uuid
-         order by created_at desc
+        select d.id,
+               coalesce(nullif(trim(p.nome), ''), d.cargo) as cargo,
+               d.departamento, d.unidade_negocio, d.created_by, d.created_at, d.etapa
+          from public.descricoes_cargo d
+          left join public.project_positions p
+            on p.id = d.organization_position_id
+           and p.project_id = d.project_id
+         where d.project_id = $1::uuid
+         order by d.created_at desc
       `,
       [projectId],
     ),
@@ -258,6 +263,16 @@ export async function createDc(input: {
   payload: DcPayload;
 }) {
   await requireCanReadProject(input.actorUserId, input.projectId);
+  const linkedPosition = input.payload.organization_position_id
+    ? await query<{ nome: string }>(
+        `select nome from public.project_positions where id = $1::uuid and project_id = $2::uuid`,
+        [input.payload.organization_position_id, input.projectId],
+      )
+    : null;
+  const payload = {
+    ...input.payload,
+    cargo: linkedPosition?.rows[0]?.nome?.trim() || input.payload.cargo,
+  };
   const result = await query<{ id: string }>(
     `
       insert into public.descricoes_cargo (
@@ -274,7 +289,7 @@ export async function createDc(input: {
       )
       returning id
     `,
-    payloadValues(input.projectId, input.actorUserId, input.payload),
+    payloadValues(input.projectId, input.actorUserId, payload),
   );
   return result.rows[0];
 }
@@ -289,6 +304,16 @@ export async function updateDc(input: {
   await requireCanReadProject(input.actorUserId, input.projectId);
   return withTransaction(async (client) => {
     await client.query(`select set_config('app.current_user_id', $1, true)`, [input.actorUserId]);
+    const linkedPosition = input.payload.organization_position_id
+      ? await client.query<{ nome: string }>(
+          `select nome from public.project_positions where id = $1::uuid and project_id = $2::uuid`,
+          [input.payload.organization_position_id, input.projectId],
+        )
+      : null;
+    const payload = {
+      ...input.payload,
+      cargo: linkedPosition?.rows[0]?.nome?.trim() || input.payload.cargo,
+    };
     const result = await client.query(
       `
         update public.descricoes_cargo
@@ -316,7 +341,7 @@ export async function updateDc(input: {
            and project_id = $2::uuid
         returning id
       `,
-      [input.dcId, input.projectId, ...payloadValuesOnly(input.payload)],
+      [input.dcId, input.projectId, ...payloadValuesOnly(payload)],
     );
     if (!result.rows[0]) throw new HttpError(404, "not_found", "Descrição não encontrada.");
 
