@@ -1,5 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 
+import { canonicalizePerformanceAnswers } from "@/lib/performance-response-labels";
+
 export const Route = createFileRoute("/api/public/performance-draft/$token")({
   server: {
     handlers: {
@@ -43,7 +45,7 @@ export const Route = createFileRoute("/api/public/performance-draft/$token")({
             return Response.json({ error: "expired", message: "Link expirado." }, { status: 410 });
 
           const review = await query(
-            `select status from public.performance_reviews where id = $1::uuid limit 1`,
+            `select status, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
             [participant.review_id],
           );
           if (review.rows[0]?.status === "finalized")
@@ -53,6 +55,10 @@ export const Route = createFileRoute("/api/public/performance-draft/$token")({
             );
 
           const savedAt = new Date().toISOString();
+          const questions = Array.isArray(review.rows[0]?.questions_snapshot)
+            ? review.rows[0].questions_snapshot
+            : [];
+          const answers = canonicalizePerformanceAnswers(body.answers ?? {}, questions);
           await query(
             `
               update public.performance_review_participants
@@ -61,7 +67,7 @@ export const Route = createFileRoute("/api/public/performance-draft/$token")({
                      status = 'in_progress'
                where id = $1::uuid
             `,
-            [participant.id, JSON.stringify(body.answers ?? {}), savedAt],
+            [participant.id, JSON.stringify(answers), savedAt],
           );
           return Response.json({ ok: true, savedAt });
         } catch (error) {

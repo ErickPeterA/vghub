@@ -1,5 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 
+import { canonicalizePerformanceAnswers } from "@/lib/performance-response-labels";
+
 export const Route = createFileRoute("/api/public/performance-response/$token")({
   server: {
     handlers: {
@@ -66,10 +68,13 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
                 : {};
             const submittedAnswers =
               body.answers && typeof body.answers === "object" ? body.answers : {};
-            const answers = { ...draftAnswers, ...submittedAnswers } as Record<string, unknown>;
             const questions = Array.isArray(review.rows[0]?.questions_snapshot)
               ? review.rows[0].questions_snapshot
               : [];
+            const answers = canonicalizePerformanceAnswers(
+              { ...draftAnswers, ...submittedAnswers } as Record<string, unknown>,
+              questions,
+            );
             const missingQuestion = questions.find(
               (question: {
                 id?: unknown;

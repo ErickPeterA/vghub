@@ -31,6 +31,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { apiJson } from "@/lib/api";
 import {
+  canonicalResponseValue,
   leaderOptionsFor,
   responseOptionForParticipant,
   responseValueForParticipant,
@@ -860,7 +861,7 @@ const DEFAULT_EXPERIENCE_90_QUESTIONS: PerformanceQuestion[] = [
 ];
 
 function withRequiredPerformanceQuestions(questions: PerformanceQuestion[]) {
-  const normalized = questions.map((question) => ({
+  const normalized: PerformanceQuestion[] = questions.map((question) => ({
     ...question,
     leaderOptions: question.leaderOptions ?? leaderOptionsFor(question.options),
   }));
@@ -1431,6 +1432,15 @@ function requirementValueForStaticCriterion(
           "necessario",
         ];
   const values = items.flatMap((item) => {
+    if (criterionKey === "instruction") {
+      const educationLevel = valuesByFieldTerms(
+        item,
+        sectionFields,
+        ["nivel", "escolaridade", "formacao"],
+        ["requisito"],
+      ).filter((value) => educationRank(value) !== null);
+      if (educationLevel.length) return educationLevel;
+    }
     const byFields = valuesByFieldTerms(item, sectionFields, strictInclude);
     if (byFields.length) return byFields;
     return valuesByKeyTerms(item, fallbackInclude).filter((value) => !isInternalOptionValue(value));
@@ -1666,10 +1676,13 @@ function scoreFromAnswerText(answer: string) {
 }
 
 function scoreFromQuestionOrder(answer: string, question: PerformanceQuestion) {
-  const options = Array.from(
-    new Set([...(question.options ?? []), ...(question.leaderOptions ?? [])]),
-  ).filter((option) => !normalizeLookup(option).includes("não se aplica"));
-  const index = options.findIndex((option) => normalizeLookup(option) === normalizeLookup(answer));
+  const options = (question.options ?? []).filter(
+    (option) => !normalizeLookup(option).includes("não se aplica"),
+  );
+  const canonicalAnswer = canonicalResponseValue(answer, question.options, question.leaderOptions);
+  const index = options.findIndex(
+    (option) => normalizeLookup(option) === normalizeLookup(canonicalAnswer),
+  );
   if (index < 0) return null;
   if (options.length <= 1) return 100;
   const ascending =
@@ -1695,17 +1708,29 @@ function rankedIndex(value: string, options: string[]) {
 
 function educationRank(value: string) {
   const normalized = normalizeLookup(value).replace(/_/g, " ");
-  const direct = rankedIndex(value, EDUCATION_LEVEL_OPTIONS);
-  if (direct !== null) return direct;
   if (normalized.includes("pos") || normalized.includes("mba")) return 7;
   if (normalized.includes("superior") && normalized.includes("incompleto")) return 5;
+  // The assessment's generic "Ensino Superior" option and a job requirement
+  // of "Cursando Ensino Superior" represent the same accepted level.
+  if (normalized.includes("cursando") && normalized.includes("superior")) return 6;
   if (normalized.includes("superior") || normalized.includes("graduacao")) return 6;
   if (normalized.includes("tecnico")) return 4;
   if (normalized.includes("medio") && normalized.includes("incompleto")) return 2;
   if (normalized.includes("medio")) return 3;
   if (normalized.includes("fundamental") && normalized.includes("incompleto")) return 0;
   if (normalized.includes("fundamental")) return 1;
+  const direct = rankedIndex(value, EDUCATION_LEVEL_OPTIONS);
+  if (direct !== null) return direct;
   return null;
+}
+
+function educationRequirementLabel(value: string) {
+  const normalized = normalizeLookup(value).replace(/_/g, " ");
+  if (normalized.includes("cursando") && normalized.includes("superior")) {
+    return "Cursando Ensino Superior";
+  }
+  const rank = educationRank(value);
+  return rank === null ? value : (EDUCATION_LEVEL_OPTIONS[rank] ?? value);
 }
 
 function experienceRank(value: string) {
@@ -1726,34 +1751,60 @@ function experienceRank(value: string) {
   return 0;
 }
 
-function requirementCandidatesFromSnapshot(review: ReviewRow, criterionKey: string) {
+function isDesirableRequirementItem(item: Record<string, unknown>) {
+  return Object.entries(item).some(([key, value]) => {
+    if (!normalizeLookup(key).includes("requisito")) return false;
+    return stringsFromUnknown(value).some((entry) => normalizeLookup(entry).includes("desejavel"));
+  });
+}
+
+function requirementItemsFromSnapshot(review: ReviewRow, criterionKey: string) {
   const snapshot = review.job_description_snapshot ?? {};
+  return criterionKey === "instruction"
+    ? asRecordArray(snapshot.instrucao)
+    : criterionKey === "experience"
+      ? asRecordArray(snapshot.experiencia)
+      : [];
+}
+
+function requirementCandidatesFromSnapshot(review: ReviewRow, criterionKey: string) {
   const values =
     criterionKey === "instruction"
-      ? asRecordArray(snapshot.instrucao).flatMap((item) =>
-          valuesByKeyTerms(item, [
-            "escolaridade",
-            "formacao",
-            "minimo",
-            "requisito",
-            "pre_requisito",
-            "exigido",
-            "necessario",
-          ]),
-        )
-      : asRecordArray(snapshot.experiencia).flatMap((item) =>
-          valuesByKeyTerms(item, [
-            "experiencia",
-            "tempo",
-            "anos",
-            "minimo",
-            "requisito",
-            "pre_requisito",
-            "exigido",
-            "necessario",
-          ]),
-        );
-  return uniqueCleanValues(values.filter((value) => !isInternalOptionValue(value)));
+      ? requirementItemsFromSnapshot(review, criterionKey)
+          .filter((item) => !isDesirableRequirementItem(item))
+          .flatMap((item) =>
+            valuesByKeyTerms(item, [
+              "nivel",
+              "escolaridade",
+              "formacao",
+              "minimo",
+              "requisito",
+              "pre_requisito",
+              "exigido",
+              "necessario",
+            ]),
+          )
+      : requirementItemsFromSnapshot(review, criterionKey)
+          .filter((item) => !isDesirableRequirementItem(item))
+          .flatMap((item) =>
+            valuesByKeyTerms(item, [
+              "experiencia",
+              "tempo",
+              "anos",
+              "minimo",
+              "requisito",
+              "pre_requisito",
+              "exigido",
+              "necessario",
+            ]),
+          );
+  return uniqueCleanValues(
+    values.filter((value) =>
+      criterionKey === "instruction"
+        ? educationRank(value) !== null
+        : !isInternalOptionValue(value),
+    ),
+  );
 }
 
 function answerRankForCriterion(value: string, criterionKey: string) {
@@ -1824,9 +1875,18 @@ function scoreAgainstJobRequirement(
     return scoreAnswer(answer, rules, question);
   }
   const answerRank = answerRankForCriterion(answer, criterionKey);
-  const requirementValues = question.requirementValue?.trim()
-    ? [question.requirementValue]
-    : requirementCandidatesFromSnapshot(review, criterionKey);
+  const snapshotRequirements = requirementCandidatesFromSnapshot(review, criterionKey);
+  const questionRequirement = question.requirementValue?.trim() ?? "";
+  const questionIsDesirable = normalizeLookup(questionRequirement).includes("desejavel");
+  const hasDesirableSnapshot = requirementItemsFromSnapshot(review, criterionKey).some(
+    isDesirableRequirementItem,
+  );
+  const requirementValues = snapshotRequirements.length
+    ? snapshotRequirements
+    : questionRequirement && !questionIsDesirable
+      ? [questionRequirement]
+      : [];
+  if (!requirementValues.length && (questionIsDesirable || hasDesirableSnapshot)) return null;
   const requirementRank = requirementRankForCriterion(requirementValues, criterionKey);
   if (answerRank === null || requirementRank === null) return scoreAnswer(answer, rules, question);
   return scoreForRequirementDifference(answerRank - requirementRank, criterionKey, rules);
@@ -1837,9 +1897,17 @@ function requirementLabelForCriterion(
   question: PerformanceQuestion,
   criterionKey: string,
 ) {
-  if (question.requirementValue?.trim()) return question.requirementValue.trim();
   if (criterionKey !== "instruction" && criterionKey !== "experience") return null;
-  return requirementCandidatesFromSnapshot(review, criterionKey).join(" | ") || null;
+  const snapshotRequirements = requirementCandidatesFromSnapshot(review, criterionKey);
+  if (snapshotRequirements.length) {
+    return snapshotRequirements
+      .map((value) => (criterionKey === "instruction" ? educationRequirementLabel(value) : value))
+      .join(" | ");
+  }
+  const questionRequirement = question.requirementValue?.trim() ?? "";
+  return questionRequirement && !normalizeLookup(questionRequirement).includes("desejavel")
+    ? questionRequirement
+    : null;
 }
 
 function scoreAnswer(
@@ -1885,6 +1953,7 @@ function buildComparisonScoreSummary(
   const careerLabel = stringFromUnknown(weightSnapshot.careerLabel) || null;
   let comparedTotal = 0;
   let matchesTotal = 0;
+  const collaboratorScoresTotal: number[] = [];
 
   const criteria = SCORE_CRITERIA.map((criterion) => {
     const criterionQuestions = questions.filter(
@@ -1904,11 +1973,27 @@ function buildComparisonScoreSummary(
       if (collaboratorAnswer.trim() && leaderAnswer.trim()) {
         compared += 1;
         comparedTotal += 1;
-        if (normalizeLookup(collaboratorAnswer) === normalizeLookup(leaderAnswer)) {
+        const canonicalCollaboratorAnswer = canonicalResponseValue(
+          collaboratorAnswer,
+          question.options,
+          question.leaderOptions,
+        );
+        const canonicalLeaderAnswer = canonicalResponseValue(
+          leaderAnswer,
+          question.options,
+          question.leaderOptions,
+        );
+        if (
+          normalizeLookup(canonicalCollaboratorAnswer) === normalizeLookup(canonicalLeaderAnswer)
+        ) {
           matches += 1;
           matchesTotal += 1;
         }
       }
+
+      // Perguntas opcionais servem apenas como informação complementar e não
+      // devem influenciar a nota final nem a classificação do resultado.
+      if (!question.required) return;
 
       const collaboratorScore = scoreAgainstJobRequirement(
         collaboratorAnswer,
@@ -1916,7 +2001,10 @@ function buildComparisonScoreSummary(
         question,
         review,
       );
-      if (collaboratorScore !== null) collaboratorScores.push(collaboratorScore);
+      if (collaboratorScore !== null) {
+        collaboratorScores.push(collaboratorScore);
+        collaboratorScoresTotal.push(collaboratorScore);
+      }
     });
 
     const weight = numberFromUnknown(weights[criterion.key]);
@@ -1943,10 +2031,7 @@ function buildComparisonScoreSummary(
     totalWeight: criteria.reduce((sum, criterion) => sum + criterion.weight, 0),
     matchPercent:
       comparedTotal > 0 ? Math.round((matchesTotal / comparedTotal) * 10000) / 100 : null,
-    collaboratorFinalScore:
-      roundScore(
-        criteria.reduce((sum, criterion) => sum + (criterion.collaboratorPoints ?? 0), 0),
-      ) ?? 0,
+    collaboratorFinalScore: roundScore(average(collaboratorScoresTotal)) ?? 0,
     leaderFinalScore: 0,
     criteria,
   };
@@ -2039,6 +2124,8 @@ function buildPerformanceBlockScores(
 
   return buildPerformanceComparisonBlocks(questions).flatMap((block) => {
     const items = block.questions.flatMap((question): PerformanceBlockScoreItem[] => {
+      if (!question.required) return [];
+
       const answer = collaborator.response_answers?.[question.id]?.trim() ?? "";
       if (!answer) return [];
 
@@ -2061,9 +2148,7 @@ function buildPerformanceBlockScores(
             criterion?.label ?? question.sectionTitle ?? "Critério",
           ),
           contextLabel:
-            question.dynamicSource && question.groupId
-              ? displayQuestionGroupTitle(question)
-              : null,
+            question.dynamicSource && question.groupId ? displayQuestionGroupTitle(question) : null,
           questionLabel: displayQuestionLabel(question, collaborator.participant_type),
           answer,
           score: roundScore(score) ?? score,
@@ -2213,8 +2298,7 @@ export function PerformanceComparisonPage({
   const questions = allReviewQuestions(effectiveReview);
   const comparisonBlocks = buildPerformanceComparisonBlocks(questions);
   const locked = review.status === "finalized";
-  const canShowResult =
-    collaborator?.status === "answered" && leader?.status === "answered";
+  const canShowResult = collaborator?.status === "answered" && leader?.status === "answered";
   const scoreSummary = buildComparisonScoreSummary(
     effectiveReview,
     questions,
@@ -2504,11 +2588,21 @@ export function PerformanceComparisonPage({
                 {block.questions.map((question) => {
                   const leftAnswer = collaborator?.response_answers?.[question.id] ?? "";
                   const rightAnswer = leader?.response_answers?.[question.id] ?? "";
+                  const canonicalLeftAnswer = canonicalResponseValue(
+                    leftAnswer,
+                    question.options,
+                    question.leaderOptions,
+                  );
+                  const canonicalRightAnswer = canonicalResponseValue(
+                    rightAnswer,
+                    question.options,
+                    question.leaderOptions,
+                  );
                   const different =
                     question.type === "select" &&
                     leftAnswer &&
                     rightAnswer &&
-                    leftAnswer !== rightAnswer;
+                    normalizeLookup(canonicalLeftAnswer) !== normalizeLookup(canonicalRightAnswer);
                   return (
                     <article
                       key={question.id}

@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { canonicalResponseValue } from "@/lib/performance-response-labels";
 import { query, withTransaction } from "@/server/db/pool";
 import { HttpError } from "@/server/http/errors";
 import {
@@ -588,8 +589,9 @@ async function lockReviewForManage(
     status: string;
     employee_id: string | null;
     due_date: string | null;
+    questions_snapshot: unknown;
   }>(
-    `select id, status::text, employee_id, due_date from public.performance_reviews where id = $1::uuid and project_id = $2::uuid for update`,
+    `select id, status::text, employee_id, due_date, questions_snapshot from public.performance_reviews where id = $1::uuid and project_id = $2::uuid for update`,
     [reviewId, projectId],
   );
   if (!result.rows[0]) throw new HttpError(404, "not_found", "Avaliação não encontrada.");
@@ -645,13 +647,22 @@ export async function updatePerformanceAnswer(args: {
     if (!participant.rows[0]) throw new HttpError(404, "not_found", "Participante não encontrado.");
     const currentAnswers = participant.rows[0].response_answers ?? {};
     const previousAnswer = currentAnswers[args.questionKey] ?? "";
-    if (previousAnswer === args.nextAnswer) return;
+    const questions = Array.isArray(review.questions_snapshot) ? review.questions_snapshot : [];
+    const question = questions.find(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null && item.id === args.questionKey,
+    );
+    const options = Array.isArray(question?.options)
+      ? question.options.filter((option): option is string => typeof option === "string")
+      : undefined;
+    const leaderOptions = Array.isArray(question?.leaderOptions)
+      ? question.leaderOptions.filter((option): option is string => typeof option === "string")
+      : undefined;
+    const nextAnswer = canonicalResponseValue(args.nextAnswer, options, leaderOptions);
+    if (previousAnswer === nextAnswer) return;
     await client.query(
       `update public.performance_review_participants set response_answers = $2::jsonb where id = $1::uuid`,
-      [
-        args.participantId,
-        JSON.stringify({ ...currentAnswers, [args.questionKey]: args.nextAnswer }),
-      ],
+      [args.participantId, JSON.stringify({ ...currentAnswers, [args.questionKey]: nextAnswer })],
     );
     await client.query(
       `insert into public.performance_answer_history (participant_id, review_id, question_key, previous_answer, new_answer, changed_by) values ($1::uuid, $2::uuid, $3, $4, $5, $6::uuid)`,
@@ -660,7 +671,7 @@ export async function updatePerformanceAnswer(args: {
         args.reviewId,
         args.questionKey,
         previousAnswer,
-        args.nextAnswer,
+        nextAnswer,
         args.actorUserId,
       ],
     );

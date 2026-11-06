@@ -62,6 +62,59 @@ export function leaderOptionsFor(options?: string[]) {
     : undefined;
 }
 
+function normalizeResponseOption(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/** Resolves a participant-specific label to the canonical collaborator option. */
+export function canonicalResponseValue(
+  value: string,
+  options?: string[],
+  leaderOptions?: string[],
+) {
+  if (!value || !options?.length) return value;
+  const normalizedValue = normalizeResponseOption(value);
+  const canonicalIndex = options.findIndex(
+    (option) => normalizeResponseOption(option) === normalizedValue,
+  );
+  if (canonicalIndex >= 0) return options[canonicalIndex];
+
+  const resolvedLeaderOptions =
+    leaderOptions?.length === options.length
+      ? leaderOptions
+      : options.map((option) => responseOptionForParticipant(option, "leader"));
+  const leaderIndex = resolvedLeaderOptions.findIndex(
+    (option) => normalizeResponseOption(option) === normalizedValue,
+  );
+  return leaderIndex >= 0 ? options[leaderIndex] : value;
+}
+
+export function canonicalizePerformanceAnswers(
+  answers: Record<string, unknown>,
+  questions: Array<{ id?: unknown; options?: unknown; leaderOptions?: unknown }>,
+) {
+  const result = { ...answers };
+  for (const question of questions) {
+    if (typeof question.id !== "string" || typeof result[question.id] !== "string") continue;
+    const options = Array.isArray(question.options)
+      ? question.options.filter((option): option is string => typeof option === "string")
+      : undefined;
+    const leaderOptions = Array.isArray(question.leaderOptions)
+      ? question.leaderOptions.filter((option): option is string => typeof option === "string")
+      : undefined;
+    result[question.id] = canonicalResponseValue(
+      result[question.id] as string,
+      options,
+      leaderOptions,
+    );
+  }
+  return result;
+}
+
 export function responseValueForParticipant(
   value: string,
   options: string[] | undefined,
@@ -70,25 +123,18 @@ export function responseValueForParticipant(
 ) {
   if (!value || !options?.length) return value;
 
-  const normalize = (text: string) =>
-    text
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
+  const canonicalValue = canonicalResponseValue(value, options, participantOptions);
   const resolvedOptions =
     participantType === "leader"
       ? (participantOptions ??
         options.map((option) => responseOptionForParticipant(option, participantType)))
       : options;
-  const normalizedValue = normalize(value);
-  const canonicalOption = resolvedOptions.find((option) => normalize(option) === normalizedValue);
-  if (canonicalOption) return canonicalOption;
+  if (participantType !== "leader") return canonicalValue;
 
-  if (participantType !== "leader") return value;
+  const originalIndex = options.findIndex(
+    (option) => normalizeResponseOption(option) === normalizeResponseOption(canonicalValue),
+  );
+  if (originalIndex < 0) return canonicalValue;
 
-  const originalIndex = options.indexOf(value);
-  if (originalIndex < 0) return value;
-
-  return resolvedOptions[originalIndex] ?? value;
+  return resolvedOptions[originalIndex] ?? canonicalValue;
 }

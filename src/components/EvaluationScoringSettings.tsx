@@ -215,7 +215,9 @@ function uniqueRulesFromQuestions(questions: PerformanceQuestion[]) {
     .forEach((question) => {
       const criterion = criterionForQuestion(question);
       if (!criterion || criterion === "instruction" || criterion === "experience") return;
-      [...(question.options ?? []), ...(question.leaderOptions ?? [])].forEach((option) => {
+      // Leader wording is only a display variant of the canonical option and
+      // must not create a second scoring rule.
+      (question.options ?? []).forEach((option) => {
         const label = option.trim();
         const key = normalizeLookup(label);
         if (!label || seen[criterion].has(key)) return;
