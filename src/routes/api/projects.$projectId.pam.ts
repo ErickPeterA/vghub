@@ -40,7 +40,6 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
                 employeeId: z.string().uuid().nullable(),
                 employeeName: z.string().min(1),
                 jobTitle: z.string().nullable(),
-                feedbackDate: z.string().nullable(),
                 items: z.array(
                   z.object({
                     source: z.string(),
@@ -76,7 +75,6 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
               employeeId: mode.employeeId,
               employeeName: mode.employeeName,
               jobTitle: mode.jobTitle,
-              feedbackDate: mode.feedbackDate,
               items: mode.items,
             });
             return Response.json({ ok: true, pam }, { status: 201 });

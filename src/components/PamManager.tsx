@@ -132,8 +132,6 @@ export function PamManager({ projectId }: { projectId: string }) {
 
     const collaborator = participants.find((participant) => participant.review_id === review.id);
     const suggestions = buildPamSuggestions(review, collaborator?.response_answers ?? {}, 80);
-    const feedbackDate = (review.finalized_at ?? new Date().toISOString()).slice(0, 10);
-
     try {
       const { pam } = await apiJson<{ ok: boolean; pam: PamRow }>(
         `/api/projects/${projectId}/pam`,
@@ -145,7 +143,6 @@ export function PamManager({ projectId }: { projectId: string }) {
             employeeId: review.employee_id,
             employeeName: review.employee_name,
             jobTitle: review.job_title,
-            feedbackDate,
             items: suggestions.map((suggestion, index) => ({
               source: suggestion.source,
               source_key: suggestion.source_key,
@@ -257,12 +254,17 @@ export function PamManager({ projectId }: { projectId: string }) {
           </p>
           <h1 className="font-display text-3xl text-[#042558]">PAM</h1>
         </div>
-        <button
-          onClick={() => void load()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
-        >
-          <RefreshCw className="h-4 w-4" /> Atualizar
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a href="/api/google/gmail/connect" className="inline-flex items-center justify-center rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white">
+            Conectar Gmail
+          </a>
+          <button
+            onClick={() => void load()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+          >
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </button>
+        </div>
       </header>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
@@ -526,19 +528,9 @@ function PamDetail({
                       </span>
                     )}
                   </div>
-                  {item.skill_label && item.skill_label !== item.improvement_point && (
-                    <p className="mt-2 text-lg font-semibold text-[#042558]">
-                      {item.skill_label}
-                    </p>
-                  )}
                   {item.question_label && item.question_label !== item.improvement_point && (
-                    <p className="mt-3 text-base font-semibold leading-relaxed text-[#042558]">
+                    <p className="mt-1 text-sm font-semibold text-[#042558]/45">
                       {item.question_label}
-                    </p>
-                  )}
-                  {item.source_answer && (
-                    <p className="mt-2 rounded-lg bg-[#042558]/5 p-3 text-base leading-relaxed text-[#042558]/75">
-                      {item.source_answer}
                     </p>
                   )}
                 </div>

@@ -39,6 +39,7 @@ type DetailedScoreItem = {
 
 type DetailedScoreBlock = {
   title?: unknown;
+  eyebrow?: unknown;
   items?: unknown;
 };
 
@@ -186,10 +187,10 @@ function dynamicSkillLabel(question: PerformanceQuestionLike) {
 
 function categoryLabel(question: PerformanceQuestionLike) {
   const labels: Record<string, string> = {
-    activities: "Atividades",
-    indicators: "Indicadores",
-    culture_skills: "Habilidades Culturais",
-    role_skills: "Habilidades do Cargo",
+    activities: "Atividade",
+    indicators: "Indicador",
+    culture_skills: "Habilidade Cultural",
+    role_skills: "Habilidade do Cargo",
     behavior: "Postura e Comportamento",
   };
   if (question.dynamicSource) return labels[question.dynamicSource] ?? dynamicSkillLabel(question);
@@ -237,6 +238,7 @@ export function buildPamSuggestions(
 ): PamSuggestion[] {
   const fromDetailedSummary = suggestionsFromDetailedScoreSummary(
     review.score_summary_snapshot,
+    review.questions_snapshot,
     threshold,
   );
   if (fromDetailedSummary.length) return fromDetailedSummary;
@@ -251,10 +253,17 @@ export function buildPamSuggestions(
 
 function suggestionsFromDetailedScoreSummary(
   scoreSummary: unknown,
+  questionsSnapshot: unknown,
   threshold: number,
 ): PamSuggestion[] {
   const blocks = asRecord(scoreSummary).blocks;
   if (!Array.isArray(blocks)) return [];
+  const questionsById = new Map(
+    (Array.isArray(questionsSnapshot) ? questionsSnapshot : []).map((question) => {
+      const typedQuestion = question as PerformanceQuestionLike;
+      return [typedQuestion.id, typedQuestion] as const;
+    }),
+  );
 
   return (blocks as DetailedScoreBlock[]).flatMap((block) => {
     if (!Array.isArray(block.items)) return [];
@@ -264,9 +273,10 @@ function suggestionsFromDetailedScoreSummary(
       const sourceKey = stringValue(item.id);
       const question = stringValue(item.questionLabel);
       const context = stringValue(item.contextLabel);
-      const category = context
-        ? blockTitle || stringValue(item.criterionLabel)
-        : stringValue(item.criterionLabel) || blockTitle;
+      const sourceQuestion = questionsById.get(sourceKey);
+      const category = sourceQuestion
+        ? categoryLabel(sourceQuestion)
+        : stringValue(block.eyebrow) || blockTitle || stringValue(item.criterionLabel);
       if (score === null || score >= threshold || !sourceKey || !question) return [];
       return [
         {
@@ -274,7 +284,7 @@ function suggestionsFromDetailedScoreSummary(
           source_key: sourceKey,
           source_score: score,
           improvement_point: context || question,
-          skill_label: context || category,
+          skill_label: "",
           category_label: category,
           question_label: question,
           source_answer: stringValue(item.answer),

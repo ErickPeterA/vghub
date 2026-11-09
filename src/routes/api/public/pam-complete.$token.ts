@@ -5,8 +5,8 @@ export const Route = createFileRoute("/api/public/pam-complete/$token")({
     handlers: {
       POST: async ({ params }) => {
         try {
-          const { completePublicPam } = await import("@/server/pam/pam-repository");
-          return Response.json({ ok: true, ...(await completePublicPam(params.token)) });
+          const { finalizePamAndCreateDraft } = await import("@/server/pam/pam-delivery");
+          return Response.json({ ok: true, ...(await finalizePamAndCreateDraft(params.token)) });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");
           return toErrorResponse(error);

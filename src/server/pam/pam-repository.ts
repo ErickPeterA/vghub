@@ -161,7 +161,6 @@ export async function createPam(input: {
   employeeId: string | null;
   employeeName: string;
   jobTitle: string | null;
-  feedbackDate: string | null;
   items: Array<{
     source: string;
     source_key: string | null;
@@ -188,8 +187,14 @@ export async function createPam(input: {
           status,
           created_by
         )
-        values ($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text, $6::date, 'draft', $7::uuid)
-        returning *
+        select $1::uuid, $2::uuid, review.id, $4::text, $5::text,
+               (review.finalized_at at time zone 'America/Sao_Paulo')::date, 'draft', $6::uuid
+          from public.performance_reviews review
+         where review.id = $3::uuid
+           and review.project_id = $1::uuid
+           and review.status = 'finalized'
+           and review.finalized_at is not null
+        returning public.pam.*
       `,
       [
         input.projectId,
@@ -197,11 +202,17 @@ export async function createPam(input: {
         input.reviewId,
         input.employeeName,
         input.jobTitle,
-        input.feedbackDate,
         input.actorUserId,
       ],
     );
     const pam = pamResult.rows[0];
+    if (!pam) {
+      throw new HttpError(
+        409,
+        "review_not_finalized",
+        "O PAM só pode ser criado após a finalização da avaliação pela GP.",
+      );
+    }
 
     for (const item of input.items) {
       await client.query(

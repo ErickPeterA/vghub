@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -71,6 +71,8 @@ function PublicPamPage() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [gmailStatus, setGmailStatus] = useState<"idle" | "creating" | "created" | "failed" | "missing_email">("idle");
+  const [pdfGenerated, setPdfGenerated] = useState(false);
   const dirtyItemId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -106,14 +108,6 @@ function PublicPamPage() {
   const allFilled = items.length > 0 && items.every(isPamItemFilled);
   const progressPercent = items.length ? Math.round((completedCount / items.length) * 100) : 0;
   const editable = Boolean(data?.editable && data.pam.status !== "completed");
-  const currentIndex = useMemo(
-    () =>
-      Math.max(
-        0,
-        items.findIndex((item) => item.id === selectedItem?.id),
-      ),
-    [items, selectedItem?.id],
-  );
 
   useEffect(() => {
     if (!dirtyItemId.current || !editable) return;
@@ -181,13 +175,15 @@ function PublicPamPage() {
     setState("completing");
     try {
       const response = await fetch(`/api/public/pam-complete/${token}`, { method: "POST" });
-      const json = (await response.json()) as { ok?: true; completedAt?: string } | PamError;
+      const json = (await response.json()) as { ok?: true; completedAt?: string; pdfGenerated?: boolean; gmail?: "created" | "failed" | "missing_email" } | PamError;
       if (!response.ok || "error" in json) {
         setErrorMsg((json as PamError).message ?? "Não foi possível concluir.");
         setState("ready");
         return;
       }
       setItems((current) => current.map((item) => ({ ...item, status: "completed" })));
+      setPdfGenerated(Boolean("pdfGenerated" in json && json.pdfGenerated));
+      if ("gmail" in json && json.gmail) setGmailStatus(json.gmail);
       setData((current) =>
         current
           ? {
@@ -206,6 +202,15 @@ function PublicPamPage() {
       setErrorMsg("Erro de conexão.");
       setState("ready");
     }
+  };
+
+  const retryGmailDraft = async () => {
+    setGmailStatus("creating");
+    try {
+      const response = await fetch(`/api/public/pam-gmail-retry/${token}`, { method: "POST" });
+      const json = await response.json() as { gmail?: "created" | "failed" | "missing_email" } | PamError;
+      setGmailStatus(response.ok && "gmail" in json && json.gmail ? json.gmail : "failed");
+    } catch { setGmailStatus("failed"); }
   };
 
   return (
@@ -271,8 +276,17 @@ function PublicPamPage() {
                   <CheckCircle2 className="h-5 w-5" /> Plano de Ação Concluído
                 </div>
                 <p className="mt-1 text-sm text-emerald-700">
-                  As respostas foram registradas e agora ficam disponíveis para o gestor.
+                  {gmailStatus === "created" ? "PAM finalizado e rascunho criado no Gmail." : "O PAM foi finalizado e o PDF foi gerado."}
                 </p>
+                <div className="mt-4 space-y-2 text-sm">
+                  <p>PDF: {pdfGenerated ? "✓ Gerado" : "Gerando..."}</p>
+                  <p>Gmail: {gmailStatus === "created" ? "Rascunho criado" : gmailStatus === "creating" ? "Criando..." : gmailStatus === "missing_email" ? "Colaborador sem e-mail cadastrado" : gmailStatus === "failed" ? "Falha ao criar" : "Não criado"}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {pdfGenerated && <a href={`/api/public/pam-pdf/${token}`} className="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-medium">Baixar PDF</a>}
+                    {gmailStatus === "created" && <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noreferrer" className="rounded-lg bg-emerald-700 px-3 py-2 font-medium text-white">Abrir Gmail</a>}
+                    {gmailStatus === "failed" && <button onClick={() => void retryGmailDraft()} className="rounded-lg bg-amber-600 px-3 py-2 font-medium text-white">Tentar criar rascunho novamente</button>}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -314,9 +328,12 @@ function PublicPamPage() {
                             fallbackItemTitle(item),
                           )}
                         </p>
-                        <p className="mt-1 text-sm text-[#042558]/55">
-                          {item.skill_label || "Item Não Informado"}
-                        </p>
+                        {item.question_label &&
+                          item.question_label !== item.improvement_point && (
+                            <p className="mt-1 text-sm font-semibold text-[#042558]/45">
+                              {item.question_label}
+                            </p>
+                          )}
                       </div>
                       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[#042558]/35 md:hidden" />
                     </div>
@@ -324,11 +341,6 @@ function PublicPamPage() {
                       <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-xs font-medium text-[#042558]">
                         {itemStatusLabel(item.status)}
                       </span>
-                      {isPamItemFilled(item) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                          <Check className="h-3 w-3" /> Preenchido
-                        </span>
-                      )}
                     </div>
                   </button>
                 ))}
@@ -338,8 +350,6 @@ function PublicPamPage() {
                 {selectedItem && (
                   <ActionPlanEditor
                     item={selectedItem}
-                    index={currentIndex + 1}
-                    total={items.length}
                     editable={editable}
                     onBack={() => setMobileDetailOpen(false)}
                     onChange={(patch) => updateItem(selectedItem.id, patch)}
@@ -360,7 +370,7 @@ function PublicPamPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#042558]/90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {state === "completing" ? "Concluindo..." : "Concluir Plano de Ação"}
+                  {state === "completing" ? "Finalizando e gerando PDF..." : "Finalizar PAM + Gerar PDF"}
                 </button>
               </div>
             </footer>
@@ -373,16 +383,12 @@ function PublicPamPage() {
 
 function ActionPlanEditor({
   item,
-  index,
-  total,
   editable,
   onBack,
   onChange,
   onComplete,
 }: {
   item: PamItem;
-  index: number;
-  total: number;
   editable: boolean;
   onBack: () => void;
   onChange: (patch: Partial<PamItem>) => void;
@@ -398,30 +404,9 @@ function ActionPlanEditor({
       </button>
       <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#042558]/45">
-            Ponto {index} De {total}
-          </p>
           <h2 className="mt-1 text-xl font-semibold text-[#042558]">
             {displayPamImprovementPoint(item.improvement_point, fallbackItemTitle(item))}
           </h2>
-          {item.category_label && (
-            <p className="mt-2 text-xs font-bold uppercase tracking-wider text-[#042558]/45">
-              Categoria: {item.category_label}
-            </p>
-          )}
-          {item.skill_label && item.skill_label !== item.improvement_point && (
-            <p className="mt-2 text-lg font-semibold text-[#042558]">{item.skill_label}</p>
-          )}
-          {item.question_label && item.question_label !== item.improvement_point && (
-            <p className="mt-3 text-base font-semibold leading-relaxed text-[#042558]">
-              {item.question_label}
-            </p>
-          )}
-          {item.source_answer && (
-            <p className="mt-2 rounded-lg bg-[#042558]/5 p-3 text-base leading-relaxed text-[#042558]/75">
-              {item.source_answer}
-            </p>
-          )}
         </div>
       </div>
 

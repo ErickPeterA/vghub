@@ -45,6 +45,8 @@ import { Route as ApiPublicPerformanceResponseTokenRouteImport } from './routes/
 import { Route as ApiPublicPerformanceFormTokenRouteImport } from './routes/api/public/performance-form.$token'
 import { Route as ApiPublicPerformanceDraftTokenRouteImport } from './routes/api/public/performance-draft.$token'
 import { Route as ApiPublicPamTokenRouteImport } from './routes/api/public/pam.$token'
+import { Route as ApiPublicPamPdfTokenRouteImport } from './routes/api/public/pam-pdf.$token'
+import { Route as ApiPublicPamGmailRetryTokenRouteImport } from './routes/api/public/pam-gmail-retry.$token'
 import { Route as ApiPublicPamDraftTokenRouteImport } from './routes/api/public/pam-draft.$token'
 import { Route as ApiPublicPamCompleteTokenRouteImport } from './routes/api/public/pam-complete.$token'
 import { Route as ApiPublicActivityResponseTokenRouteImport } from './routes/api/public/activity-response.$token'
@@ -62,6 +64,8 @@ import { Route as ApiProjectsProjectIdActivityLinksRouteImport } from './routes/
 import { Route as ApiProjectsProjectIdActivityConfigRouteImport } from './routes/api/projects.$projectId.activity-config'
 import { Route as ApiProjectsProjectIdActivityCompilationRouteImport } from './routes/api/projects.$projectId.activity-compilation'
 import { Route as ApiProjectsProjectIdAccessRouteImport } from './routes/api/projects.$projectId.access'
+import { Route as ApiGoogleGmailConnectRouteImport } from './routes/api/google.gmail.connect'
+import { Route as ApiGoogleGmailCallbackRouteImport } from './routes/api/google.gmail.callback'
 import { Route as ApiDcDcIdCommentsRouteImport } from './routes/api/dc.$dcId.comments'
 import { Route as ApiBaseOptionsOptionIdRouteImport } from './routes/api/base.options.$optionId'
 import { Route as ApiBaseFieldsOrderRouteImport } from './routes/api/base.fields.order'
@@ -278,6 +282,17 @@ const ApiPublicPamTokenRoute = ApiPublicPamTokenRouteImport.update({
   path: '/api/public/pam/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPamPdfTokenRoute = ApiPublicPamPdfTokenRouteImport.update({
+  id: '/api/public/pam-pdf/$token',
+  path: '/api/public/pam-pdf/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPamGmailRetryTokenRoute =
+  ApiPublicPamGmailRetryTokenRouteImport.update({
+    id: '/api/public/pam-gmail-retry/$token',
+    path: '/api/public/pam-gmail-retry/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPamDraftTokenRoute = ApiPublicPamDraftTokenRouteImport.update({
   id: '/api/public/pam-draft/$token',
   path: '/api/public/pam-draft/$token',
@@ -377,6 +392,16 @@ const ApiProjectsProjectIdAccessRoute =
     path: '/access',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
+const ApiGoogleGmailConnectRoute = ApiGoogleGmailConnectRouteImport.update({
+  id: '/api/google/gmail/connect',
+  path: '/api/google/gmail/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleGmailCallbackRoute = ApiGoogleGmailCallbackRouteImport.update({
+  id: '/api/google/gmail/callback',
+  path: '/api/google/gmail/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDcDcIdCommentsRoute = ApiDcDcIdCommentsRouteImport.update({
   id: '/api/dc/$dcId/comments',
   path: '/api/dc/$dcId/comments',
@@ -561,6 +586,8 @@ export interface FileRoutesByFullPath {
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
+  '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
+  '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -578,6 +605,8 @@ export interface FileRoutesByFullPath {
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
   '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam-gmail-retry/$token': typeof ApiPublicPamGmailRetryTokenRoute
+  '/api/public/pam-pdf/$token': typeof ApiPublicPamPdfTokenRoute
   '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
@@ -634,6 +663,8 @@ export interface FileRoutesByTo {
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
+  '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
+  '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -651,6 +682,8 @@ export interface FileRoutesByTo {
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
   '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam-gmail-retry/$token': typeof ApiPublicPamGmailRetryTokenRoute
+  '/api/public/pam-pdf/$token': typeof ApiPublicPamPdfTokenRoute
   '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
@@ -713,6 +746,8 @@ export interface FileRoutesById {
   '/api/base/fields/order': typeof ApiBaseFieldsOrderRoute
   '/api/base/options/$optionId': typeof ApiBaseOptionsOptionIdRoute
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
+  '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
+  '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -730,6 +765,8 @@ export interface FileRoutesById {
   '/api/public/activity-response/$token': typeof ApiPublicActivityResponseTokenRoute
   '/api/public/pam-complete/$token': typeof ApiPublicPamCompleteTokenRoute
   '/api/public/pam-draft/$token': typeof ApiPublicPamDraftTokenRoute
+  '/api/public/pam-gmail-retry/$token': typeof ApiPublicPamGmailRetryTokenRoute
+  '/api/public/pam-pdf/$token': typeof ApiPublicPamPdfTokenRoute
   '/api/public/pam/$token': typeof ApiPublicPamTokenRoute
   '/api/public/performance-draft/$token': typeof ApiPublicPerformanceDraftTokenRoute
   '/api/public/performance-form/$token': typeof ApiPublicPerformanceFormTokenRoute
@@ -792,6 +829,8 @@ export interface FileRouteTypes {
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
     | '/api/dc/$dcId/comments'
+    | '/api/google/gmail/callback'
+    | '/api/google/gmail/connect'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -809,6 +848,8 @@ export interface FileRouteTypes {
     | '/api/public/activity-response/$token'
     | '/api/public/pam-complete/$token'
     | '/api/public/pam-draft/$token'
+    | '/api/public/pam-gmail-retry/$token'
+    | '/api/public/pam-pdf/$token'
     | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
@@ -865,6 +906,8 @@ export interface FileRouteTypes {
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
     | '/api/dc/$dcId/comments'
+    | '/api/google/gmail/callback'
+    | '/api/google/gmail/connect'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -882,6 +925,8 @@ export interface FileRouteTypes {
     | '/api/public/activity-response/$token'
     | '/api/public/pam-complete/$token'
     | '/api/public/pam-draft/$token'
+    | '/api/public/pam-gmail-retry/$token'
+    | '/api/public/pam-pdf/$token'
     | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
@@ -943,6 +988,8 @@ export interface FileRouteTypes {
     | '/api/base/fields/order'
     | '/api/base/options/$optionId'
     | '/api/dc/$dcId/comments'
+    | '/api/google/gmail/callback'
+    | '/api/google/gmail/connect'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -960,6 +1007,8 @@ export interface FileRouteTypes {
     | '/api/public/activity-response/$token'
     | '/api/public/pam-complete/$token'
     | '/api/public/pam-draft/$token'
+    | '/api/public/pam-gmail-retry/$token'
+    | '/api/public/pam-pdf/$token'
     | '/api/public/pam/$token'
     | '/api/public/performance-draft/$token'
     | '/api/public/performance-form/$token'
@@ -995,11 +1044,15 @@ export interface RootRouteChildren {
   AtividadesPreencherTokenRoute: typeof AtividadesPreencherTokenRoute
   AvaliacaoDesempenhoPreencherTokenRoute: typeof AvaliacaoDesempenhoPreencherTokenRoute
   ApiDcDcIdCommentsRoute: typeof ApiDcDcIdCommentsRoute
+  ApiGoogleGmailCallbackRoute: typeof ApiGoogleGmailCallbackRoute
+  ApiGoogleGmailConnectRoute: typeof ApiGoogleGmailConnectRoute
   ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
   ApiPublicPamCompleteTokenRoute: typeof ApiPublicPamCompleteTokenRoute
   ApiPublicPamDraftTokenRoute: typeof ApiPublicPamDraftTokenRoute
+  ApiPublicPamGmailRetryTokenRoute: typeof ApiPublicPamGmailRetryTokenRoute
+  ApiPublicPamPdfTokenRoute: typeof ApiPublicPamPdfTokenRoute
   ApiPublicPamTokenRoute: typeof ApiPublicPamTokenRoute
   ApiPublicPerformanceDraftTokenRoute: typeof ApiPublicPerformanceDraftTokenRoute
   ApiPublicPerformanceFormTokenRoute: typeof ApiPublicPerformanceFormTokenRoute
@@ -1260,6 +1313,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPamTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/pam-pdf/$token': {
+      id: '/api/public/pam-pdf/$token'
+      path: '/api/public/pam-pdf/$token'
+      fullPath: '/api/public/pam-pdf/$token'
+      preLoaderRoute: typeof ApiPublicPamPdfTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pam-gmail-retry/$token': {
+      id: '/api/public/pam-gmail-retry/$token'
+      path: '/api/public/pam-gmail-retry/$token'
+      fullPath: '/api/public/pam-gmail-retry/$token'
+      preLoaderRoute: typeof ApiPublicPamGmailRetryTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pam-draft/$token': {
       id: '/api/public/pam-draft/$token'
       path: '/api/public/pam-draft/$token'
@@ -1378,6 +1445,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/projects/$projectId/access'
       preLoaderRoute: typeof ApiProjectsProjectIdAccessRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/google/gmail/connect': {
+      id: '/api/google/gmail/connect'
+      path: '/api/google/gmail/connect'
+      fullPath: '/api/google/gmail/connect'
+      preLoaderRoute: typeof ApiGoogleGmailConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/gmail/callback': {
+      id: '/api/google/gmail/callback'
+      path: '/api/google/gmail/callback'
+      fullPath: '/api/google/gmail/callback'
+      preLoaderRoute: typeof ApiGoogleGmailCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/dc/$dcId/comments': {
       id: '/api/dc/$dcId/comments'
@@ -1838,11 +1919,15 @@ const rootRouteChildren: RootRouteChildren = {
   AvaliacaoDesempenhoPreencherTokenRoute:
     AvaliacaoDesempenhoPreencherTokenRoute,
   ApiDcDcIdCommentsRoute: ApiDcDcIdCommentsRoute,
+  ApiGoogleGmailCallbackRoute: ApiGoogleGmailCallbackRoute,
+  ApiGoogleGmailConnectRoute: ApiGoogleGmailConnectRoute,
   ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,
   ApiPublicPamCompleteTokenRoute: ApiPublicPamCompleteTokenRoute,
   ApiPublicPamDraftTokenRoute: ApiPublicPamDraftTokenRoute,
+  ApiPublicPamGmailRetryTokenRoute: ApiPublicPamGmailRetryTokenRoute,
+  ApiPublicPamPdfTokenRoute: ApiPublicPamPdfTokenRoute,
   ApiPublicPamTokenRoute: ApiPublicPamTokenRoute,
   ApiPublicPerformanceDraftTokenRoute: ApiPublicPerformanceDraftTokenRoute,
   ApiPublicPerformanceFormTokenRoute: ApiPublicPerformanceFormTokenRoute,
