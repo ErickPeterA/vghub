@@ -15,7 +15,8 @@
     "db:apply-local-auth": "node --env-file=.env scripts/apply-local-auth-migration.mjs",
     "db:apply-organization-layout": "node --env-file=.env scripts/apply-organization-layout-migration.mjs",
     "db:apply-organization-canvas": "node --env-file=.env scripts/apply-organization-canvas-migration.mjs",
-    "db:apply-performance-link-extensions": "node --env-file=.env scripts/apply-performance-link-extensions-migration.mjs"
+    "db:apply-performance-link-extensions": "node --env-file=.env scripts/apply-performance-link-extensions-migration.mjs",
+    "db:apply-pam-pdf-refresh": "node --env-file=.env scripts/apply-pam-pdf-refresh-migration.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

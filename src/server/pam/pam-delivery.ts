@@ -8,7 +8,7 @@ type DeliveryPam = { id: string; employee_name: string; job_title: string | null
 
 async function load(token: string) {
   const result = await query<DeliveryPam>(`select p.id, p.employee_name, p.job_title, p.feedback_date, p.completed_at, e.email, p.pdf_data, p.pdf_filename, p.gmail_draft_id from public.pam p left join public.project_employees e on e.id = p.employee_id and e.project_id = p.project_id where p.token = $1 and p.link_revoked_at is null limit 1`, [token]);
-  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM nao encontrado.");
+  if (!result.rows[0]) throw new HttpError(404, "not_found", "PAM não encontrado.");
   return result.rows[0];
 }
 

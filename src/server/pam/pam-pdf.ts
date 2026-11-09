@@ -57,15 +57,23 @@ function build(lines: PdfLine[]) {
 
 export function createPamPdf(input: { employeeName: string; jobTitle: string | null; feedbackDate: string | null; completedAt: string | null; items: Array<Record<string, unknown>> }) {
   const lines: PdfLine[] = [
-    { text: "Plano de Acao para Melhoria (PAM)", size: 18, gap: 12 },
+    { text: "Plano de Ação para Melhoria (PAM)", size: 18, gap: 12 },
     { text: `Colaborador: ${input.employeeName}`, size: 12, gap: 6 },
-    { text: `Cargo: ${input.jobTitle || "Nao informado"}`, size: 10, gap: 6 },
-    { text: `Feedback: ${input.feedbackDate || "Nao informado"}`, size: 10, gap: 6 },
-    { text: `Finalizado em: ${input.completedAt || "Nao informado"}`, size: 10, gap: 18 },
+    { text: `Cargo: ${input.jobTitle || "Não informado"}`, size: 10, gap: 6 },
+    { text: `Feedback: ${input.feedbackDate || "Não informado"}`, size: 10, gap: 6 },
+    { text: `Finalizado em: ${input.completedAt || "Não informado"}`, size: 10, gap: 18 },
   ];
   input.items.forEach((item, index) => {
-    lines.push({ text: `${index + 1}. ${String(item.improvement_point ?? "Ponto de melhoria")}`, size: 13, gap: 8 });
-    const fields = [["Pergunta", item.question_label], ["Por que isso e um problema?", item.problem_reason], ["Como pretende melhorar?", item.improvement_plan], ["Como vai conferir a evolucao?", item.evidence_plan]];
+    const category = String(item.category_label ?? item.skill_label ?? "Ponto de melhoria");
+    const answer = String(item.improvement_point ?? "Ponto de melhoria");
+    const question = String(item.question_label ?? "");
+    lines.push({ text: `${index + 1}. ${category}`, size: 10, gap: 5 });
+    wrap(answer).forEach((text) => lines.push({ text, size: 13, gap: 4 }));
+    if (question && question !== answer) {
+      wrap(question).forEach((text) => lines.push({ text, size: 10, gap: 4 }));
+    }
+    lines.push({ text: "", gap: 5 });
+    const fields = [["Por que isso é um problema?", item.problem_reason], ["Como pretende melhorar?", item.improvement_plan], ["Como vai conferir a evolução?", item.evidence_plan]];
     for (const [label, value] of fields) {
       lines.push({ text: String(label), size: 10, gap: 4 });
       wrap(String(value ?? "")).forEach((text) => lines.push({ text: `  ${text}`, size: 10, gap: 3 }));

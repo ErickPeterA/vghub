@@ -64,6 +64,8 @@ import { Route as ApiProjectsProjectIdActivityLinksRouteImport } from './routes/
 import { Route as ApiProjectsProjectIdActivityConfigRouteImport } from './routes/api/projects.$projectId.activity-config'
 import { Route as ApiProjectsProjectIdActivityCompilationRouteImport } from './routes/api/projects.$projectId.activity-compilation'
 import { Route as ApiProjectsProjectIdAccessRouteImport } from './routes/api/projects.$projectId.access'
+import { Route as ApiGoogleGmailStatusRouteImport } from './routes/api/google.gmail.status'
+import { Route as ApiGoogleGmailDisconnectRouteImport } from './routes/api/google.gmail.disconnect'
 import { Route as ApiGoogleGmailConnectRouteImport } from './routes/api/google.gmail.connect'
 import { Route as ApiGoogleGmailCallbackRouteImport } from './routes/api/google.gmail.callback'
 import { Route as ApiDcDcIdCommentsRouteImport } from './routes/api/dc.$dcId.comments'
@@ -392,6 +394,17 @@ const ApiProjectsProjectIdAccessRoute =
     path: '/access',
     getParentRoute: () => ApiProjectsProjectIdRoute,
   } as any)
+const ApiGoogleGmailStatusRoute = ApiGoogleGmailStatusRouteImport.update({
+  id: '/api/google/gmail/status',
+  path: '/api/google/gmail/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleGmailDisconnectRoute =
+  ApiGoogleGmailDisconnectRouteImport.update({
+    id: '/api/google/gmail/disconnect',
+    path: '/api/google/gmail/disconnect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiGoogleGmailConnectRoute = ApiGoogleGmailConnectRouteImport.update({
   id: '/api/google/gmail/connect',
   path: '/api/google/gmail/connect',
@@ -588,6 +601,8 @@ export interface FileRoutesByFullPath {
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
   '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
+  '/api/google/gmail/disconnect': typeof ApiGoogleGmailDisconnectRoute
+  '/api/google/gmail/status': typeof ApiGoogleGmailStatusRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -665,6 +680,8 @@ export interface FileRoutesByTo {
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
   '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
+  '/api/google/gmail/disconnect': typeof ApiGoogleGmailDisconnectRoute
+  '/api/google/gmail/status': typeof ApiGoogleGmailStatusRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -748,6 +765,8 @@ export interface FileRoutesById {
   '/api/dc/$dcId/comments': typeof ApiDcDcIdCommentsRoute
   '/api/google/gmail/callback': typeof ApiGoogleGmailCallbackRoute
   '/api/google/gmail/connect': typeof ApiGoogleGmailConnectRoute
+  '/api/google/gmail/disconnect': typeof ApiGoogleGmailDisconnectRoute
+  '/api/google/gmail/status': typeof ApiGoogleGmailStatusRoute
   '/api/projects/$projectId/access': typeof ApiProjectsProjectIdAccessRoute
   '/api/projects/$projectId/activity-compilation': typeof ApiProjectsProjectIdActivityCompilationRoute
   '/api/projects/$projectId/activity-config': typeof ApiProjectsProjectIdActivityConfigRoute
@@ -831,6 +850,8 @@ export interface FileRouteTypes {
     | '/api/dc/$dcId/comments'
     | '/api/google/gmail/callback'
     | '/api/google/gmail/connect'
+    | '/api/google/gmail/disconnect'
+    | '/api/google/gmail/status'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -908,6 +929,8 @@ export interface FileRouteTypes {
     | '/api/dc/$dcId/comments'
     | '/api/google/gmail/callback'
     | '/api/google/gmail/connect'
+    | '/api/google/gmail/disconnect'
+    | '/api/google/gmail/status'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -990,6 +1013,8 @@ export interface FileRouteTypes {
     | '/api/dc/$dcId/comments'
     | '/api/google/gmail/callback'
     | '/api/google/gmail/connect'
+    | '/api/google/gmail/disconnect'
+    | '/api/google/gmail/status'
     | '/api/projects/$projectId/access'
     | '/api/projects/$projectId/activity-compilation'
     | '/api/projects/$projectId/activity-config'
@@ -1046,6 +1071,8 @@ export interface RootRouteChildren {
   ApiDcDcIdCommentsRoute: typeof ApiDcDcIdCommentsRoute
   ApiGoogleGmailCallbackRoute: typeof ApiGoogleGmailCallbackRoute
   ApiGoogleGmailConnectRoute: typeof ApiGoogleGmailConnectRoute
+  ApiGoogleGmailDisconnectRoute: typeof ApiGoogleGmailDisconnectRoute
+  ApiGoogleGmailStatusRoute: typeof ApiGoogleGmailStatusRoute
   ApiPublicActivityDraftTokenRoute: typeof ApiPublicActivityDraftTokenRoute
   ApiPublicActivityFormTokenRoute: typeof ApiPublicActivityFormTokenRoute
   ApiPublicActivityResponseTokenRoute: typeof ApiPublicActivityResponseTokenRoute
@@ -1445,6 +1472,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/projects/$projectId/access'
       preLoaderRoute: typeof ApiProjectsProjectIdAccessRouteImport
       parentRoute: typeof ApiProjectsProjectIdRoute
+    }
+    '/api/google/gmail/status': {
+      id: '/api/google/gmail/status'
+      path: '/api/google/gmail/status'
+      fullPath: '/api/google/gmail/status'
+      preLoaderRoute: typeof ApiGoogleGmailStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/gmail/disconnect': {
+      id: '/api/google/gmail/disconnect'
+      path: '/api/google/gmail/disconnect'
+      fullPath: '/api/google/gmail/disconnect'
+      preLoaderRoute: typeof ApiGoogleGmailDisconnectRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/google/gmail/connect': {
       id: '/api/google/gmail/connect'
@@ -1921,6 +1962,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDcDcIdCommentsRoute: ApiDcDcIdCommentsRoute,
   ApiGoogleGmailCallbackRoute: ApiGoogleGmailCallbackRoute,
   ApiGoogleGmailConnectRoute: ApiGoogleGmailConnectRoute,
+  ApiGoogleGmailDisconnectRoute: ApiGoogleGmailDisconnectRoute,
+  ApiGoogleGmailStatusRoute: ApiGoogleGmailStatusRoute,
   ApiPublicActivityDraftTokenRoute: ApiPublicActivityDraftTokenRoute,
   ApiPublicActivityFormTokenRoute: ApiPublicActivityFormTokenRoute,
   ApiPublicActivityResponseTokenRoute: ApiPublicActivityResponseTokenRoute,

@@ -22,6 +22,7 @@ type PamData = {
   editable: boolean;
   pam: {
     id: string;
+    projectId: string;
     employeeName: string;
     jobTitle: string | null;
     feedbackDate: string | null;
@@ -232,6 +233,12 @@ function PublicPamPage() {
 
         {(state === "ready" || state === "completing" || state === "success") && data && (
           <div className="space-y-5">
+            <a
+              href={`/projetos/${data.pam.projectId}/pam`}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm font-medium text-[#042558] shadow-sm transition hover:bg-[#042558]/5"
+            >
+              <ArrowLeft className="h-4 w-4" /> Voltar para os PAMs gerais
+            </a>
             <header className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -244,7 +251,7 @@ function PublicPamPage() {
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-[#042558]/65">
-                    {data.pam.employeeName} - {data.pam.jobTitle || "Cargo Não Informado"} -
+                    {data.pam.employeeName} - {data.pam.jobTitle || "Cargo não informado"} -
                     Feedback: {formatDate(data.pam.feedbackDate)}
                   </p>
                 </div>
@@ -273,7 +280,7 @@ function PublicPamPage() {
             {state === "success" && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
                 <div className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="h-5 w-5" /> Plano de Ação Concluído
+                  <CheckCircle2 className="h-5 w-5" /> Plano de Ação concluído
                 </div>
                 <p className="mt-1 text-sm text-emerald-700">
                   {gmailStatus === "created" ? "PAM finalizado e rascunho criado no Gmail." : "O PAM foi finalizado e o PDF foi gerado."}
@@ -362,7 +369,7 @@ function PublicPamPage() {
             <footer className="sticky bottom-0 -mx-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(4,37,88,0.08)] backdrop-blur md:static md:mx-0 md:rounded-xl md:border md:border-[#042558]/10 md:shadow-sm">
               <div className="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm text-[#042558]/60">
-                  {filledCount} De {items.length} Pontos Preenchidos
+                  {filledCount} de {items.length} pontos preenchidos
                 </p>
                 <button
                   onClick={() => void completePam()}
@@ -413,7 +420,7 @@ function ActionPlanEditor({
       <div className="mt-5 space-y-5">
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-gray-700">
-            Por que isso e um problema?
+            Por que isso é um problema?
           </span>
           <textarea
             disabled={!editable}
@@ -435,7 +442,7 @@ function ActionPlanEditor({
         </label>
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-gray-700">
-            Como vai conferir a evolucao?
+            Como vai conferir a evolução?
           </span>
           <textarea
             disabled={!editable}
@@ -452,7 +459,7 @@ function ActionPlanEditor({
           disabled={!editable || !isPamItemFilled(item)}
           className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#042558]/20 transition hover:bg-[#042558]/90 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
         >
-          <Check className="h-4 w-4" /> Concluir Aba
+          <Check className="h-4 w-4" /> Concluir ponto
         </button>
       </div>
     </article>
@@ -489,9 +496,9 @@ function SaveFeedback({
     );
   }
   if (state === "error") {
-    return <span className="text-sm font-medium text-red-600">Erro ao Salvar</span>;
+    return <span className="text-sm font-medium text-red-600">Erro ao salvar</span>;
   }
-  return <span className="text-sm text-[#042558]/45">Salvo Automaticamente</span>;
+  return <span className="text-sm text-[#042558]/45">Salvo automaticamente</span>;
 }
 
 function formatDate(value?: string | null) {

@@ -342,6 +342,35 @@ export async function updatePam(input: {
   return result.rows[0];
 }
 
+export async function reopenPam(input: {
+  actorUserId: string;
+  projectId: string;
+  pamId: string;
+}) {
+  await requireCanManageProject(input.actorUserId, input.projectId);
+  const result = await query(
+    `
+      update public.pam
+         set status = 'in_progress',
+             completed_at = null,
+             pdf_data = null,
+             pdf_filename = null,
+             pdf_generated_at = null,
+             gmail_draft_id = null,
+             gmail_draft_created_at = null
+       where id = $1::uuid
+         and project_id = $2::uuid
+         and status = 'completed'
+       returning *
+    `,
+    [input.pamId, input.projectId],
+  );
+  if (!result.rows[0]) {
+    throw new HttpError(409, "not_completed", "Somente um PAM concluído pode ser reaberto.");
+  }
+  return result.rows[0];
+}
+
 function assertPublicToken(token: string) {
   if (!token || token.length < 32) {
     throw new HttpError(400, "invalid_token", "Link inválido.");
@@ -354,6 +383,7 @@ async function getPublicPam(token: string) {
   return result.rows[0] as
     | {
         id: string;
+        project_id: string;
         status: PamStatus;
         link_revoked_at: string | null;
         first_accessed_at: string | null;
@@ -420,6 +450,7 @@ export async function getPublicPamPageData(token: string) {
   return {
     pam: {
       id: pam!.id,
+      projectId: pam!.project_id,
       employeeName: pam!.employee_name,
       jobTitle: pam!.job_title,
       feedbackDate: pam!.feedback_date,

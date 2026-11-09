@@ -1,8 +1,10 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Mail,
   Plus,
   RefreshCw,
+  RotateCcw,
   ShieldOff,
   Trash2,
 } from "lucide-react";
@@ -74,6 +76,12 @@ type PamItemRow = {
   display_order: number;
 };
 
+type GmailConnection = {
+  connected: boolean;
+  accountEmail: string | null;
+  connectedAt: string | null;
+};
+
 const inputClass =
   "w-full rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm text-[#042558] outline-none transition focus:border-[#042558] focus:ring-2 focus:ring-[#042558]/15";
 
@@ -86,6 +94,8 @@ export function PamManager({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true);
   const [manualTitle, setManualTitle] = useState("");
   const [manualSkill, setManualSkill] = useState("");
+  const [gmailConnection, setGmailConnection] = useState<GmailConnection | null>(null);
+  const [disconnectingGmail, setDisconnectingGmail] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,6 +114,8 @@ export function PamManager({ projectId }: { projectId: string }) {
       setPams(nextPams);
       setItems(data.items ?? []);
       setSelectedPamId((current) => current || nextPams[0]?.id || "");
+      const gmail = await apiJson<{ ok: true } & GmailConnection>("/api/google/gmail/status");
+      setGmailConnection(gmail);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao carregar PAM.");
     } finally {
@@ -182,7 +194,7 @@ export function PamManager({ projectId }: { projectId: string }) {
           pamId: selectedPam.id,
           source: "manual",
           improvementPoint: manualTitle.trim(),
-          skillLabel: manualSkill.trim() || "Ponto Manual",
+          skillLabel: manualSkill.trim() || "Ponto manual",
           displayOrder: selectedItems.length + 1,
         },
       });
@@ -237,6 +249,34 @@ export function PamManager({ projectId }: { projectId: string }) {
     }
   };
 
+  const reopenPam = async (pam: PamRow) => {
+    if (!confirm("Reabrir este PAM para edição? Ao finalizar novamente, um PDF atualizado e um novo rascunho serão gerados no Gmail.")) return;
+    try {
+      await apiJson(`/api/projects/${projectId}/pam`, {
+        method: "PATCH",
+        body: { action: "reopen", pamId: pam.id },
+      });
+      toast.success("PAM reaberto para edição.");
+      window.location.assign(publicPamUrl(pam.token));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível reabrir o PAM.");
+    }
+  };
+
+  const disconnectGmail = async () => {
+    if (!confirm("Desconectar esta conta do Gmail? Os próximos PAMs não gerarão rascunhos até que outra conta seja conectada.")) return;
+    setDisconnectingGmail(true);
+    try {
+      await apiJson("/api/google/gmail/disconnect", { method: "POST" });
+      setGmailConnection({ connected: false, accountEmail: null, connectedAt: null });
+      toast.success("Conta do Gmail desconectada.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível desconectar o Gmail.");
+    } finally {
+      setDisconnectingGmail(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -255,9 +295,37 @@ export function PamManager({ projectId }: { projectId: string }) {
           <h1 className="font-display text-3xl text-[#042558]">PAM</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a href="/api/google/gmail/connect" className="inline-flex items-center justify-center rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white">
-            Conectar Gmail
-          </a>
+          {gmailConnection?.connected ? (
+            <div className="flex flex-wrap gap-2">
+              <div
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700"
+                title={gmailConnection.accountEmail ?? "Conta Gmail conectada"}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Gmail conectado
+                {gmailConnection.accountEmail && (
+                  <span className="hidden font-normal text-emerald-700/75 sm:inline">
+                    ({gmailConnection.accountEmail})
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => void disconnectGmail()}
+                disabled={disconnectingGmail}
+                className="inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {disconnectingGmail ? "Desconectando..." : "Desconectar"}
+              </button>
+            </div>
+          ) : (
+            <a
+              href={`/api/google/gmail/connect?returnTo=${encodeURIComponent(`/projetos/${projectId}/pam`)}`}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
+            >
+              <Mail className="h-4 w-4" /> Gmail não conectado · Conectar
+            </a>
+          )}
           <button
             onClick={() => void load()}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#042558]/15 px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
@@ -290,7 +358,7 @@ export function PamManager({ projectId }: { projectId: string }) {
                           onClick={() => setSelectedPamId(existing.id)}
                           className="mt-2 text-xs font-semibold text-[#042558] hover:underline"
                         >
-                          Ver PAM Existente
+                          Ver PAM existente
                         </button>
                       ) : (
                         <button
@@ -335,7 +403,7 @@ export function PamManager({ projectId }: { projectId: string }) {
                             {pam.employee_name}
                           </p>
                           <p className="text-xs text-[#042558]/55">
-                            {pam.job_title || "Cargo Não Informado"}
+                            {pam.job_title || "Cargo não informado"}
                           </p>
                         </div>
                         <span className="rounded-full bg-[#042558]/10 px-2 py-0.5 text-[11px] font-medium text-[#042558]">
@@ -372,6 +440,7 @@ export function PamManager({ projectId }: { projectId: string }) {
               onManualSkill={setManualSkill}
               onAddManual={() => void addManualItem()}
               onOpen={() => void openPam(selectedPam)}
+              onReopen={() => void reopenPam(selectedPam)}
               onRevoke={() =>
                 void updatePam(
                   selectedPam,
@@ -401,6 +470,7 @@ function PamDetail({
   onManualSkill,
   onAddManual,
   onOpen,
+  onReopen,
   onRevoke,
   onDeleteItem,
 }: {
@@ -412,6 +482,7 @@ function PamDetail({
   onManualSkill: (value: string) => void;
   onAddManual: () => void;
   onOpen: () => void;
+  onReopen: () => void;
   onRevoke: () => void;
   onDeleteItem: (item: PamItemRow) => void;
 }) {
@@ -429,7 +500,7 @@ function PamDetail({
             </p>
             <h2 className="mt-1 text-xl font-semibold text-[#042558]">{pam.employee_name}</h2>
             <p className="mt-1 text-sm text-[#042558]/60">
-              {pam.job_title || "Cargo Não Informado"} - Feedback: {formatDate(pam.feedback_date)}
+              {pam.job_title || "Cargo não informado"} - Feedback: {formatDate(pam.feedback_date)}
             </p>
             <span className="mt-3 inline-flex rounded-full bg-[#042558]/10 px-2.5 py-1 text-xs font-medium text-[#042558]">
               {statusLabel(pam.link_revoked_at ? "revoked" : pam.status)}
@@ -442,6 +513,14 @@ function PamDetail({
             >
               Abrir
             </button>
+            {pam.status === "completed" && (
+              <button
+                onClick={onReopen}
+                className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
+              >
+                <RotateCcw className="h-4 w-4" /> Reabrir PAM
+              </button>
+            )}
             {canRevoke && (
                 <button
                   onClick={onRevoke}
@@ -457,7 +536,7 @@ function PamDetail({
             <span>
               {completed} de {items.length} pontos concluídos
             </span>
-            <span>{filled} Preenchidos</span>
+            <span>{filled} preenchidos</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-[#042558]/10">
             <div
@@ -469,11 +548,11 @@ function PamDetail({
       </section>
 
       <section className="rounded-xl border border-[#042558]/10 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-[#042558]">Adicionar Ponto Extra</h3>
+        <h3 className="text-sm font-semibold text-[#042558]">Adicionar ponto extra</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_220px_auto] md:items-end">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
-              Ponto de Melhoria
+              Ponto de melhoria
             </span>
             <input
               value={manualTitle}
@@ -549,7 +628,7 @@ function PamDetail({
                 </div>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <AnswerPreview label="Por que e um problema?" value={item.problem_reason} />
+                <AnswerPreview label="Por que é um problema?" value={item.problem_reason} />
                 <AnswerPreview label="Como melhorar?" value={item.improvement_plan} />
                 <AnswerPreview label="Como conferir a melhora?" value={item.evidence_plan} />
               </div>
@@ -566,7 +645,7 @@ function AnswerPreview({ label, value }: { label: string; value?: string | null 
     <div className="rounded-lg bg-[#042558]/5 p-3">
       <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm text-[#042558]">
-        {value?.trim() || <span className="italic text-[#042558]/35">Sem Resposta</span>}
+        {value?.trim() || <span className="italic text-[#042558]/35">Sem resposta</span>}
       </p>
     </div>
   );

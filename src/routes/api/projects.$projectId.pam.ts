@@ -97,7 +97,7 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
       },
       PATCH: async ({ request, params }) => {
         try {
-          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, { updatePam }] =
+          const [{ z }, { requireAuthenticatedUser }, { requireLocalUser }, repo] =
             await Promise.all([
               import("zod"),
               import("@/server/auth/session"),
@@ -106,24 +106,36 @@ export const Route = createFileRoute("/api/projects/$projectId/pam")({
             ]);
           const body = await request.json().catch(() => null);
           const input = z
-            .object({
-              pamId: z.string().uuid(),
-              patch: z.object({
-                status: z.enum(["draft", "released", "in_progress", "completed"]).optional(),
-                released_at: z.string().nullable().optional(),
-                completed_at: z.string().nullable().optional(),
-                link_revoked_at: z.string().nullable().optional(),
+            .union([
+              z.object({
+                action: z.literal("reopen"),
+                pamId: z.string().uuid(),
               }),
-            })
+              z.object({
+                pamId: z.string().uuid(),
+                patch: z.object({
+                  status: z.enum(["draft", "released", "in_progress", "completed"]).optional(),
+                  released_at: z.string().nullable().optional(),
+                  completed_at: z.string().nullable().optional(),
+                  link_revoked_at: z.string().nullable().optional(),
+                }),
+              }),
+            ])
             .parse(body);
           const user = await requireAuthenticatedUser(request);
           await requireLocalUser(user.userId);
-          const pam = await updatePam({
+          const pam = "action" in input
+            ? await repo.reopenPam({
+                actorUserId: user.userId,
+                projectId: params.projectId,
+                pamId: input.pamId,
+              })
+            : await repo.updatePam({
             actorUserId: user.userId,
             projectId: params.projectId,
             pamId: input.pamId,
             patch: input.patch,
-          });
+              });
           return Response.json({ ok: true, pam });
         } catch (error) {
           const { toErrorResponse } = await import("@/server/http/errors");
