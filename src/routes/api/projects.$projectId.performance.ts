@@ -110,6 +110,11 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
               z.object({ action: z.literal("reopen"), reviewId: z.string().uuid() }),
               z.object({ action: z.literal("deleteReview"), reviewId: z.string().uuid() }),
               z.object({
+                action: z.literal("extendExpiredLink"),
+                participantId: z.string().uuid(),
+                justification: z.string().trim().min(10).max(2000),
+              }),
+              z.object({
                 action: z.literal("markSent"),
                 participantId: z.string().uuid().optional(),
                 reviewId: z.string().uuid().optional(),
@@ -189,6 +194,14 @@ export const Route = createFileRoute("/api/projects/$projectId/performance")({
               projectId: params.projectId,
               reviewId: input.reviewId,
             });
+          } else if (input.action === "extendExpiredLink") {
+            const extension = await repo.extendExpiredPerformanceLink({
+              actorUserId: user.userId,
+              projectId: params.projectId,
+              participantId: input.participantId,
+              justification: input.justification,
+            });
+            return Response.json({ ok: true, ...extension });
           } else if (input.action === "markSent") {
             if (!input.participantId && !input.reviewId) {
               return Response.json(

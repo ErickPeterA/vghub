@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Clock,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -118,6 +119,14 @@ type ParticipantRow = {
   sent_at?: string | null;
   response_answers: Record<string, string>;
   submitted_at: string | null;
+  extensions?: Array<{
+    id: string;
+    justification: string;
+    previous_expires_at: string;
+    extended_expires_at: string;
+    created_by: string | null;
+    created_at: string;
+  }>;
 };
 type ReviewRow = {
   id: string;
@@ -4587,6 +4596,9 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
     EXPERIENCE_REVIEW_PERIOD_OPTIONS[0].days,
   );
   const [reviewTypeTab, setReviewTypeTab] = useState<ReviewType>("experience");
+  const [extensionParticipant, setExtensionParticipant] = useState<ParticipantRow | null>(null);
+  const [extensionJustification, setExtensionJustification] = useState("");
+  const [extendingLink, setExtendingLink] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -4782,6 +4794,32 @@ function PerformanceReviewsPanel({ projectId }: { projectId: string }) {
       await load();
     } catch {
       toast.error("Não foi possível copiar o link.");
+    }
+  };
+
+  const extendExpiredLink = async () => {
+    if (!extensionParticipant || extensionJustification.trim().length < 10) {
+      toast.error("Informe uma justificativa com pelo menos 10 caracteres.");
+      return;
+    }
+    setExtendingLink(true);
+    try {
+      await apiJson(`/api/projects/${projectId}/performance`, {
+        method: "POST",
+        body: {
+          action: "extendExpiredLink",
+          participantId: extensionParticipant.id,
+          justification: extensionJustification.trim(),
+        },
+      });
+      toast.success("Acréscimo de 48 horas concedido e registrado no histórico.");
+      setExtensionParticipant(null);
+      setExtensionJustification("");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível prorrogar o link.");
+    } finally {
+      setExtendingLink(false);
     }
   };
 
@@ -5194,12 +5232,14 @@ Estou à disposição para eventuais dúvidas!`;
                     participant={collaborator}
                     onCopy={markSentAndCopy}
                     onGmail={(participant) => sendByGmail(participant, review)}
+                    onExtend={setExtensionParticipant}
                   />
                   <ParticipantCard
                     title="Líder"
                     participant={leader}
                     onCopy={markSentAndCopy}
                     onGmail={(participant) => sendByGmail(participant, review)}
+                    onExtend={setExtensionParticipant}
                   />
                 </div>
               </article>
@@ -5207,6 +5247,30 @@ Estou à disposição para eventuais dúvidas!`;
           })
         )}
       </section>
+      <Dialog open={Boolean(extensionParticipant)} onOpenChange={(open) => {
+        if (!open && !extendingLink) { setExtensionParticipant(null); setExtensionJustification(""); }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar acréscimo de 48 horas</DialogTitle>
+            <DialogDescription>
+              O link expirado voltará a ficar ativo por 48 horas. A justificativa ficará registrada no histórico da avaliação e do projeto.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={extensionJustification}
+            onChange={(event) => setExtensionJustification(event.target.value)}
+            placeholder="Explique por que este prazo adicional é necessário"
+            rows={5}
+          />
+          <DialogFooter>
+            <button type="button" onClick={() => setExtensionParticipant(null)} disabled={extendingLink} className="rounded-lg border px-4 py-2 text-sm">Cancelar</button>
+            <button type="button" onClick={() => void extendExpiredLink()} disabled={extendingLink || extensionJustification.trim().length < 10} className="rounded-lg bg-[#042558] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+              {extendingLink ? "Concedendo..." : "Confirmar acréscimo de 48h"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -5216,17 +5280,21 @@ function ParticipantCard({
   participant,
   onCopy,
   onGmail,
+  onExtend,
 }: {
   title: string;
   participant?: ParticipantRow;
   onCopy: (participant: ParticipantRow) => void;
   onGmail: (participant: ParticipantRow) => void;
+  onExtend: (participant: ParticipantRow) => void;
 }) {
   const answered = participant?.status === "answered";
+  const expired = Boolean(participant && !answered && new Date(participant.expires_at).getTime() <= Date.now());
+  const hasExtension = Boolean(participant?.extensions?.length);
   return (
     <div
       className={`rounded-lg border p-3 transition-colors ${
-        answered ? "border-emerald-200 bg-emerald-50" : "border-[#042558]/10 bg-[#042558]/5"
+        answered ? "border-emerald-200 bg-emerald-50" : hasExtension ? "border-amber-300 bg-amber-50 ring-1 ring-amber-200" : "border-[#042558]/10 bg-[#042558]/5"
       }`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -5262,6 +5330,11 @@ function ParticipantCard({
             >
               <Mail className="h-3.5 w-3.5" /> Enviar por Gmail
             </button>
+            {expired && (
+              <button type="button" onClick={() => onExtend(participant)} className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100">
+                <Clock className="h-3.5 w-3.5" /> Acréscimo de 48h
+              </button>
+            )}
           </div>
         ) : (
           <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
@@ -5275,6 +5348,19 @@ function ParticipantCard({
         </p>
       )}
       {participant && !answered && <LinkValidityBadge expiresAt={participant.expires_at} />}
+      {hasExtension && participant && (
+        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-100/70 px-3 py-2 text-xs text-amber-900">
+          <p className="font-bold uppercase tracking-wide">Prazo prorrogado em 48 horas</p>
+          <div className="mt-2 space-y-2">
+            {participant.extensions?.map((extension) => (
+              <div key={extension.id} className="border-t border-amber-300/70 pt-2 first:border-0 first:pt-0">
+                <p>Justificativa: {extension.justification}</p>
+                <p className="mt-1 opacity-75">Concedido em {new Date(extension.created_at).toLocaleString("pt-BR")} · Novo vencimento: {new Date(extension.extended_expires_at).toLocaleString("pt-BR")}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

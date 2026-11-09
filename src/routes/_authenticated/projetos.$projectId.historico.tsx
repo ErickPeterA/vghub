@@ -32,6 +32,7 @@ const labelMap: Record<string, string> = {
   hub_item_criado: "Item adicionado à Página Central",
   hub_item_removido: "Item removido da Página Central",
   avaliacao_excluida: "Avaliação excluída",
+  prazo_avaliacao_prorrogado: "Prazo da avaliação prorrogado em 48 horas",
 };
 
 const acaoColors: Record<string, string> = {
@@ -50,6 +51,7 @@ const acaoColors: Record<string, string> = {
   hub_item_criado: "bg-indigo-50 text-indigo-700",
   hub_item_removido: "bg-rose-50 text-rose-700",
   avaliacao_excluida: "bg-red-50 text-red-700",
+  prazo_avaliacao_prorrogado: "bg-amber-100 text-amber-800",
 };
 
 const stageLabels: Record<string, string> = {
@@ -75,6 +77,12 @@ const detailLabels: Record<string, string> = {
   comentarios: "Comentários",
   colaborador: "Colaborador",
   tipo: "Tipo",
+  avaliacao: "Avaliação",
+  participante: "Participante",
+  prazo_anterior: "Prazo anterior",
+  novo_prazo: "Novo prazo",
+  acrescimo_horas: "Acréscimo (horas)",
+  justificativa: "Justificativa",
 };
 
 function formatDate(date: string) {
@@ -93,6 +101,8 @@ function formatValue(key: string, value: unknown, users: Record<string, string>)
   if ((key === "de" || key === "para") && typeof value === "string")
     return stageLabels[value] ?? value;
   if (key === "role" && typeof value === "string") return roleLabels[value] ?? value;
+  if ((key === "prazo_anterior" || key === "novo_prazo") && typeof value === "string")
+    return formatDate(value);
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (Array.isArray(value)) return value.map((item) => formatValue(key, item, users)).join(", ");
   if (typeof value === "object") {
@@ -135,6 +145,8 @@ function formatDetails(item: Item, users: Record<string, string>) {
       return `Membro removido: ${targetUser}`;
     case "avaliacao_excluida":
       return `Avaliação: ${formatValue("nome", details.nome, users)}. Colaborador: ${formatValue("colaborador", details.colaborador, users)}. Tipo: ${details.tipo === "experience" ? "Experiência" : "Desempenho"}`;
+    case "prazo_avaliacao_prorrogado":
+      return `Avaliação: ${formatValue("avaliacao", details.avaliacao, users)}. Participante: ${details.participante === "leader" ? "Líder" : "Colaborador"}. Novo prazo: ${formatValue("novo_prazo", details.novo_prazo, users)}. Justificativa: ${formatValue("justificativa", details.justificativa, users)}`;
     default: {
       const entries = Object.entries(details);
       if (!entries.length) return "Sem alteração detalhada";

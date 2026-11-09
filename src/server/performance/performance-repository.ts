@@ -102,9 +102,24 @@ export async function getPerformanceWorkspaceData(userId: string, projectId: str
         order by r.created_at desc`,
       [projectId],
     ),
-    query(`select * from public.performance_review_participants where project_id = $1::uuid`, [
-      projectId,
-    ]),
+    query(
+      `select participant.*,
+              coalesce((
+                select jsonb_agg(jsonb_build_object(
+                  'id', extension.id,
+                  'justification', extension.justification,
+                  'previous_expires_at', extension.previous_expires_at,
+                  'extended_expires_at', extension.extended_expires_at,
+                  'created_by', extension.created_by,
+                  'created_at', extension.created_at
+                ) order by extension.created_at desc)
+                from public.performance_link_extensions extension
+                where extension.participant_id = participant.id
+              ), '[]'::jsonb) as extensions
+         from public.performance_review_participants participant
+        where participant.project_id = $1::uuid`,
+      [projectId],
+    ),
     query(
       `select id, nome, parent_id from public.project_positions where project_id = $1::uuid and status = 'active' order by display_order`,
       [projectId],
@@ -534,6 +549,75 @@ export async function createPerformanceReview(args: {
       [reviewId, args.projectId, args.input.expiresAt],
     );
     return { id: reviewId };
+  });
+}
+
+export async function extendExpiredPerformanceLink(args: {
+  actorUserId: string;
+  projectId: string;
+  participantId: string;
+  justification: string;
+}) {
+  await requireCanManageProject(args.actorUserId, args.projectId);
+  return withTransaction(async (client) => {
+    const result = await client.query<{
+      id: string;
+      review_id: string;
+      participant_type: string;
+      status: string;
+      expires_at: string;
+      employee_name: string;
+      name: string;
+    }>(
+      `select participant.id, participant.review_id, participant.participant_type,
+              participant.status::text, participant.expires_at,
+              review.employee_name, review.name
+         from public.performance_review_participants participant
+         join public.performance_reviews review on review.id = participant.review_id
+        where participant.id = $1::uuid
+          and participant.project_id = $2::uuid
+        for update of participant`,
+      [args.participantId, args.projectId],
+    );
+    const participant = result.rows[0];
+    if (!participant) throw new HttpError(404, "not_found", "Link da avaliação não encontrado.");
+    if (participant.status === "answered") {
+      throw new HttpError(409, "already_answered", "Este link já foi respondido.");
+    }
+    if (new Date(participant.expires_at).getTime() > Date.now()) {
+      throw new HttpError(409, "link_not_expired", "O acréscimo só pode ser aplicado a links expirados.");
+    }
+
+    const previousExpiresAt = participant.expires_at;
+    const extended = await client.query<{ expires_at: string }>(
+      `update public.performance_review_participants
+          set expires_at = now() + interval '48 hours', updated_at = now()
+        where id = $1::uuid
+        returning expires_at`,
+      [participant.id],
+    );
+    const extendedExpiresAt = extended.rows[0].expires_at;
+    await client.query(
+      `insert into public.performance_link_extensions
+        (participant_id, review_id, project_id, previous_expires_at, extended_expires_at, justification, created_by)
+       values ($1::uuid, $2::uuid, $3::uuid, $4::timestamptz, $5::timestamptz, $6, $7::uuid)`,
+      [participant.id, participant.review_id, args.projectId, previousExpiresAt, extendedExpiresAt, args.justification.trim(), args.actorUserId],
+    );
+    await client.query(
+      `insert into public.project_history
+        (project_id, user_id, acao, entidade, entidade_id, detalhes)
+       values ($1::uuid, $2::uuid, 'prazo_avaliacao_prorrogado', 'avaliacao_desempenho', $3::uuid, $4::jsonb)`,
+      [args.projectId, args.actorUserId, participant.review_id, JSON.stringify({
+        avaliacao: participant.name,
+        colaborador: participant.employee_name,
+        participante: participant.participant_type,
+        prazo_anterior: previousExpiresAt,
+        novo_prazo: extendedExpiresAt,
+        acrescimo_horas: 48,
+        justificativa: args.justification.trim(),
+      })],
+    );
+    return { expiresAt: extendedExpiresAt };
   });
 }
 
