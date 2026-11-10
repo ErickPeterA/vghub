@@ -32,7 +32,7 @@ export async function createPamDraft(token: string) {
   if (pam.gmail_draft_id) return { completedAt: pam.completed_at, pdfGenerated: true, gmail: "created", gmailDraftId: pam.gmail_draft_id };
   if (!pam.email?.trim()) return { completedAt: pam.completed_at, pdfGenerated: true, gmail: "missing_email" };
   try {
-    const text = `Olá, ${pam.employee_name}!\n\nSegue em anexo o seu Plano de Ação para Melhoria (PAM).\n\nO documento reúne os pontos definidos durante o processo, incluindo os aspectos a serem acompanhados e desenvolvidos ao longo do período.\n\nUtilize este material como referência para acompanhar seus compromissos, ações e evolução.\n\nAtenciosamente,\nVG Resultados`;
+    const text = `Olá, ${pam.employee_name}!\n\nSegue em anexo o seu Plano de Ação para Melhoria (PAM).\n\nO documento reúne os pontos definidos durante o processo, incluindo os aspectos a serem acompanhados e desenvolvidos ao longo do período.\n\nUtilize este material como referência para acompanhar seus compromissos, ações e evolução.`;
     const draftId = await createGmailDraft({ to: pam.email.trim(), subject: `Plano de Ação para Melhoria — ${pam.employee_name}`, text, filename: pam.pdf_filename!, pdf: pam.pdf_data! });
     await query(`update public.pam set gmail_draft_id = $2, gmail_draft_created_at = now() where id = $1::uuid and gmail_draft_id is null`, [pam.id, draftId]);
     return { completedAt: pam.completed_at, pdfGenerated: true, gmail: "created", gmailDraftId: draftId };

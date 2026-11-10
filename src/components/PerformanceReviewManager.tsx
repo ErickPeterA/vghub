@@ -1397,6 +1397,15 @@ function requirementValueForStaticCriterion(
         ? asRecordArray(dc.experiencia)
         : [];
   const sectionFields = fieldsForStaticCriterion(fields, criterionKey);
+  if (criterionKey === "experience") {
+    const requirements = items.flatMap((item) =>
+      experienceMinimumValuesFromItem(item, sectionFields),
+    );
+    const highestRank = requirementRankForCriterion(requirements, criterionKey);
+    return highestRank === null
+      ? ""
+      : (EXPERIENCE_YEARS_OPTIONS[highestRank] ?? requirements[0] ?? "");
+  }
   const strictInclude =
     criterionKey === "instruction"
       ? [
@@ -1743,13 +1752,18 @@ function educationRequirementLabel(value: string) {
 }
 
 function experienceRank(value: string) {
-  const normalized = normalizeLookup(value).replace(/_/g, " ");
-  const direct = rankedIndex(value, EXPERIENCE_YEARS_OPTIONS);
+  const cleaned = value.replace(/_\d{10,}$/, "").trim();
+  const normalized = normalizeLookup(cleaned).replace(/_/g, " ");
+  const direct = rankedIndex(cleaned, EXPERIENCE_YEARS_OPTIONS);
   if (direct !== null) return direct;
   if (normalized.includes("menos") && normalized.includes("1")) return 0;
   const numbers = normalized.match(/\d+/g)?.map(Number).filter(Number.isFinite) ?? [];
   if (!numbers.length) return null;
   const max = Math.max(...numbers);
+  if (normalized.includes("mes")) {
+    if (max < 12) return 0;
+    return experienceRank(`${Math.ceil(max / 12)} anos`);
+  }
   if (max >= 10) return 7;
   if (max >= 6) return 6;
   if (max >= 5) return 5;
@@ -1758,6 +1772,45 @@ function experienceRank(value: string) {
   if (max >= 2) return 2;
   if (max >= 1) return 1;
   return 0;
+}
+
+function isExperienceMinimumFieldName(value: string) {
+  const normalized = normalizeLookup(value);
+  return (
+    (normalized.includes("tempo") &&
+      (normalized.includes("minimo") || normalized.includes("necessario"))) ||
+    (normalized.includes("experiencia") && normalized.includes("minimo")) ||
+    (normalized.includes("anos") &&
+      (normalized.includes("minimo") || normalized.includes("necessario")))
+  );
+}
+
+function experienceMinimumValuesFromItem(
+  item: Record<string, unknown>,
+  fields: BaseFieldRow[] = [],
+) {
+  const configuredValues = fields
+    .filter((field) => isExperienceMinimumFieldName(`${field.label} ${field.field_key}`))
+    .flatMap((field) => displayValuesForField(field, item[field.field_key]));
+  const rawValues = Object.entries(item)
+    .filter(([key]) => isExperienceMinimumFieldName(key))
+    .flatMap(([, value]) => stringsFromUnknown(value));
+  const values = configuredValues.length ? configuredValues : rawValues;
+  const unit = Object.entries(item)
+    .filter(([key]) => {
+      const normalized = normalizeLookup(key);
+      return normalized.includes("unidade") && normalized.includes("tempo");
+    })
+    .flatMap(([, value]) => stringsFromUnknown(value))[0];
+
+  return uniqueCleanValues(
+    values
+      .map((value) => value.replace(/_\d{10,}$/, "").trim())
+      .map((value) =>
+        unit && !/(ano|mes|mês)/i.test(value) ? `${value} ${unit}` : value,
+      )
+      .filter((value) => experienceRank(value) !== null),
+  );
 }
 
 function isDesirableRequirementItem(item: Record<string, unknown>) {
@@ -1777,6 +1830,13 @@ function requirementItemsFromSnapshot(review: ReviewRow, criterionKey: string) {
 }
 
 function requirementCandidatesFromSnapshot(review: ReviewRow, criterionKey: string) {
+  if (criterionKey === "experience") {
+    return uniqueCleanValues(
+      requirementItemsFromSnapshot(review, criterionKey).flatMap((item) =>
+        isDesirableRequirementItem(item) ? [] : experienceMinimumValuesFromItem(item),
+      ),
+    );
+  }
   const values =
     criterionKey === "instruction"
       ? requirementItemsFromSnapshot(review, criterionKey)
@@ -1793,20 +1853,7 @@ function requirementCandidatesFromSnapshot(review: ReviewRow, criterionKey: stri
               "necessario",
             ]),
           )
-      : requirementItemsFromSnapshot(review, criterionKey)
-          .filter((item) => !isDesirableRequirementItem(item))
-          .flatMap((item) =>
-            valuesByKeyTerms(item, [
-              "experiencia",
-              "tempo",
-              "anos",
-              "minimo",
-              "requisito",
-              "pre_requisito",
-              "exigido",
-              "necessario",
-            ]),
-          );
+      : [];
   return uniqueCleanValues(
     values.filter((value) =>
       criterionKey === "instruction"
@@ -1909,6 +1956,10 @@ function requirementLabelForCriterion(
   if (criterionKey !== "instruction" && criterionKey !== "experience") return null;
   const snapshotRequirements = requirementCandidatesFromSnapshot(review, criterionKey);
   if (snapshotRequirements.length) {
+    if (criterionKey === "experience") {
+      const rank = requirementRankForCriterion(snapshotRequirements, criterionKey);
+      return rank === null ? null : (EXPERIENCE_YEARS_OPTIONS[rank] ?? null);
+    }
     return snapshotRequirements
       .map((value) => (criterionKey === "instruction" ? educationRequirementLabel(value) : value))
       .join(" | ");
