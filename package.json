@@ -16,7 +16,8 @@
     "db:apply-organization-layout": "node --env-file=.env scripts/apply-organization-layout-migration.mjs",
     "db:apply-organization-canvas": "node --env-file=.env scripts/apply-organization-canvas-migration.mjs",
     "db:apply-performance-link-extensions": "node --env-file=.env scripts/apply-performance-link-extensions-migration.mjs",
-    "db:apply-pam-pdf-refresh": "node --env-file=.env scripts/apply-pam-pdf-refresh-migration.mjs"
+    "db:apply-pam-pdf-refresh": "node --env-file=.env scripts/apply-pam-pdf-refresh-migration.mjs",
+    "db:apply-experience-90-questionnaire": "node --env-file=.env scripts/apply-experience-90-questionnaire-migration.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

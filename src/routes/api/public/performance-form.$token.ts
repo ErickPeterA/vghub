@@ -11,6 +11,7 @@ type PerformanceQuestion = {
   active?: boolean;
   options?: string[];
   leaderOptions?: string[];
+  audience?: "all" | "leader";
   helpText?: string;
   source?: "activity" | "config" | "job_description";
   sectionTitle?: string;

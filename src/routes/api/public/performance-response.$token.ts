@@ -81,12 +81,16 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
                 label?: unknown;
                 required?: unknown;
                 active?: unknown;
+                audience?: unknown;
               }) => {
                 if (
                   question.active === false ||
                   question.required !== true ||
                   typeof question.id !== "string"
                 ) {
+                  return false;
+                }
+                if (question.audience === "leader" && participant.participant_type !== "leader") {
                   return false;
                 }
                 const answer = answers[question.id];

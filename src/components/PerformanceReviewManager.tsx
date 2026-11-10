@@ -62,6 +62,7 @@ export type PerformanceQuestion = {
   groupDescription?: string;
   dynamicSource?: "activities" | "indicators" | "culture_skills" | "role_skills" | "behavior";
   dynamicRole?: "efficiency" | "efficacy" | "result" | "reach" | "fit" | "rating";
+  isPrimaryActivity?: boolean;
   requirementValue?: string;
   requirementLabel?: string;
 };
@@ -1544,6 +1545,8 @@ function buildReviewQuestions(
         source: "job_description" as const,
         groupId: `${question.dynamicSource}_${index + 1}`,
         groupTitle: title,
+        isPrimaryActivity:
+          question.dynamicSource === "activities" ? isPrimaryActivityItem(item) : undefined,
         helpText: question.helpText,
         requirementValue:
           requirementValueForDynamicItem(question, item, fields) || question.requirementValue,
@@ -1995,6 +1998,41 @@ function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function isAffirmative(value: unknown) {
+  if (value === true) return true;
+  return ["sim", "yes", "true", "1"].includes(normalizeLookup(stringFromUnknown(value)));
+}
+
+function isPrimaryActivityItem(activity: Record<string, unknown>) {
+  return Object.entries(activity).some(([key, value]) => {
+    const normalizedKey = normalizeLookup(key);
+    return normalizedKey.includes("atividade") && normalizedKey.includes("principal") && isAffirmative(value);
+  });
+}
+
+function isPrimaryActivityQuestion(question: PerformanceQuestion, review: ReviewRow) {
+  if (question.dynamicSource !== "activities") return false;
+  if (typeof question.isPrimaryActivity === "boolean") return question.isPrimaryActivity;
+
+  const index = Number(question.groupId?.match(/_(\d+)$/)?.[1] ?? "0") - 1;
+  if (index < 0) return false;
+  const snapshot = review.job_description_snapshot ?? {};
+  const dynamicValues =
+    snapshot.dynamic_values && typeof snapshot.dynamic_values === "object"
+      ? (snapshot.dynamic_values as Record<string, unknown>)
+      : {};
+  const activity = asRecordArray(snapshot.atividades ?? dynamicValues.atividades)[index];
+  if (!activity) return false;
+  return isPrimaryActivityItem(activity);
+}
+
+function averageActivityScores(scores: Array<{ score: number; isPrimary: boolean }>) {
+  const primary = average(scores.filter((item) => item.isPrimary).map((item) => item.score));
+  const other = average(scores.filter((item) => !item.isPrimary).map((item) => item.score));
+  if (primary !== null && other !== null) return primary * 0.7 + other * 0.3;
+  return primary ?? other;
+}
+
 function roundScore(value: number | null) {
   return value === null ? null : Math.round(value * 100) / 100;
 }
@@ -2013,14 +2051,14 @@ export function buildComparisonScoreSummary(
   const careerLabel = stringFromUnknown(weightSnapshot.careerLabel) || null;
   let comparedTotal = 0;
   let matchesTotal = 0;
-  const leaderScoresTotal: number[] = [];
+  const weightedLeaderScores: Array<{ average: number; weight: number }> = [];
 
   const criteria = SCORE_CRITERIA.map((criterion) => {
     const criterionQuestions = questions.filter(
       (question) => criterionKeyForQuestion(question) === criterion.key,
     );
     const rules = scoreRulesForCriterion(review, criterion.key);
-    const leaderScores: number[] = [];
+    const leaderScores: Array<{ score: number; isPrimary: boolean }> = [];
     let compared = 0;
     let matches = 0;
     const requirementLabels = new Set<string>();
@@ -2057,13 +2095,19 @@ export function buildComparisonScoreSummary(
 
       const leaderScore = scoreAgainstJobRequirement(leaderAnswer, rules, question, review);
       if (leaderScore !== null) {
-        leaderScores.push(leaderScore);
-        leaderScoresTotal.push(leaderScore);
+        leaderScores.push({
+          score: leaderScore,
+          isPrimary: isPrimaryActivityQuestion(question, review),
+        });
       }
     });
 
     const weight = numberFromUnknown(weights[criterion.key]);
-    const leaderAverage = average(leaderScores);
+    const leaderAverage =
+      criterion.key === "activities"
+        ? averageActivityScores(leaderScores)
+        : average(leaderScores.map((item) => item.score));
+    if (leaderAverage !== null) weightedLeaderScores.push({ average: leaderAverage, weight });
     return {
       key: criterion.key,
       label: criterion.label,
@@ -2083,13 +2127,23 @@ export function buildComparisonScoreSummary(
     };
   });
 
+  const weightedTotal = weightedLeaderScores.reduce(
+    (total, item) => total + item.average * item.weight,
+    0,
+  );
+  const scoredWeight = weightedLeaderScores.reduce((total, item) => total + item.weight, 0);
+  const finalScore =
+    scoredWeight > 0
+      ? weightedTotal / scoredWeight
+      : average(weightedLeaderScores.map((item) => item.average)) ?? 0;
+
   return {
     careerLabel,
     totalWeight: criteria.reduce((sum, criterion) => sum + criterion.weight, 0),
     matchPercent:
       comparedTotal > 0 ? Math.round((matchesTotal / comparedTotal) * 10000) / 100 : null,
-    collaboratorFinalScore: roundScore(average(leaderScoresTotal)) ?? 0,
-    leaderFinalScore: roundScore(average(leaderScoresTotal)) ?? 0,
+    collaboratorFinalScore: roundScore(finalScore) ?? 0,
+    leaderFinalScore: roundScore(finalScore) ?? 0,
     criteria,
   };
 }
@@ -2119,12 +2173,31 @@ function buildPerformanceComparisonBlocks(questions: PerformanceQuestion[]) {
   const activeQuestions = questions.filter((question) => question.active ?? true);
   const blocks: PerformanceComparisonBlock[] = [];
   const introQuestions = activeQuestions.filter((question) => !question.dynamicSource);
-  if (introQuestions.length) {
+  const staticQuestionIds = new Set<string>();
+  SCORE_CRITERIA.filter(
+    (criterion) => criterion.key === "instruction" || criterion.key === "experience",
+  ).forEach((criterion) => {
+    const criterionQuestions = introQuestions.filter(
+      (question) => criterionKeyForQuestion(question) === criterion.key,
+    );
+    if (!criterionQuestions.length) return;
+    criterionQuestions.forEach((question) => staticQuestionIds.add(question.id));
+    blocks.push({
+      id: `criterion:${criterion.key}`,
+      title: criterion.label,
+      eyebrow: "Bloco",
+      questions: criterionQuestions,
+    });
+  });
+  const remainingIntroQuestions = introQuestions.filter(
+    (question) => !staticQuestionIds.has(question.id),
+  );
+  if (remainingIntroQuestions.length) {
     blocks.push({
       id: "intro",
       title: withPortugueseAccents(introQuestions[0]?.sectionTitle || "Instrução e Experiência"),
       eyebrow: "Bloco",
-      questions: introQuestions,
+      questions: remainingIntroQuestions,
     });
   }
 
