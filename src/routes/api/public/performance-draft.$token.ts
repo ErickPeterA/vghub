@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/public/performance-draft/$token")({
             return Response.json({ error: "expired", message: "Link expirado." }, { status: 410 });
 
           const review = await query(
-            `select status, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
+            `select status, review_type, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
             [participant.review_id],
           );
           if (review.rows[0]?.status === "finalized")
@@ -55,9 +55,16 @@ export const Route = createFileRoute("/api/public/performance-draft/$token")({
             );
 
           const savedAt = new Date().toISOString();
-          const questions = Array.isArray(review.rows[0]?.questions_snapshot)
+          const snapshotQuestions = Array.isArray(review.rows[0]?.questions_snapshot)
             ? review.rows[0].questions_snapshot
             : [];
+          const questions =
+            review.rows[0]?.review_type === "experience"
+              ? snapshotQuestions.filter(
+                  (question: { sectionTitle?: unknown }) =>
+                    typeof question.sectionTitle === "string" && question.sectionTitle.trim(),
+                )
+              : snapshotQuestions;
           const answers = canonicalizePerformanceAnswers(body.answers ?? {}, questions);
           await query(
             `

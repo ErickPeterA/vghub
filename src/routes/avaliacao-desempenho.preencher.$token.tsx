@@ -49,17 +49,23 @@ function PublicPerformanceForm() {
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const hydratedRef = useRef(false);
-  const steps = useMemo(() => buildPerformanceSteps(form?.questions ?? []), [form?.questions]);
+  const steps = useMemo(
+    () => buildPerformanceSteps(form?.questions ?? [], form?.reviewType),
+    [form?.questions, form?.reviewType],
+  );
   const currentStep = steps[stepIndex] ?? steps[0];
   const answeredCount = useMemo(
     () =>
       (form?.questions ?? []).filter(
-        (question) => (question.active ?? true) && answers[question.id]?.trim(),
+        (question) =>
+          (question.active ?? true) && question.required && answers[question.id]?.trim(),
       ).length,
     [answers, form?.questions],
   );
   const totalQuestions = useMemo(
-    () => (form?.questions ?? []).filter((question) => question.active ?? true).length,
+    () =>
+      (form?.questions ?? []).filter((question) => (question.active ?? true) && question.required)
+        .length,
     [form?.questions],
   );
   const progressPercent = totalQuestions ? Math.round((answeredCount / totalQuestions) * 100) : 0;
@@ -227,6 +233,7 @@ function PublicPerformanceForm() {
                   title={currentStep.title}
                   questions={currentStep.questions}
                   blockId={currentStep.id}
+                  showBlockComment={form.reviewType !== "experience"}
                   participantType={form.participantType}
                   answers={answers}
                   onChange={setAnswers}
@@ -237,6 +244,7 @@ function PublicPerformanceForm() {
                   title={currentStep.title}
                   questions={currentStep.questions}
                   blockId={currentStep.id}
+                  showBlockComment={form.reviewType !== "experience"}
                   participantType={form.participantType}
                   answers={answers}
                   onChange={setAnswers}
@@ -297,7 +305,7 @@ function PublicPerformanceForm() {
           <div className="mx-auto max-w-3xl">
             <div className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500">
               <span>
-                {answeredCount} De {totalQuestions} Perguntas Respondidas
+                {answeredCount} de {totalQuestions} perguntas obrigatórias respondidas
               </span>
               <span>{progressPercent}%</span>
             </div>
@@ -325,8 +333,44 @@ type PerformanceStep =
       questions: PerformanceQuestion[];
     };
 
-function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceStep[] {
+function buildPerformanceSteps(
+  questions: PerformanceQuestion[],
+  reviewType?: "experience" | "performance",
+): PerformanceStep[] {
   const activeQuestions = questions.filter((question) => question.active ?? true);
+
+  if (reviewType === "experience") {
+    const configuredQuestions = activeQuestions.filter((question) => question.sectionTitle?.trim());
+    const standardSections = Array.from(
+      configuredQuestions
+        .filter((question) => !question.dynamicSource)
+        .reduce((sections, question) => {
+          const title = question.sectionTitle!.trim();
+          sections.set(title, [...(sections.get(title) ?? []), question]);
+          return sections;
+        }, new Map<string, PerformanceQuestion[]>()),
+    ).map(([title, sectionQuestions]) => ({ title, questions: sectionQuestions }));
+    const preservedDynamicSections = [
+      {
+        title: "Habilidade Específica do Cargo",
+        questions: configuredQuestions.filter(
+          (question) => question.dynamicSource === "role_skills",
+        ),
+      },
+      {
+        title: "Postura e Comportamento",
+        questions: configuredQuestions.filter((question) => question.dynamicSource === "behavior"),
+      },
+    ].filter((section) => section.questions.length > 0);
+
+    return [...standardSections, ...preservedDynamicSections].map((section, index) => ({
+      kind: index === 0 ? ("intro" as const) : ("section" as const),
+      id: `section:experience:${index}`,
+      title: section.title,
+      questions: section.questions,
+    }));
+  }
+
   const introQuestions = activeQuestions.filter((question) => !question.dynamicSource);
   const activityGroups: PerformanceStep[] = [];
   const groupMap = new Map<string, PerformanceQuestion[]>();
@@ -365,16 +409,18 @@ function buildPerformanceSteps(questions: PerformanceQuestion[]): PerformanceSte
     }))
     .filter((step) => step.questions.length > 0);
 
-  return [
+  const initialSteps: PerformanceStep[] = [
     {
       kind: "intro",
       id: "intro",
       title: "Instrução e Experiência",
       questions: introQuestions,
     },
-    ...activityGroups,
-    ...sectionSteps,
   ];
+
+  return [...initialSteps, ...activityGroups, ...sectionSteps].filter(
+    (step) => step.questions.length > 0,
+  );
 }
 
 function isActivityQuestion(question: PerformanceQuestion) {
@@ -520,6 +566,7 @@ function SectionStep({
   title,
   questions,
   blockId,
+  showBlockComment = true,
   participantType,
   answers,
   onChange,
@@ -527,6 +574,7 @@ function SectionStep({
   title: string;
   questions: PerformanceQuestion[];
   blockId: string;
+  showBlockComment?: boolean;
   participantType: FormData["participantType"];
   answers: Record<string, string>;
   onChange: Dispatch<SetStateAction<Record<string, string>>>;
@@ -581,16 +629,18 @@ function SectionStep({
           ),
         )
       )}
-      <BlockCommentField
-        blockId={blockId}
-        value={answers[performanceBlockCommentKey(blockId)] ?? ""}
-        onChange={(value) =>
-          onChange((current) => ({
-            ...current,
-            [performanceBlockCommentKey(blockId)]: value,
-          }))
-        }
-      />
+      {showBlockComment && (
+        <BlockCommentField
+          blockId={blockId}
+          value={answers[performanceBlockCommentKey(blockId)] ?? ""}
+          onChange={(value) =>
+            onChange((current) => ({
+              ...current,
+              [performanceBlockCommentKey(blockId)]: value,
+            }))
+          }
+        />
+      )}
     </section>
   );
 }

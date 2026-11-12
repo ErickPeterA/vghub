@@ -32,7 +32,8 @@ AS $$
     {"id":"avexp90_postura_comportamento","label":"Avaliação da postura e do comportamento","type":"select","required":true,"active":true,"options":["Demonstro este comportamento no dia a dia, a ponto de me DESTACAR perante os demais colaboradores.","Demonstro este comportamento no dia a dia.","Preciso MELHORAR neste comportamento em POUCAS situações.","Preciso MELHORAR neste comportamento em MUITAS situações.","Preciso MELHORAR URGENTEMENTE neste comportamento.","Não se aplica."],"sectionTitle":"Autoavaliação em habilidades, postura e comportamento","dynamicSource":"behavior","dynamicRole":"rating"},
     {"id":"observacoes_adicionais","label":"Observações e comentários adicionais:","type":"textarea","required":false,"active":true,"sectionTitle":"Observações e comentários adicionais"},
     {"id":"acao_efetivo","label":"Ação a ser tomada (efetivo):","type":"textarea","required":false,"active":true,"audience":"leader","sectionTitle":"Ações do líder"},
-    {"id":"acao_estagio","label":"Ação a ser tomada (estágio):","type":"textarea","required":false,"active":true,"audience":"leader","sectionTitle":"Ações do líder"}
+    {"id":"acao_estagio","label":"Ação a ser tomada (estágio):","type":"textarea","required":false,"active":true,"audience":"leader","sectionTitle":"Ações do líder"},
+    {"id":"acao_justificativa","label":"Justificativa:","type":"textarea","required":false,"active":true,"audience":"leader","sectionTitle":"Ações do líder"}
   ]'::jsonb
 $$;
 
@@ -96,9 +97,9 @@ AS $$
   ) AS resolved
 $$;
 
--- Keep project-specific questions that are not part of the workbook.  Matched
--- ids use the canonical wording/options, while unmatched ids and their answer
--- keys remain intact.
+-- The workbook is the complete experience questionnaire.  Replacing the old
+-- schema prevents legacy questions from being appended after the configured
+-- blocks; saved answer keys remain preserved on participant responses.
 CREATE OR REPLACE FUNCTION pg_temp.merge_experience_questions(
   current_questions jsonb,
   canonical_questions jsonb
@@ -107,23 +108,7 @@ RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
 AS $$
-  SELECT COALESCE(jsonb_agg(question ORDER BY position), '[]'::jsonb)
-  FROM (
-    SELECT ordinality::numeric AS position, question
-    FROM jsonb_array_elements(COALESCE(canonical_questions, '[]'::jsonb))
-      WITH ORDINALITY AS canonical(question, ordinality)
-
-    UNION ALL
-
-    SELECT 1000000 + ordinality::numeric AS position, question
-    FROM jsonb_array_elements(COALESCE(current_questions, '[]'::jsonb))
-      WITH ORDINALITY AS previous(question, ordinality)
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM jsonb_array_elements(COALESCE(canonical_questions, '[]'::jsonb)) AS canonical(question)
-      WHERE canonical.question->>'id' = previous.question->>'id'
-    )
-  ) AS merged
+  SELECT COALESCE(canonical_questions, '[]'::jsonb)
 $$;
 
 -- The global record is the source for future projects.  Update every project

@@ -229,6 +229,24 @@ function itemsForQuestion(snapshot: JsonRecord, question: PerformanceQuestion) {
   return [];
 }
 
+function withExpandedExperienceQuestions(snapshot: JsonRecord, questions: PerformanceQuestion[]) {
+  return questions.flatMap((question) => {
+    if (
+      question.groupId ||
+      (question.dynamicSource !== "role_skills" && question.dynamicSource !== "behavior")
+    ) {
+      return [question];
+    }
+
+    return itemsForQuestion(snapshot, question).map((_, index) => ({
+      ...question,
+      id: `${question.id}_${index + 1}`,
+      source: "job_description" as const,
+      groupId: `${question.dynamicSource}_${index + 1}`,
+    }));
+  });
+}
+
 const CULTURAL_SKILL_OPTIONS = [
   "Me destaco ao usar esta habilidade nas minhas atividades, sendo exemplo aos demais.",
   "Utilizo na pratica esta habilidade para garantir bons resultados nas minhas atividades",
@@ -531,7 +549,7 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
           const completedQuestions =
             (review.review_type ?? "performance") === "performance"
               ? withMissingCulturalSkillQuestions(snapshot, snapshotQuestions)
-              : snapshotQuestions;
+              : withExpandedExperienceQuestions(snapshot, snapshotQuestions);
           const resolvedQuestions = completedQuestions.map((question) => ({
             ...question,
             groupTitle: titleForQuestion(
@@ -545,11 +563,23 @@ export const Route = createFileRoute("/api/public/performance-form/$token")({
               question,
             ),
           }));
-          const questions = resolvedQuestions.filter((question) => question.active ?? true);
-          if (completedQuestions.length !== snapshotQuestions.length) {
+          const persistedQuestions =
+            (review.review_type ?? "performance") === "experience"
+              ? resolvedQuestions.filter((question) => Boolean(question.sectionTitle?.trim()))
+              : resolvedQuestions;
+          const questions = persistedQuestions.filter(
+            (question) =>
+              (question.active ?? true) &&
+              (question.audience !== "leader" || participant.participant_type === "leader"),
+          );
+          const shouldRefreshSnapshot =
+            (review.review_type ?? "performance") === "experience"
+              ? JSON.stringify(persistedQuestions) !== JSON.stringify(snapshotQuestions)
+              : completedQuestions.length !== snapshotQuestions.length;
+          if (shouldRefreshSnapshot) {
             await query(
               `update public.performance_reviews set questions_snapshot = $2::jsonb where id = $1::uuid`,
-              [review.id, JSON.stringify(resolvedQuestions)],
+              [review.id, JSON.stringify(persistedQuestions)],
             );
           }
 

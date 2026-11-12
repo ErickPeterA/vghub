@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
               });
 
             const review = await client.query(
-              `select status, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
+              `select status, review_type, questions_snapshot from public.performance_reviews where id = $1::uuid limit 1`,
               [participant.review_id],
             );
             if (review.rows[0]?.status === "finalized")
@@ -68,9 +68,16 @@ export const Route = createFileRoute("/api/public/performance-response/$token")(
                 : {};
             const submittedAnswers =
               body.answers && typeof body.answers === "object" ? body.answers : {};
-            const questions = Array.isArray(review.rows[0]?.questions_snapshot)
+            const snapshotQuestions = Array.isArray(review.rows[0]?.questions_snapshot)
               ? review.rows[0].questions_snapshot
               : [];
+            const questions =
+              review.rows[0]?.review_type === "experience"
+                ? snapshotQuestions.filter(
+                    (question: { sectionTitle?: unknown }) =>
+                      typeof question.sectionTitle === "string" && question.sectionTitle.trim(),
+                  )
+                : snapshotQuestions;
             const answers = canonicalizePerformanceAnswers(
               { ...draftAnswers, ...submittedAnswers } as Record<string, unknown>,
               questions,

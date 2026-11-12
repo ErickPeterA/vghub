@@ -52,6 +52,7 @@ export type PerformanceQuestion = {
   type: FieldType;
   required: boolean;
   active?: boolean;
+  audience?: "all" | "leader";
   options?: string[];
   leaderOptions?: string[];
   helpText?: string;
@@ -1531,8 +1532,6 @@ function buildReviewQuestions(
     .map((question) =>
       withRequirementFromDescription({ ...question, source: "config" as const }, dc, fields),
     );
-  if (reviewType !== "performance") return activeQuestions;
-
   return activeQuestions.flatMap((question) => {
     if (!question.dynamicSource) return [question];
     const items = dynamicItemsForQuestion(dc, question);
@@ -3090,14 +3089,15 @@ function PerformanceFinalVisualizationPanel({
       <div className="space-y-5 p-5">
         <div className="space-y-4">
           {review.management_opinion?.trim() && (
-            <div className="rounded-xl border border-[#042558]/10 bg-[#042558]/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
+            <details className="group rounded-xl border border-[#042558]/10 bg-[#042558]/5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[#042558]/55 [&::-webkit-details-marker]:hidden">
                 Parecer da Gestão de Pessoa
-              </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <p className="border-t border-[#042558]/10 px-4 py-3 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]">
                 {review.management_opinion}
               </p>
-            </div>
+            </details>
           )}
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -3167,8 +3167,8 @@ function PerformanceBlockScoreList({
   return (
     <section className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="mb-3 flex items-end justify-between gap-3">
-        <h3 className="text-lg font-bold text-[#042558]">{title}</h3>
-        <span className="shrink-0 text-sm font-semibold">{count} Bloco(s)</span>
+        <h3 className="text-base font-bold text-[#042558]">{title}</h3>
+        <span className="shrink-0 text-xs font-semibold">{count} Bloco(s)</span>
       </div>
 
       {blocks.length === 0 ? (
@@ -3204,13 +3204,13 @@ function PerformanceBlockScoreCard({
           <p className="text-xs font-semibold uppercase tracking-wider text-[#042558]/45">
             {block.eyebrow}
           </p>
-          <h4 className="mt-1 font-bold leading-snug">{block.title}</h4>
+          <h4 className="mt-1 text-sm font-bold leading-snug">{block.title}</h4>
         </div>
         <div className={`rounded-lg px-3 py-2 text-right ${chipClass}`}>
           <p className="text-[11px] font-semibold uppercase tracking-wider opacity-70">
             Nota Geral do Bloco
           </p>
-          <p className="text-2xl font-black">{formatSummaryNumber(block.score)}%</p>
+          <p className="text-lg font-black">{formatSummaryNumber(block.score)}%</p>
         </div>
       </div>
 
@@ -3235,7 +3235,7 @@ function PerformanceBlockScoreCard({
                     ? `${item.criterionLabel} - ${item.contextLabel}`
                     : item.criterionLabel}
                 </p>
-                <p className="mt-1 text-sm font-semibold leading-snug">{item.questionLabel}</p>
+                <p className="mt-1 text-xs font-semibold leading-snug">{item.questionLabel}</p>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold ${chipClass}`}>
                 {formatSummaryNumber(item.score)}%
@@ -3245,7 +3245,7 @@ function PerformanceBlockScoreCard({
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#042558]/50">
                 Líder
               </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#042558]/75">
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-[#042558]/75">
                 {item.answer}
               </p>
             </div>
