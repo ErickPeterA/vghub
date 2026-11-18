@@ -40,10 +40,13 @@ export async function getPamPageData(userId: string, projectId: string) {
     ),
     query(
       `
-        select *
-          from public.pam
-         where project_id = $1::uuid
-         order by created_at desc
+        select p.*, employee.email as employee_email
+          from public.pam p
+          left join public.project_employees employee
+            on employee.id = p.employee_id
+           and employee.project_id = p.project_id
+         where p.project_id = $1::uuid
+         order by p.created_at desc
       `,
       [projectId],
     ),
@@ -54,10 +57,13 @@ export async function getPamPageData(userId: string, projectId: string) {
   const [pams, items] = await Promise.all([
     query(
       `
-        select *
-          from public.pam
-         where project_id = $1::uuid
-         order by created_at desc
+        select p.*, employee.email as employee_email
+          from public.pam p
+          left join public.project_employees employee
+            on employee.id = p.employee_id
+           and employee.project_id = p.project_id
+         where p.project_id = $1::uuid
+         order by p.created_at desc
       `,
       [projectId],
     ),
@@ -342,11 +348,7 @@ export async function updatePam(input: {
   return result.rows[0];
 }
 
-export async function reopenPam(input: {
-  actorUserId: string;
-  projectId: string;
-  pamId: string;
-}) {
+export async function reopenPam(input: { actorUserId: string; projectId: string; pamId: string }) {
   await requireCanManageProject(input.actorUserId, input.projectId);
   const result = await query(
     `

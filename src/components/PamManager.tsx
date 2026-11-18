@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Copy,
   Mail,
   Plus,
   RefreshCw,
@@ -48,6 +49,7 @@ type PamRow = {
   review_id: string | null;
   token: string;
   employee_name: string;
+  employee_email: string | null;
   job_title: string | null;
   feedback_date: string | null;
   status: PamStatus;
@@ -249,8 +251,65 @@ export function PamManager({ projectId }: { projectId: string }) {
     }
   };
 
+  const copyPamLink = async (pam: PamRow) => {
+    try {
+      if (pam.status === "draft" || pam.link_revoked_at) {
+        await apiJson(`/api/projects/${projectId}/pam`, {
+          method: "PATCH",
+          body: {
+            pamId: pam.id,
+            patch: {
+              status: pam.status === "draft" ? "released" : pam.status,
+              released_at: pam.released_at ?? new Date().toISOString(),
+              link_revoked_at: null,
+            },
+          },
+        });
+      }
+      await navigator.clipboard.writeText(publicPamUrl(pam.token));
+      toast.success("Link do PAM copiado");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível copiar o link.");
+    }
+  };
+
+  const sendPamByGmail = async (pam: PamRow) => {
+    try {
+      if (pam.status === "draft" || pam.link_revoked_at) {
+        await apiJson(`/api/projects/${projectId}/pam`, {
+          method: "PATCH",
+          body: {
+            pamId: pam.id,
+            patch: {
+              status: pam.status === "draft" ? "released" : pam.status,
+              released_at: pam.released_at ?? new Date().toISOString(),
+              link_revoked_at: null,
+            },
+          },
+        });
+      }
+
+      const link = publicPamUrl(pam.token);
+      const body = `Olá, ${pam.employee_name}!\n\nSegue o link para preenchimento do seu Plano de Ação para Melhoria (PAM):\n\n${link}\n\nUtilize este espaço para acompanhar os pontos definidos, registrar suas ações e sua evolução ao longo do período.\n\nEstou à disposição para eventuais dúvidas!`;
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+        pam.employee_email?.trim() ?? "",
+      )}&su=${encodeURIComponent(`Plano de Ação para Melhoria - ${pam.employee_name}`)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, "_blank", "noopener,noreferrer");
+      toast.success("PAM liberado para envio");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível preparar o envio.");
+    }
+  };
+
   const reopenPam = async (pam: PamRow) => {
-    if (!confirm("Reabrir este PAM para edição? Ao finalizar novamente, um PDF atualizado e um novo rascunho serão gerados no Gmail.")) return;
+    if (
+      !confirm(
+        "Reabrir este PAM para edição? Ao finalizar novamente, um PDF atualizado e um novo rascunho serão gerados no Gmail.",
+      )
+    )
+      return;
     try {
       await apiJson(`/api/projects/${projectId}/pam`, {
         method: "PATCH",
@@ -264,7 +323,12 @@ export function PamManager({ projectId }: { projectId: string }) {
   };
 
   const disconnectGmail = async () => {
-    if (!confirm("Desconectar esta conta do Gmail? Os próximos PAMs não gerarão rascunhos até que outra conta seja conectada.")) return;
+    if (
+      !confirm(
+        "Desconectar esta conta do Gmail? Os próximos PAMs não gerarão rascunhos até que outra conta seja conectada.",
+      )
+    )
+      return;
     setDisconnectingGmail(true);
     try {
       await apiJson("/api/google/gmail/disconnect", { method: "POST" });
@@ -440,6 +504,8 @@ export function PamManager({ projectId }: { projectId: string }) {
               onManualSkill={setManualSkill}
               onAddManual={() => void addManualItem()}
               onOpen={() => void openPam(selectedPam)}
+              onCopy={() => void copyPamLink(selectedPam)}
+              onGmail={() => void sendPamByGmail(selectedPam)}
               onReopen={() => void reopenPam(selectedPam)}
               onRevoke={() =>
                 void updatePam(
@@ -470,6 +536,8 @@ function PamDetail({
   onManualSkill,
   onAddManual,
   onOpen,
+  onCopy,
+  onGmail,
   onReopen,
   onRevoke,
   onDeleteItem,
@@ -482,6 +550,8 @@ function PamDetail({
   onManualSkill: (value: string) => void;
   onAddManual: () => void;
   onOpen: () => void;
+  onCopy: () => void;
+  onGmail: () => void;
   onReopen: () => void;
   onRevoke: () => void;
   onDeleteItem: (item: PamItemRow) => void;
@@ -508,6 +578,18 @@ function PamDetail({
           </div>
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={onCopy}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#042558]/15 bg-white px-3 py-2 text-sm font-medium text-[#042558] hover:bg-[#042558]/5"
+            >
+              <Copy className="h-4 w-4" /> Copiar link
+            </button>
+            <button
+              onClick={onGmail}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              <Mail className="h-4 w-4" /> Enviar por Gmail
+            </button>
+            <button
               onClick={onOpen}
               className="inline-flex items-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
             >
@@ -522,12 +604,12 @@ function PamDetail({
               </button>
             )}
             {canRevoke && (
-                <button
-                  onClick={onRevoke}
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
-                >
-                  <ShieldOff className="h-4 w-4" /> Revogar
-                </button>
+              <button
+                onClick={onRevoke}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                <ShieldOff className="h-4 w-4" /> Revogar
+              </button>
             )}
           </div>
         </div>
