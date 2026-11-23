@@ -40,11 +40,12 @@ export async function getPamPageData(userId: string, projectId: string) {
     ),
     query(
       `
-        select p.*, employee.email as employee_email
+        select p.*, employee.email as employee_email, review.due_date as link_expires_at
           from public.pam p
           left join public.project_employees employee
             on employee.id = p.employee_id
            and employee.project_id = p.project_id
+          left join public.performance_reviews review on review.id = p.review_id
          where p.project_id = $1::uuid
          order by p.created_at desc
       `,
@@ -57,11 +58,12 @@ export async function getPamPageData(userId: string, projectId: string) {
   const [pams, items] = await Promise.all([
     query(
       `
-        select p.*, employee.email as employee_email
+        select p.*, employee.email as employee_email, review.due_date as link_expires_at
           from public.pam p
           left join public.project_employees employee
             on employee.id = p.employee_id
            and employee.project_id = p.project_id
+          left join public.performance_reviews review on review.id = p.review_id
          where p.project_id = $1::uuid
          order by p.created_at desc
       `,

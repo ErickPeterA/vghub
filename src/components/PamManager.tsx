@@ -57,6 +57,7 @@ type PamRow = {
   completed_at: string | null;
   link_revoked_at: string | null;
   created_at: string;
+  link_expires_at: string | null;
 };
 
 type PamItemRow = {
@@ -97,7 +98,7 @@ export function PamManager({ projectId }: { projectId: string }) {
   const [manualTitle, setManualTitle] = useState("");
   const [manualSkill, setManualSkill] = useState("");
   const [gmailConnection, setGmailConnection] = useState<GmailConnection | null>(null);
-  const [disconnectingGmail, setDisconnectingGmail] = useState(false);
+  const [creatingGmailDraft, setCreatingGmailDraft] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -275,6 +276,7 @@ export function PamManager({ projectId }: { projectId: string }) {
   };
 
   const sendPamByGmail = async (pam: PamRow) => {
+    setCreatingGmailDraft(true);
     try {
       if (pam.status === "draft" || pam.link_revoked_at) {
         await apiJson(`/api/projects/${projectId}/pam`, {
@@ -290,23 +292,24 @@ export function PamManager({ projectId }: { projectId: string }) {
         });
       }
 
-      const link = publicPamUrl(pam.token);
-      const body = `Olá, ${pam.employee_name}!\n\nSegue o link para preenchimento do seu Plano de Ação para Melhoria (PAM):\n\n${link}\n\nUtilize este espaço para acompanhar os pontos definidos, registrar suas ações e sua evolução ao longo do período.\n\nEstou à disposição para eventuais dúvidas!`;
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
-        pam.employee_email?.trim() ?? "",
-      )}&su=${encodeURIComponent(`Plano de Ação para Melhoria - ${pam.employee_name}`)}&body=${encodeURIComponent(body)}`;
-      window.open(gmailUrl, "_blank", "noopener,noreferrer");
-      toast.success("PAM liberado para envio");
+      await apiJson(`/api/projects/${projectId}/pam`, {
+        method: "POST",
+        body: { action: "create_invitation_draft", pamId: pam.id },
+      });
+      window.open("https://mail.google.com/mail/u/0/#drafts", "_blank", "noopener,noreferrer");
+      toast.success("Rascunho do PAM criado no Gmail");
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível preparar o envio.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível criar o rascunho.");
+    } finally {
+      setCreatingGmailDraft(false);
     }
   };
 
   const reopenPam = async (pam: PamRow) => {
     if (
       !confirm(
-        "Reabrir este PAM para edição? Ao finalizar novamente, um PDF atualizado e um novo rascunho serão gerados no Gmail.",
+        "Reabrir este PAM para edição? Ao finalizar novamente, um PDF atualizado será gerado para download.",
       )
     )
       return;
@@ -319,25 +322,6 @@ export function PamManager({ projectId }: { projectId: string }) {
       window.location.assign(publicPamUrl(pam.token));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível reabrir o PAM.");
-    }
-  };
-
-  const disconnectGmail = async () => {
-    if (
-      !confirm(
-        "Desconectar esta conta do Gmail? Os próximos PAMs não gerarão rascunhos até que outra conta seja conectada.",
-      )
-    )
-      return;
-    setDisconnectingGmail(true);
-    try {
-      await apiJson("/api/google/gmail/disconnect", { method: "POST" });
-      setGmailConnection({ connected: false, accountEmail: null, connectedAt: null });
-      toast.success("Conta do Gmail desconectada.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível desconectar o Gmail.");
-    } finally {
-      setDisconnectingGmail(false);
     }
   };
 
@@ -360,34 +344,23 @@ export function PamManager({ projectId }: { projectId: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {gmailConnection?.connected ? (
-            <div className="flex flex-wrap gap-2">
-              <div
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700"
-                title={gmailConnection.accountEmail ?? "Conta Gmail conectada"}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Gmail conectado
-                {gmailConnection.accountEmail && (
-                  <span className="hidden font-normal text-emerald-700/75 sm:inline">
-                    ({gmailConnection.accountEmail})
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => void disconnectGmail()}
-                disabled={disconnectingGmail}
-                className="inline-flex items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {disconnectingGmail ? "Desconectando..." : "Desconectar"}
-              </button>
+            <div
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700"
+              title={gmailConnection.accountEmail ?? "Conta Gmail conectada"}
+            >
+              <CheckCircle2 className="h-4 w-4" /> Gmail conectado
+              {gmailConnection.accountEmail && (
+                <span className="hidden font-normal sm:inline">
+                  ({gmailConnection.accountEmail})
+                </span>
+              )}
             </div>
           ) : (
             <a
               href={`/api/google/gmail/connect?returnTo=${encodeURIComponent(`/projetos/${projectId}/pam`)}`}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-3 py-2 text-sm font-medium text-white"
             >
-              <Mail className="h-4 w-4" /> Gmail não conectado · Conectar
+              <Mail className="h-4 w-4" /> Conectar Gmail
             </a>
           )}
           <button
@@ -506,6 +479,7 @@ export function PamManager({ projectId }: { projectId: string }) {
               onOpen={() => void openPam(selectedPam)}
               onCopy={() => void copyPamLink(selectedPam)}
               onGmail={() => void sendPamByGmail(selectedPam)}
+              creatingGmailDraft={creatingGmailDraft}
               onReopen={() => void reopenPam(selectedPam)}
               onRevoke={() =>
                 void updatePam(
@@ -538,6 +512,7 @@ function PamDetail({
   onOpen,
   onCopy,
   onGmail,
+  creatingGmailDraft,
   onReopen,
   onRevoke,
   onDeleteItem,
@@ -552,6 +527,7 @@ function PamDetail({
   onOpen: () => void;
   onCopy: () => void;
   onGmail: () => void;
+  creatingGmailDraft: boolean;
   onReopen: () => void;
   onRevoke: () => void;
   onDeleteItem: (item: PamItemRow) => void;
@@ -585,9 +561,11 @@ function PamDetail({
             </button>
             <button
               onClick={onGmail}
+              disabled={creatingGmailDraft}
               className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
             >
-              <Mail className="h-4 w-4" /> Enviar por Gmail
+              <Mail className="h-4 w-4" />
+              {creatingGmailDraft ? "Criando rascunho..." : "Enviar por Gmail"}
             </button>
             <button
               onClick={onOpen}

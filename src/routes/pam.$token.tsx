@@ -72,7 +72,6 @@ function PublicPamPage() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-  const [gmailStatus, setGmailStatus] = useState<"idle" | "creating" | "created" | "failed" | "missing_email">("idle");
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const dirtyItemId = useRef<string | null>(null);
 
@@ -176,7 +175,9 @@ function PublicPamPage() {
     setState("completing");
     try {
       const response = await fetch(`/api/public/pam-complete/${token}`, { method: "POST" });
-      const json = (await response.json()) as { ok?: true; completedAt?: string; pdfGenerated?: boolean; gmail?: "created" | "failed" | "missing_email" } | PamError;
+      const json = (await response.json()) as
+        | { ok?: true; completedAt?: string; pdfGenerated?: boolean }
+        | PamError;
       if (!response.ok || "error" in json) {
         setErrorMsg((json as PamError).message ?? "Não foi possível concluir.");
         setState("ready");
@@ -184,7 +185,6 @@ function PublicPamPage() {
       }
       setItems((current) => current.map((item) => ({ ...item, status: "completed" })));
       setPdfGenerated(Boolean("pdfGenerated" in json && json.pdfGenerated));
-      if ("gmail" in json && json.gmail) setGmailStatus(json.gmail);
       setData((current) =>
         current
           ? {
@@ -203,15 +203,6 @@ function PublicPamPage() {
       setErrorMsg("Erro de conexão.");
       setState("ready");
     }
-  };
-
-  const retryGmailDraft = async () => {
-    setGmailStatus("creating");
-    try {
-      const response = await fetch(`/api/public/pam-gmail-retry/${token}`, { method: "POST" });
-      const json = await response.json() as { gmail?: "created" | "failed" | "missing_email" } | PamError;
-      setGmailStatus(response.ok && "gmail" in json && json.gmail ? json.gmail : "failed");
-    } catch { setGmailStatus("failed"); }
   };
 
   return (
@@ -283,15 +274,19 @@ function PublicPamPage() {
                   <CheckCircle2 className="h-5 w-5" /> Plano de Ação concluído
                 </div>
                 <p className="mt-1 text-sm text-emerald-700">
-                  {gmailStatus === "created" ? "PAM finalizado e rascunho criado no Gmail." : "O PAM foi finalizado e o PDF foi gerado."}
+                  O PAM foi finalizado e o PDF foi gerado.
                 </p>
                 <div className="mt-4 space-y-2 text-sm">
                   <p>PDF: {pdfGenerated ? "✓ Gerado" : "Gerando..."}</p>
-                  <p>Gmail: {gmailStatus === "created" ? "Rascunho criado" : gmailStatus === "creating" ? "Criando..." : gmailStatus === "missing_email" ? "Colaborador sem e-mail cadastrado" : gmailStatus === "failed" ? "Falha ao criar" : "Não criado"}</p>
                   <div className="flex flex-wrap gap-2">
-                    {pdfGenerated && <a href={`/api/public/pam-pdf/${token}`} className="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-medium">Baixar PDF</a>}
-                    {gmailStatus === "created" && <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noreferrer" className="rounded-lg bg-emerald-700 px-3 py-2 font-medium text-white">Abrir Gmail</a>}
-                    {gmailStatus === "failed" && <button onClick={() => void retryGmailDraft()} className="rounded-lg bg-amber-600 px-3 py-2 font-medium text-white">Tentar criar rascunho novamente</button>}
+                    {pdfGenerated && (
+                      <a
+                        href={`/api/public/pam-pdf/${token}`}
+                        className="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-medium"
+                      >
+                        Baixar PDF
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -335,12 +330,11 @@ function PublicPamPage() {
                             fallbackItemTitle(item),
                           )}
                         </p>
-                        {item.question_label &&
-                          item.question_label !== item.improvement_point && (
-                            <p className="mt-1 text-sm font-semibold text-[#042558]/45">
-                              {item.question_label}
-                            </p>
-                          )}
+                        {item.question_label && item.question_label !== item.improvement_point && (
+                          <p className="mt-1 text-sm font-semibold text-[#042558]/45">
+                            {item.question_label}
+                          </p>
+                        )}
                       </div>
                       <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[#042558]/35 md:hidden" />
                     </div>
@@ -377,7 +371,9 @@ function PublicPamPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#042558] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#042558]/90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {state === "completing" ? "Finalizando e gerando PDF..." : "Finalizar PAM + Gerar PDF"}
+                  {state === "completing"
+                    ? "Finalizando e gerando PDF..."
+                    : "Finalizar PAM + Gerar PDF"}
                 </button>
               </div>
             </footer>
